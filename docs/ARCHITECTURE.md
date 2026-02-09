@@ -5,9 +5,11 @@
 ```
 ┌─────────────────────────────────────────────────┐
 │                    UI Layer                      │
-│  (Fragments + ViewModels + Material 3)           │
-│  Dashboard · Summaries · NotificationLog ·       │
-│  Settings · ModelConfig · AppConfig · About       │
+│  (Jetpack Compose + Material 3 Expressive)       │
+│  Dynamic Color · Larger Type Scales · Vibrant    │
+│  DashboardScreen · SummariesScreen ·             │
+│  NotificationLogScreen · SettingsScreen ·        │
+│  ModelConfigScreen · AppConfigScreen · About      │
 ├─────────────────────────────────────────────────┤
 │                  Domain Layer                    │
 │  SummaryEngine · RuleEngine · PromptBuilder      │
@@ -150,7 +152,7 @@ SummaryNotificationManager.postSummarizePrompt()
 | SummaryWorker | WorkManager's coroutine dispatcher |
 | LLM API calls | `Dispatchers.IO` with timeout |
 | Room DB operations | `Dispatchers.IO` (Room handles internally) |
-| UI updates | `Dispatchers.Main` via ViewModel + LiveData/StateFlow |
+| UI updates | `Dispatchers.Main` via ViewModel + StateFlow, collected in Compose with `collectAsStateWithLifecycle()` |
 
 ---
 

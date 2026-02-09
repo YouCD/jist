@@ -3,23 +3,35 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/mobile_navigation"
-    app:startDestination="@+id/nav_home">
+    app:startDestination="@+id/nav_dashboard">
 
     <fragment
-        android:id="@+id/nav_home"
-        android:name="dev.rcht.jist.ui.home.HomeFragment"
+        android:id="@+id/nav_dashboard"
+        android:name="dev.rcht.jist.ui.dashboard.DashboardFragment"
         android:label="@string/menu_home"
         tools:layout="@layout/fragment_home" />
 
     <fragment
-        android:id="@+id/nav_gallery"
-        android:name="dev.rcht.jist.ui.gallery.GalleryFragment"
+        android:id="@+id/nav_summaries"
+        android:name="dev.rcht.jist.ui.summaries.SummariesFragment"
         android:label="@string/menu_gallery"
         tools:layout="@layout/fragment_gallery" />
 
     <fragment
-        android:id="@+id/nav_slideshow"
-        android:name="dev.rcht.jist.ui.slideshow.SlideshowFragment"
+        android:id="@+id/nav_settings"
+        android:name="dev.rcht.jist.ui.settings.SettingsFragment"
         android:label="@string/menu_slideshow"
         tools:layout="@layout/fragment_slideshow" />
+
+    <fragment
+        android:id="@+id/nav_notification_log"
+        android:name="dev.rcht.jist.ui.notifications.NotificationLogFragment"
+        android:label="@string/notification_log"
+        tools:layout="@layout/fragment_notification_log" />
+
+    <fragment
+        android:id="@+id/nav_about"
+        android:name="dev.rcht.jist.ui.about.AboutFragment"
+        android:label="@string/about"
+        tools:layout="@layout/fragment_about" />
 </navigation>

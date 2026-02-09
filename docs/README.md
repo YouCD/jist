@@ -30,6 +30,7 @@ Users can choose between **auto-summarize** mode (hands-free) or **manual mode**
 | [Database Schema](./DATABASE_SCHEMA.md) | Room database tables and relationships |
 | [LLM Integration](./LLM_INTEGRATION.md) | How multi-model LLM support works |
 | [File Structure](./FILE_STRUCTURE.md) | Target project file/folder organization |
+| [Material 3 Expressive](./MATERIAL3_EXPRESSIVE.md) | UI design system, components, and guidelines |
 | [Feature Ideas](./FEATURE_IDEAS.md) | Future features and community suggestions |
 
 ---
@@ -39,8 +40,8 @@ Users can choose between **auto-summarize** mode (hands-free) or **manual mode**
 | Component | Technology |
 |---|---|
 | Language | Kotlin |
-| UI | XML + ViewBinding, Material 3 |
-| Navigation | AndroidX Navigation |
+| UI | Jetpack Compose, Material 3 Expressive (Material You on Android 12+) |
+| Navigation | Compose Navigation |
 | Database | Room |
 | Preferences | DataStore |
 | Networking | OkHttp |

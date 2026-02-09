@@ -1,6 +1,8 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
+    alias(libs.plugins.ksp)
+    alias(libs.plugins.kotlin.serialization)
 }
 
 android {
@@ -25,6 +27,12 @@ android {
                 "proguard-rules.pro"
             )
         }
+        debug {
+            isMinifyEnabled = false
+        }
+    }
+    lint {
+        disable.add("ProtectedPermissions")
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
@@ -48,6 +56,26 @@ dependencies {
     implementation(libs.androidx.lifecycle.viewmodel.ktx)
     implementation(libs.androidx.navigation.fragment.ktx)
     implementation(libs.androidx.navigation.ui.ktx)
+    implementation(libs.androidx.recyclerview)
+    
+    // Room Database
+    implementation(libs.androidx.room.runtime)
+    implementation(libs.androidx.room.ktx)
+    ksp(libs.androidx.room.compiler)
+    
+    // DataStore Preferences
+    implementation(libs.androidx.datastore.preferences)
+    
+    // OkHttp & Networking
+    implementation(libs.okhttp)
+    
+    // JSON
+    implementation(libs.gson)
+    implementation(libs.kotlinx.serialization.json)
+    
+    // WorkManager
+    implementation(libs.androidx.work.runtime.ktx)
+    
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

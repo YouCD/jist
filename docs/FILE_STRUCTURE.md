@@ -7,7 +7,7 @@ app/src/main/
 ├── AndroidManifest.xml
 ├── java/dev/rcht/jist/
 │   ├── JistApplication.kt                  # Application class, DB + DI init
-│   ├── MainActivity.kt                     # Main activity with navigation drawer
+│   ├── MainActivity.kt                     # Single activity, hosts Compose NavHost
 │   │
 │   ├── data/
 │   │   ├── db/
@@ -55,28 +55,41 @@ app/src/main/
 │   │   └── SummaryNotificationManager.kt  # Posts summary notifications
 │   │
 │   ├── ui/
+│   │   ├── JistApp.kt                     # Root composable with NavHost
+│   │   ├── navigation/
+│   │   │   ├── Screen.kt                  # Sealed class of routes
+│   │   │   └── JistNavHost.kt             # NavHost setup
+│   │   ├── theme/
+│   │   │   ├── Color.kt                   # Material 3 Expressive color tokens
+│   │   │   ├── Theme.kt                   # JistTheme with dynamic color (Material You)
+│   │   │   └── Type.kt                    # Material 3 Expressive typography scale
+│   │   ├── components/                     # Reusable composables
+│   │   │   ├── JistTopBar.kt              # Shared top app bar
+│   │   │   ├── JistDrawer.kt              # Navigation drawer
+│   │   │   ├── EmptyState.kt              # Empty list placeholder
+│   │   │   └── LoadingIndicator.kt        # Loading spinner
 │   │   ├── dashboard/
-│   │   │   ├── DashboardFragment.kt       # Home screen with stats
+│   │   │   ├── DashboardScreen.kt         # Home screen with stats
 │   │   │   └── DashboardViewModel.kt
 │   │   ├── summaries/
-│   │   │   ├── SummariesFragment.kt       # Summary list
+│   │   │   ├── SummariesScreen.kt         # Summary list
 │   │   │   ├── SummariesViewModel.kt
-│   │   │   └── SummaryDetailFragment.kt   # Summary detail + original msgs
+│   │   │   └── SummaryDetailScreen.kt     # Summary detail + original msgs
 │   │   ├── notifications/
-│   │   │   ├── NotificationLogFragment.kt # Raw notification log
+│   │   │   ├── NotificationLogScreen.kt   # Raw notification log
 │   │   │   └── NotificationLogViewModel.kt
 │   │   ├── settings/
-│   │   │   ├── SettingsFragment.kt        # General settings
-│   │   │   ├── ModelConfigFragment.kt     # LLM provider list
-│   │   │   ├── ModelEditFragment.kt       # Add/edit LLM provider
-│   │   │   ├── AppConfigFragment.kt       # Per-app rules list
-│   │   │   ├── AppRuleEditFragment.kt     # Edit single app rule
-│   │   │   ├── PromptConfigFragment.kt    # Prompt customization
-│   │   │   └── GeneralSettingsFragment.kt # Theme, data, privacy
+│   │   │   ├── SettingsScreen.kt          # General settings
+│   │   │   ├── ModelConfigScreen.kt       # LLM provider list
+│   │   │   ├── ModelEditScreen.kt         # Add/edit LLM provider
+│   │   │   ├── AppConfigScreen.kt         # Per-app rules list
+│   │   │   ├── AppRuleEditScreen.kt       # Edit single app rule
+│   │   │   ├── PromptConfigScreen.kt      # Prompt customization
+│   │   │   └── GeneralSettingsScreen.kt   # Theme, data, privacy
 │   │   ├── onboarding/
-│   │   │   └── OnboardingActivity.kt      # First-launch wizard
+│   │   │   └── OnboardingScreen.kt        # First-launch wizard
 │   │   └── about/
-│   │       └── AboutFragment.kt           # Version, links, licenses
+│   │       └── AboutScreen.kt             # Version, links, licenses
 │   │
 │   └── util/
 │       ├── CryptoUtil.kt                  # API key encryption helpers
@@ -84,42 +97,15 @@ app/src/main/
 │       └── Extensions.kt                  # Kotlin extension functions
 │
 ├── res/
-│   ├── layout/
-│   │   ├── activity_main.xml
-│   │   ├── app_bar_main.xml
-│   │   ├── content_main.xml
-│   │   ├── nav_header_main.xml
-│   │   ├── fragment_dashboard.xml
-│   │   ├── fragment_summaries.xml
-│   │   ├── fragment_summary_detail.xml
-│   │   ├── fragment_notification_log.xml
-│   │   ├── fragment_settings.xml
-│   │   ├── fragment_model_config.xml
-│   │   ├── fragment_model_edit.xml
-│   │   ├── fragment_app_config.xml
-│   │   ├── fragment_app_rule_edit.xml
-│   │   ├── fragment_prompt_config.xml
-│   │   ├── fragment_general_settings.xml
-│   │   ├── fragment_about.xml
-│   │   ├── activity_onboarding.xml
-│   │   ├── item_notification.xml          # RecyclerView item
-│   │   ├── item_summary.xml               # RecyclerView item
-│   │   ├── item_app_rule.xml              # RecyclerView item
-│   │   └── item_llm_config.xml            # RecyclerView item
-│   ├── navigation/
-│   │   └── mobile_navigation.xml
-│   ├── menu/
-│   │   ├── activity_main_drawer.xml
-│   │   └── main.xml
 │   ├── values/
-│   │   ├── colors.xml
-│   │   ├── strings.xml
-│   │   ├── themes.xml
-│   │   └── dimens.xml
+│   │   ├── colors.xml                     # Fallback colors (Compose theme is primary)
+│   │   ├── strings.xml                    # All user-facing strings
+│   │   └── themes.xml                     # Base app theme (minimal, Compose handles UI)
 │   ├── values-night/
 │   │   └── themes.xml
 │   ├── drawable/
-│   │   └── ...                            # Icons, backgrounds
+│   │   └── ...                            # App icon assets
+│   ├── mipmap-*/                          # Launcher icons
 │   └── xml/
 │       ├── backup_rules.xml
 │       └── data_extraction_rules.xml
@@ -129,7 +115,11 @@ app/src/main/
 
 ## Notes
 
+- **Jetpack Compose** — all UI is built with Compose. No XML layouts for screens (only minimal XML for app theme and manifest).
+- **Material 3 Expressive** — larger, bolder type scales and vibrant color tokens for modern visual hierarchy. Dynamic color on Android 12+ (Material You).
 - **No Hilt initially** — manual dependency injection via `JistApplication` to keep the project lean. Hilt can be added later if complexity warrants it.
-- **ViewBinding** is already enabled — all UI uses generated binding classes, no `findViewById`.
-- **Navigation Component** handles all fragment transitions via `mobile_navigation.xml`.
-- **Each feature** gets its own package under `ui/` with Fragment + ViewModel pair.
+- **Single Activity** — `MainActivity` uses `setContent { JistTheme { JistApp() } }`. All screens are composable functions, not Fragments.
+- **Compose Navigation** — routes defined in `Screen.kt` sealed class, navigation handled by `NavHost` in `JistNavHost.kt`.
+- **Material 3 Expressive + Material You** — dynamic color extraction from wallpaper on Android 12+, custom Jist Expressive theme as fallback.
+- **Reusable components** — shared UI elements live in `ui/components/` and are used across screens.
+- **Each feature** gets its own package under `ui/` with `*Screen.kt` + `*ViewModel.kt`.

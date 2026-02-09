@@ -4,46 +4,69 @@
 
 ---
 
-## Phase 1: Foundation & Notification Capture
+## Phase 1: Foundation & Notification Capture ✅
 > Core plumbing — capture notifications, store them, show them in UI.
 
-- [ ] **1.1 Project restructure**
-  - Rename template fragments: Home → Dashboard, Gallery → Summaries, Slideshow → Settings
-  - Update navigation graph, menu, and strings
-  - Add new nav items: Notification Log, About
-  - Update app theme colors (teal/dark theme for "Jist" brand)
+- [x] **1.1 Project restructure**
+- [x] **1.2 Add Room database**
+- [x] **1.3 Add DataStore for preferences**
+- [x] **1.4 Implement NotificationListenerService**
+- [x] **1.5 Notification Log UI**
+- [x] **1.6 Dashboard UI**
 
-- [ ] **1.2 Add Room database**
-  - Add Room + KSP dependencies to `libs.versions.toml` and `build.gradle.kts`
-  - Create entities: `NotificationEntity`, `SummaryEntity`, `AppRuleEntity`, `LlmConfigEntity`
-  - Create DAOs: `NotificationDao`, `SummaryDao`, `AppRuleDao`, `LlmConfigDao`
-  - Create `JistDatabase` (Room database class)
+---
 
-- [ ] **1.3 Add DataStore for preferences**
-  - Add DataStore dependency
-  - Create `JistPreferences` data class (global settings: default mode, batch window, theme)
-  - Create `PreferencesRepository` with DataStore backing
+## Phase 1.5: Migrate to Jetpack Compose 🔄
+> Replace XML/ViewBinding UI with Jetpack Compose + Material 3.
 
-- [ ] **1.4 Implement NotificationListenerService**
-  - Create `JistNotificationListenerService` extending `NotificationListenerService`
-  - Register in `AndroidManifest.xml` with `BIND_NOTIFICATION_LISTENER_SERVICE` permission
-  - Implement `onNotificationPosted()`:
-    - Extract: packageName, title, text, key, timestamp
-    - Filter: skip own notifications, skip system/ongoing notifications
-    - Derive `conversationKey` from packageName + title
-    - Insert into Room DB via `NotificationRepository`
-  - Add permission grant flow in UI (redirect to notification access settings)
+- [ ] **1.5.1 Add Compose dependencies**
+  - Add Compose BOM, material3, navigation-compose, lifecycle-runtime-compose
+  - Add Kotlin compiler extension for Compose
+  - Enable `compose = true` in build features
+  - Remove ViewBinding (replaced by Compose)
 
-- [ ] **1.5 Notification Log UI**
-  - Create `NotificationLogFragment` + `NotificationLogViewModel`
-  - RecyclerView showing captured notifications, grouped by app
-  - Search/filter by app, contact, date range
-  - Swipe to delete / bulk clear
+- [ ] **1.5.2 Create Compose theme**
+  - Create `ui/theme/Color.kt` — Material 3 Expressive color tokens with vibrant accent (teal-based Jist brand)
+    - Primary, Secondary, Tertiary colors for visual richness
+    - Neutral and neutral variant colors for backgrounds/surfaces
+    - Support dynamic color extraction on Android 12+ (Material You)
+  - Create `ui/theme/Type.kt` — Material 3 Expressive typography scale
+    - `displayLarge` / `displayMedium` / `displaySmall` — generous, bold headlines
+    - `headlineLarge` / `headlineMedium` — section titles
+    - `bodyLarge` / `bodyMedium` — body text (expressive sizing)
+    - `labelLarge` / `labelMedium` — buttons, labels
+  - Create `ui/theme/Theme.kt` — JistTheme composable
+    - Use `dynamicColorScheme()` on Android 12+ (Material You from wallpaper)
+    - Fallback to custom Jist Expressive scheme
+    - Support light/dark via `isSystemInDarkTheme()`
+    - Apply shapes with generous corner radius for modern look
 
-- [ ] **1.6 Dashboard UI**
-  - Stats: total notifications captured today, summaries generated, active apps
-  - Quick-access cards: "Configure Apps", "View Summaries", notification listener status
-  - Warning banner if notification access not granted
+- [ ] **1.5.3 Set up Compose Navigation**
+  - Create `ui/navigation/Screen.kt` — sealed class of routes
+  - Create `ui/navigation/JistNavHost.kt` — NavHost with all routes
+  - Create `ui/JistApp.kt` — root composable with drawer + NavHost
+  - Update `MainActivity.kt` to use `setContent { JistTheme { JistApp() } }`
+  - Remove XML navigation graph, drawer menu, and layout files
+
+- [ ] **1.5.4 Migrate screens to Compose**
+  - `DashboardScreen.kt` — stats cards (using `displayMedium` for headlines), notification listener status, quick action cards
+  - `SummariesScreen.kt` — LazyColumn with Material 3 ExpressiveCard/ListItem composables
+  - `NotificationLogScreen.kt` — LazyColumn with search bar, notification items with `bodyMedium` text
+  - `SettingsScreen.kt` — settings list with Material 3 ExpressiveListItem for each setting, section headers in `headlineMedium`
+  - `AboutScreen.kt` — app info using generous typography and color accents
+  - Remove old Fragment, Adapter, and XML layout files
+  - Use vibrant color tokens (primary, secondary, tertiary) for interactive elements
+
+- [ ] **1.5.5 Create reusable components**
+  - `ui/components/JistTopBar.kt` — shared top app bar
+  - `ui/components/JistDrawer.kt` — navigation drawer content
+  - `ui/components/EmptyState.kt` — empty list placeholder
+  - `ui/components/LoadingIndicator.kt`
+
+- [ ] **1.5.6 Update ViewModels for Compose**
+  - Switch from LiveData to StateFlow
+  - Use `collectAsStateWithLifecycle()` in composables
+  - Define `*UiState` data classes for each screen
 
 ---
 
@@ -114,9 +137,9 @@
 > Full user control — configure everything.
 
 - [ ] **3.1 Model Configuration screen**
-  - List configured LLM providers
+  - Compose screen listing configured LLM providers
   - Add/Edit/Delete model configurations
-  - Form: name, provider dropdown, API key (masked), base URL (pre-filled), model ID, max tokens, temperature slider
+  - Form composables: name, provider dropdown, API key (masked), base URL (pre-filled), model ID, max tokens, temperature slider
   - "Test Connection" button
   - Set default model
   - Pre-filled defaults per provider:
@@ -252,6 +275,6 @@
 
 ---
 
-## MVP = Phase 1 + Phase 2
+## MVP = Phase 1 + Phase 1.5 + Phase 2
 
-A shippable v0.1 that captures notifications, summarizes them with any LLM, and posts summary notifications. Phase 3 makes it configurable. Phase 4-6 iterate based on feedback.
+A shippable v0.1 with modern Compose UI that captures notifications, summarizes them with any LLM, and posts summary notifications. Phase 3 makes it configurable. Phase 4-6 iterate based on feedback.
