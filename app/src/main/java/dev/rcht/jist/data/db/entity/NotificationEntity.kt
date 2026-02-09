@@ -14,5 +14,6 @@ data class NotificationEntity(
     val conversationKey: String,
     val timestamp: Long,
     val isSummarized: Boolean = false,
-    val summaryId: Long? = null
+    val summaryId: Long? = null,
+    val senderName: String? = null
 )

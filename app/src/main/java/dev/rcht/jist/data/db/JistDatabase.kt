@@ -20,7 +20,7 @@ import dev.rcht.jist.data.db.entity.SummaryEntity
         AppRuleEntity::class,
         LlmConfigEntity::class
     ],
-    version = 1,
+    version = 2,
     exportSchema = false
 )
 abstract class JistDatabase : RoomDatabase() {

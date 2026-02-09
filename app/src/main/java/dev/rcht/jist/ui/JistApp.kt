@@ -1,5 +1,6 @@
 package dev.rcht.jist.ui
 
+import android.app.Application
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -24,6 +25,7 @@ import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.navigation.compose.rememberNavController
 import dev.rcht.jist.ui.components.JistTopBar
@@ -36,6 +38,8 @@ fun JistApp() {
     val navController = rememberNavController()
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val coroutineScope = rememberCoroutineScope()
+    val context = LocalContext.current
+    val application = context.applicationContext as Application
 
     ModalNavigationDrawer(
         drawerState = drawerState,
@@ -135,6 +139,7 @@ fun JistApp() {
         ) { paddingValues ->
             JistNavHost(
                 navController = navController,
+                application = application,
                 modifier = Modifier.padding(paddingValues)
             )
         }

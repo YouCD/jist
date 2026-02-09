@@ -31,13 +31,19 @@ class GeminiClient(private val httpClient: OkHttpClient) : LlmClient {
         config: LlmRequestConfig
     ): LlmResult<LlmResponse> {
         return try {
+            // Validate API key
+            if (config.apiKey.isBlank()) {
+                return LlmResult.Error(LlmError("API key is empty. Please configure it in Settings."))
+            }
+            
             val request = buildRequest(messages, config)
             val response = httpClient.newCall(request).execute()
 
             if (!response.isSuccessful) {
+                val errorBody = response.body?.string() ?: "Unknown error"
                 return LlmResult.Error(
                     LlmError(
-                        message = response.message,
+                        message = "${response.code}: ${response.message}\n$errorBody",
                         statusCode = response.code
                     )
                 )
@@ -64,9 +70,9 @@ class GeminiClient(private val httpClient: OkHttpClient) : LlmClient {
 
             LlmResult.Success(llmResponse)
         } catch (e: IOException) {
-            LlmResult.Error(LlmError("Network error: ${e.message}"))
+            LlmResult.Error(LlmError("Network error: ${e.message ?: e.toString()}"))
         } catch (e: Exception) {
-            LlmResult.Error(LlmError("Parse error: ${e.message}"))
+            LlmResult.Error(LlmError("Parse error: ${e.message ?: e.toString()}"))
         }
     }
 

@@ -35,4 +35,7 @@ interface SummaryDao {
     
     @Delete
     suspend fun delete(summary: SummaryEntity)
+    
+    @Query("SELECT * FROM summaries WHERE id = :id")
+    suspend fun getById(id: Long): SummaryEntity?
 }

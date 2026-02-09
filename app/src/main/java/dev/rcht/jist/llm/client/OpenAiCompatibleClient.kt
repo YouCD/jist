@@ -28,7 +28,7 @@ class OpenAiCompatibleClient(private val httpClient: OkHttpClient) : LlmClient {
     data class OpenAiRequest(
         val model: String,
         val messages: List<ChatMessage>,
-        val max_tokens: Int = 1000,
+        val max_completion_tokens: Int = 1000,
         val temperature: Float = 0.7f
     )
 
@@ -42,13 +42,19 @@ class OpenAiCompatibleClient(private val httpClient: OkHttpClient) : LlmClient {
         config: LlmRequestConfig
     ): LlmResult<LlmResponse> {
         return try {
+            // Validate API key
+            if (config.apiKey.isBlank()) {
+                return LlmResult.Error(LlmError("API key is empty. Please configure it in Settings."))
+            }
+            
             val request = buildRequest(messages, config)
             val response = httpClient.newCall(request).execute()
 
             if (!response.isSuccessful) {
+                val errorBody = response.body?.string() ?: "Unknown error"
                 return LlmResult.Error(
                     LlmError(
-                        message = response.message,
+                        message = "${response.code}: ${response.message}\n$errorBody",
                         statusCode = response.code
                     )
                 )
@@ -72,9 +78,9 @@ class OpenAiCompatibleClient(private val httpClient: OkHttpClient) : LlmClient {
 
             LlmResult.Success(llmResponse)
         } catch (e: IOException) {
-            LlmResult.Error(LlmError("Network error: ${e.message}"))
+            LlmResult.Error(LlmError("Network error: ${e.message ?: e.toString()}"))
         } catch (e: Exception) {
-            LlmResult.Error(LlmError("Parse error: ${e.message}"))
+            LlmResult.Error(LlmError("Parse error: ${e.message ?: e.toString()}"))
         }
     }
 
@@ -85,7 +91,7 @@ class OpenAiCompatibleClient(private val httpClient: OkHttpClient) : LlmClient {
         val apiRequest = OpenAiRequest(
             model = config.model,
             messages = messages,
-            max_tokens = config.maxTokens,
+            max_completion_tokens = config.maxTokens,
             temperature = config.temperature
         )
 

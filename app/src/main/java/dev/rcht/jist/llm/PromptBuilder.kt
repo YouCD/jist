@@ -18,7 +18,9 @@ class PromptBuilder {
             - Preserve tone (urgent, casual, formal, etc)
             - Use bullet points if summarizing multiple messages
             - Keep the summary under 150 words
-            - Do not include timestamps or sender names unless critical to understanding
+            - Include sender names if it's a group chat or multiple people
+            - Flag any urgent or time-sensitive messages
+            - Extract and highlight decisions or next steps
         """.trimIndent()
     }
 
@@ -54,9 +56,10 @@ class PromptBuilder {
         }
 
         val header = when {
-            appName != null && contactOrGroup != null -> "Notifications from $contactOrGroup in $appName:"
-            appName != null -> "Notifications from $appName:"
-            else -> "Notifications:"
+            appName != null && contactOrGroup != null -> 
+                "Summarize these ${ notifications.size} notifications from $contactOrGroup in $appName:"
+            appName != null -> "Summarize these ${ notifications.size} notifications from $appName:"
+            else -> "Summarize these ${ notifications.size} notifications:"
         }
 
         val notificationsText = notifications.mapIndexed { index, notification ->
@@ -70,7 +73,7 @@ class PromptBuilder {
             
             $notificationsText
             
-            Please summarize these notifications concisely.
+            Please provide a concise summary highlighting key points and any action items.
         """.trimIndent()
     }
 

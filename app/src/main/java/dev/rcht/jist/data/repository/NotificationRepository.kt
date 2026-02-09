@@ -52,4 +52,8 @@ class NotificationRepository(private val notificationDao: NotificationDao) {
     suspend fun deleteAll() {
         notificationDao.deleteAll()
     }
+    
+    suspend fun getByConversationKey(key: String): List<NotificationEntity> {
+        return notificationDao.getUnsummarizedForKey(key)
+    }
 }

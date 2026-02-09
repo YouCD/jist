@@ -1,6 +1,8 @@
 package dev.rcht.jist.ui.screens
 
+import android.content.Context
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -12,27 +14,38 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import dev.rcht.jist.ui.dashboard.DashboardUiState
+import dev.rcht.jist.util.BatteryOptimizationHelper
+import dev.rcht.jist.util.PermissionHelper
 
 @Composable
 fun DashboardScreen(
     uiState: DashboardUiState = DashboardUiState(),
     modifier: Modifier = Modifier
 ) {
+    val context = LocalContext.current
+    val hasNotificationListenerPermission = remember { mutableStateOf(PermissionHelper.hasNotificationListenerPermission(context)) }
+    val isBatteryOptimizationDisabled = remember { mutableStateOf(BatteryOptimizationHelper.isBatteryOptimizationDisabled(context)) }
+    
     Scaffold(modifier = modifier.fillMaxSize()) { paddingValues ->
         if (uiState.isLoading) {
             Box(
@@ -52,6 +65,30 @@ fun DashboardScreen(
                     .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
+                // Permission banner if listener not enabled
+                if (!hasNotificationListenerPermission.value) {
+                    PermissionBanner(
+                        onEnable = {
+                            PermissionHelper.openNotificationSettings(context)
+                        },
+                        onDismiss = {
+                            hasNotificationListenerPermission.value = false
+                        }
+                    )
+                }
+                
+                // Battery optimization banner if not disabled
+                if (!isBatteryOptimizationDisabled.value) {
+                    BatteryOptimizationBanner(
+                        onEnable = {
+                            BatteryOptimizationHelper.requestDisableBatteryOptimization(context)
+                        },
+                        onDismiss = {
+                            isBatteryOptimizationDisabled.value = true
+                        }
+                    )
+                }
+                
                 // Status card
                 StatusCard(
                     isListenerActive = uiState.isNotificationListenerActive
@@ -212,6 +249,114 @@ private fun StatCard(label: String, value: String, modifier: Modifier = Modifier
                 textAlign = TextAlign.Center,
                 modifier = Modifier.padding(top = 4.dp)
             )
+        }
+    }
+}
+
+@Composable
+private fun PermissionBanner(
+    onEnable: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(MaterialTheme.colorScheme.errorContainer)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Row(
+                modifier = Modifier
+                    .weight(1f)
+                    .clickable(onClick = onEnable),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Warning,
+                    contentDescription = "Permission Required",
+                    tint = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.padding(4.dp)
+                )
+                Column {
+                    Text(
+                        text = "Enable Notification Listener",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onErrorContainer
+                    )
+                    Text(
+                        text = "Tap to enable in Settings",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onErrorContainer
+                    )
+                }
+            }
+            IconButton(onClick = onDismiss) {
+                Icon(
+                    imageVector = Icons.Filled.Close,
+                    contentDescription = "Dismiss",
+                    tint = MaterialTheme.colorScheme.error
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun BatteryOptimizationBanner(
+    onEnable: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(MaterialTheme.colorScheme.tertiaryContainer)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Row(
+                modifier = Modifier
+                    .weight(1f)
+                    .clickable(onClick = onEnable),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Warning,
+                    contentDescription = "Battery Optimization",
+                    tint = MaterialTheme.colorScheme.onTertiaryContainer,
+                    modifier = Modifier.padding(4.dp)
+                )
+                Column {
+                    Text(
+                        text = "Disable Battery Optimization",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onTertiaryContainer
+                    )
+                    Text(
+                        text = "For 24/7 background monitoring, tap to enable",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onTertiaryContainer
+                    )
+                }
+            }
+            IconButton(onClick = onDismiss) {
+                Icon(
+                    imageVector = Icons.Filled.Close,
+                    contentDescription = "Dismiss",
+                    tint = MaterialTheme.colorScheme.onTertiaryContainer
+                )
+            }
         }
     }
 }

@@ -51,6 +51,7 @@ class SummaryEngine(
                 NotificationForSummary(
                     text = notification.content,
                     timestamp = notification.timestamp,
+                    sender = notification.senderName ?: "",
                     appName = notification.appName
                 )
             }

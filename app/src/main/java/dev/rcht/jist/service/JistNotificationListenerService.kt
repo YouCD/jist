@@ -43,7 +43,8 @@ class JistNotificationListenerService : NotificationListenerService() {
                 content = appInfo.content ?: "",
                 conversationKey = conversationKey,
                 timestamp = System.currentTimeMillis(),
-                isSummarized = false
+                isSummarized = false,
+                senderName = appInfo.senderName
             )
             
             // Insert into database

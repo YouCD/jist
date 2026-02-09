@@ -8,12 +8,12 @@ object NotificationParser {
     
     fun extractAppInfo(sbn: StatusBarNotification): AppInfo {
         val packageName = sbn.packageName
-        val notification = sbn.notification ?: return AppInfo(packageName, packageName, null, null)
+        val notification = sbn.notification ?: return AppInfo(packageName, packageName, null, null, null)
         
         val title = extractTitle(notification)
         val content = extractContent(notification)
         
-        return AppInfo(packageName, packageName, title, content)
+        return AppInfo(packageName, packageName, title, content, null)
     }
     
     private fun extractTitle(notification: Notification): String? {
@@ -44,6 +44,7 @@ object NotificationParser {
         val packageName: String,
         val appName: String,
         val title: String?,
-        val content: String?
+        val content: String?,
+        val senderName: String? = null
     )
 }

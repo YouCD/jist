@@ -36,4 +36,8 @@ class SummaryRepository(private val summaryDao: SummaryDao) {
     suspend fun deleteOlderThan(timestampMs: Long) {
         summaryDao.deleteOlderThan(timestampMs)
     }
+    
+    suspend fun getById(id: Long): SummaryEntity? {
+        return summaryDao.getById(id)
+    }
 }

@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dev.rcht.jist.data.repository.NotificationRepository
 import dev.rcht.jist.data.repository.SummaryRepository
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -32,7 +33,7 @@ class DashboardViewModel(
     }
 
     private fun loadDashboardData() {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             try {
                 // Get recent notifications (last 100)
                 val recentNotifications = notificationRepository.getRecent(limit = 100)

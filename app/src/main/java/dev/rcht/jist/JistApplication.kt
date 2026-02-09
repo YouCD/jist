@@ -5,12 +5,18 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.os.Build
 import dev.rcht.jist.data.db.JistDatabase
+import dev.rcht.jist.data.db.seeding.DatabaseSeeder
 import dev.rcht.jist.data.preferences.PreferencesRepository
 import dev.rcht.jist.data.repository.AppRuleRepository
 import dev.rcht.jist.data.repository.LlmConfigRepository
 import dev.rcht.jist.data.repository.NotificationRepository
 import dev.rcht.jist.data.repository.SummaryRepository
 import dev.rcht.jist.engine.SummaryEngine
+import dev.rcht.jist.worker.SummaryWorker
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import okhttp3.OkHttpClient
 import java.util.concurrent.TimeUnit
 
@@ -38,6 +44,11 @@ class JistApplication : Application() {
         // Initialize database
         database = JistDatabase.getInstance(this)
         
+        // Seed database on first launch (synchronously to ensure it completes before UI loads)
+        runBlocking {
+            DatabaseSeeder.seedIfNeeded(this@JistApplication, database)
+        }
+        
         // Initialize HTTP client with timeouts
         httpClient = OkHttpClient.Builder()
             .connectTimeout(30, TimeUnit.SECONDS)
@@ -59,6 +70,9 @@ class JistApplication : Application() {
             llmConfigRepository,
             httpClient
         )
+        
+        // Schedule periodic summarization
+        SummaryWorker.schedule(this)
         
         // Create notification channels
         createNotificationChannels()
