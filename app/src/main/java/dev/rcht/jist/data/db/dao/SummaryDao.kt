@@ -11,6 +11,9 @@ interface SummaryDao {
     
     @Insert
     suspend fun insert(summary: SummaryEntity): Long
+
+    @Query("SELECT * FROM summaries ORDER BY createdAt DESC")
+    suspend fun getAll(): List<SummaryEntity>
     
     @Query("SELECT * FROM summaries ORDER BY createdAt DESC LIMIT :limit OFFSET :offset")
     suspend fun getRecent(limit: Int, offset: Int): List<SummaryEntity>

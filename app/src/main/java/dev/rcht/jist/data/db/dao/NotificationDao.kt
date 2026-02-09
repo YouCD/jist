@@ -15,9 +15,15 @@ interface NotificationDao {
     
     @Insert
     suspend fun insertAll(notifications: List<NotificationEntity>)
+
+    @Update
+    suspend fun update(notification: NotificationEntity)
     
     @Query("SELECT * FROM notifications WHERE conversationKey = :key AND isSummarized = 0 ORDER BY timestamp ASC")
     suspend fun getUnsummarizedForKey(key: String): List<NotificationEntity>
+
+    @Query("SELECT * FROM notifications WHERE isSummarized = 0 ORDER BY timestamp ASC")
+    suspend fun getAllUnsummarized(): List<NotificationEntity>
     
     @Query("""
         SELECT DISTINCT conversationKey FROM notifications 

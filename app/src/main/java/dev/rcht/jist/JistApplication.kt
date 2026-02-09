@@ -10,11 +10,17 @@ import dev.rcht.jist.data.repository.AppRuleRepository
 import dev.rcht.jist.data.repository.LlmConfigRepository
 import dev.rcht.jist.data.repository.NotificationRepository
 import dev.rcht.jist.data.repository.SummaryRepository
+import dev.rcht.jist.engine.SummaryEngine
+import okhttp3.OkHttpClient
+import java.util.concurrent.TimeUnit
 
 class JistApplication : Application() {
     
     // Database
     lateinit var database: JistDatabase
+    
+    // HTTP Client
+    lateinit var httpClient: OkHttpClient
     
     // Repositories
     lateinit var notificationRepository: NotificationRepository
@@ -22,6 +28,9 @@ class JistApplication : Application() {
     lateinit var appRuleRepository: AppRuleRepository
     lateinit var llmConfigRepository: LlmConfigRepository
     lateinit var preferencesRepository: PreferencesRepository
+
+    // Engines
+    lateinit var summaryEngine: SummaryEngine
     
     override fun onCreate() {
         super.onCreate()
@@ -29,12 +38,27 @@ class JistApplication : Application() {
         // Initialize database
         database = JistDatabase.getInstance(this)
         
+        // Initialize HTTP client with timeouts
+        httpClient = OkHttpClient.Builder()
+            .connectTimeout(30, TimeUnit.SECONDS)
+            .readTimeout(30, TimeUnit.SECONDS)
+            .writeTimeout(30, TimeUnit.SECONDS)
+            .build()
+        
         // Initialize repositories
         notificationRepository = NotificationRepository(database.notificationDao())
         summaryRepository = SummaryRepository(database.summaryDao())
         appRuleRepository = AppRuleRepository(database.appRuleDao())
         llmConfigRepository = LlmConfigRepository(database.llmConfigDao())
         preferencesRepository = PreferencesRepository(this)
+
+        // Initialize engines
+        summaryEngine = SummaryEngine(
+            notificationRepository,
+            summaryRepository,
+            llmConfigRepository,
+            httpClient
+        )
         
         // Create notification channels
         createNotificationChannels()

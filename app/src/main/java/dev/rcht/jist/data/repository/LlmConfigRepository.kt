@@ -16,6 +16,10 @@ class LlmConfigRepository(private val llmConfigDao: LlmConfigDao) {
     suspend fun getDefault(): LlmConfigEntity? {
         return llmConfigDao.getDefault()
     }
+
+    suspend fun getDefaultConfig(): LlmConfigEntity? {
+        return llmConfigDao.getDefault()
+    }
     
     suspend fun getAll(): List<LlmConfigEntity> {
         return llmConfigDao.getAll()

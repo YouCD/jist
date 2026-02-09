@@ -1,0 +1,150 @@
+package dev.rcht.jist.engine
+
+import dev.rcht.jist.data.db.entity.SummaryEntity
+import dev.rcht.jist.data.repository.LlmConfigRepository
+import dev.rcht.jist.data.repository.NotificationRepository
+import dev.rcht.jist.data.repository.SummaryRepository
+import dev.rcht.jist.llm.LlmClient
+import dev.rcht.jist.llm.LlmClientFactory
+import dev.rcht.jist.llm.LlmRequestConfig
+import dev.rcht.jist.llm.LlmResult
+import dev.rcht.jist.llm.NotificationForSummary
+import dev.rcht.jist.llm.PromptBuilder
+import okhttp3.OkHttpClient
+import java.util.concurrent.TimeUnit
+
+/**
+ * Orchestrates notification batching and LLM-based summarization
+ */
+class SummaryEngine(
+    private val notificationRepository: NotificationRepository,
+    private val summaryRepository: SummaryRepository,
+    private val llmConfigRepository: LlmConfigRepository,
+    private val httpClient: OkHttpClient
+) {
+
+    private val promptBuilder = PromptBuilder()
+
+    /**
+     * Summarize all unsummarized notifications for a specific conversation
+     */
+    suspend fun summarizeConversation(conversationKey: String): SummaryResult {
+        try {
+            // Get unsummarized notifications for this conversation
+            val notifications = notificationRepository.getUnsummarizedByConversationKey(
+                conversationKey
+            )
+
+            if (notifications.isEmpty()) {
+                return SummaryResult.Error("No notifications to summarize")
+            }
+
+            // Get the default LLM config
+            val llmConfig = llmConfigRepository.getDefaultConfig()
+                ?: return SummaryResult.Error("No LLM configuration found")
+
+            // Create LLM client
+            val client = LlmClientFactory.createClient(llmConfig, httpClient)
+
+            // Extract notification data for prompt
+            val notificationsForPrompt = notifications.map { notification ->
+                NotificationForSummary(
+                    text = notification.content,
+                    timestamp = notification.timestamp,
+                    appName = notification.appName
+                )
+            }
+
+            // Build prompt
+            val appName = notifications.firstOrNull()?.appName
+            val contactOrGroup = notifications.firstOrNull()?.title
+            val messages = promptBuilder.buildMessages(
+                notificationsForPrompt,
+                appName,
+                contactOrGroup
+            )
+
+            // Call LLM
+            val llmConfig_ = LlmRequestConfig(
+                model = llmConfig.modelId,
+                maxTokens = llmConfig.maxTokens,
+                temperature = llmConfig.temperature,
+                apiKey = llmConfig.apiKey,
+                baseUrl = llmConfig.baseUrl
+            )
+
+            val response = client.complete(messages, llmConfig_)
+
+            return when (response) {
+                is LlmResult.Success -> {
+                    val summary = response.data
+                    // Store summary in database
+                    val summaryEntity = SummaryEntity(
+                        conversationKey = conversationKey,
+                        appName = appName ?: "Unknown",
+                        contactOrGroup = contactOrGroup ?: "Unknown",
+                        summaryText = summary.text,
+                        messageCount = notifications.size,
+                        modelUsed = summary.model,
+                        tokenCount = summary.totalTokens,
+                        createdAt = System.currentTimeMillis()
+                    )
+
+                    val summaryId = summaryRepository.insert(summaryEntity)
+
+                    // Mark notifications as summarized
+                    notifications.forEach { notification ->
+                        notificationRepository.update(
+                            notification.copy(
+                                isSummarized = true,
+                                summaryId = summaryId
+                            )
+                        )
+                    }
+
+                    SummaryResult.Success(summary.text, summaryId)
+                }
+
+                is LlmResult.Error -> {
+                    SummaryResult.Error(response.error.message)
+                }
+            }
+        } catch (e: Exception) {
+            return SummaryResult.Error("Error during summarization: ${e.message}")
+        }
+    }
+
+    /**
+     * Summarize all pending conversations that meet their batch window threshold
+     */
+    suspend fun summarizeAllPending(): List<SummaryResult> {
+        try {
+            // Get all unsummarized notifications grouped by conversation key
+            val conversationsByKey = notificationRepository.getAllUnsummarized()
+                .groupBy { it.conversationKey }
+
+            val results = mutableListOf<SummaryResult>()
+
+            for ((conversationKey, notifications) in conversationsByKey) {
+                // Simple heuristic: summarize if we have 3+ messages or it's been 15+ minutes
+                val timeSinceFirst = System.currentTimeMillis() - notifications.first().timestamp
+                val shouldSummarize = notifications.size >= 3 ||
+                        timeSinceFirst > TimeUnit.MINUTES.toMillis(15)
+
+                if (shouldSummarize) {
+                    val result = summarizeConversation(conversationKey)
+                    results.add(result)
+                }
+            }
+
+            return results
+        } catch (e: Exception) {
+            return listOf(SummaryResult.Error("Error during batch summarization: ${e.message}"))
+        }
+    }
+}
+
+sealed class SummaryResult {
+    data class Success(val summaryText: String, val summaryId: Long) : SummaryResult()
+    data class Error(val message: String) : SummaryResult()
+}

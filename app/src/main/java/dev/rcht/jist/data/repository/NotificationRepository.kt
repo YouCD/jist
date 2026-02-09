@@ -12,9 +12,21 @@ class NotificationRepository(private val notificationDao: NotificationDao) {
     suspend fun insertAll(notifications: List<NotificationEntity>) {
         notificationDao.insertAll(notifications)
     }
+
+    suspend fun update(notification: NotificationEntity) {
+        notificationDao.update(notification)
+    }
     
     suspend fun getUnsummarizedForKey(key: String): List<NotificationEntity> {
         return notificationDao.getUnsummarizedForKey(key)
+    }
+
+    suspend fun getUnsummarizedByConversationKey(key: String): List<NotificationEntity> {
+        return notificationDao.getUnsummarizedForKey(key)
+    }
+
+    suspend fun getAllUnsummarized(): List<NotificationEntity> {
+        return notificationDao.getAllUnsummarized()
     }
     
     suspend fun getPendingConversationKeys(minCount: Int): List<String> {

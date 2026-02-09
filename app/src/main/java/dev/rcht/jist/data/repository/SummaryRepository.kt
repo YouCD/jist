@@ -8,6 +8,10 @@ class SummaryRepository(private val summaryDao: SummaryDao) {
     suspend fun insert(summary: SummaryEntity): Long {
         return summaryDao.insert(summary)
     }
+
+    suspend fun getAll(): List<SummaryEntity> {
+        return summaryDao.getAll()
+    }
     
     suspend fun getRecent(limit: Int = 50, offset: Int = 0): List<SummaryEntity> {
         return summaryDao.getRecent(limit, offset)

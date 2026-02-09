@@ -16,6 +16,10 @@ class AppRuleRepository(private val appRuleDao: AppRuleDao) {
     suspend fun getForApp(packageName: String): AppRuleEntity? {
         return appRuleDao.getForApp(packageName)
     }
+
+    suspend fun getByPackageName(packageName: String): AppRuleEntity? {
+        return appRuleDao.getForApp(packageName)
+    }
     
     suspend fun getEnabledApps(): List<AppRuleEntity> {
         return appRuleDao.getEnabledApps()
