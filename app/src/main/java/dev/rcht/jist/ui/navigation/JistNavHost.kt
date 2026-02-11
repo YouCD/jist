@@ -5,6 +5,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -37,19 +38,25 @@ fun JistNavHost(
         modifier = modifier
     ) {
         composable(Screen.Dashboard.route) {
+            val context = LocalContext.current
             val viewModel: DashboardViewModel = viewModel(
                 factory = object : ViewModelProvider.Factory {
                     override fun <T : ViewModel> create(modelClass: Class<T>): T {
                         @Suppress("UNCHECKED_CAST")
                         return DashboardViewModel(
                             jistApp.notificationRepository,
-                            jistApp.summaryRepository
+                            jistApp.summaryRepository,
+                            jistApp.summaryEngine,
+                            dev.rcht.jist.notification.SummaryNotificationManager(context)
                         ) as T
                     }
                 }
             )
             val uiState by viewModel.uiState.collectAsState()
-            DashboardScreen(uiState = uiState)
+            DashboardScreen(
+                uiState = uiState,
+                onSummarizeNow = { viewModel.summarizeNow() }
+            )
         }
         composable(Screen.Summaries.route) {
             val viewModel: SummariesViewModel = viewModel(

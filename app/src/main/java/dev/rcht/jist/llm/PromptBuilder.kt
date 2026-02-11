@@ -16,11 +16,14 @@ class PromptBuilder {
             - Be brief but complete - capture essential information
             - Highlight action items or questions directed at the user
             - Preserve tone (urgent, casual, formal, etc)
-            - Use bullet points if summarizing multiple messages
+            - Format as plain paragraphs (NOT bullet points or markdown)
             - Keep the summary under 150 words
             - Include sender names if it's a group chat or multiple people
             - Flag any urgent or time-sensitive messages
             - Extract and highlight decisions or next steps
+            - Do NOT use markdown formatting, asterisks, dashes, or special characters
+            - Do NOT use bullet points or numbered lists
+            - Simply use plain text paragraphs separated by line breaks
         """.trimIndent()
     }
 

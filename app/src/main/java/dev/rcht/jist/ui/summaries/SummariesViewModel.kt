@@ -65,23 +65,25 @@ class SummariesViewModel(
     }
 
     private fun applyFilters(searchQuery: String, appFilter: String?) {
-        val summaries = _uiState.value.summaries
-        var filtered = summaries
-
-        // Filter by app
-        if (appFilter != null) {
-            filtered = filtered.filter { it.appName == appFilter }
-        }
-
-        // Filter by search query
-        if (searchQuery.isNotBlank()) {
-            filtered = filtered.filter { summary ->
-                summary.summaryText.contains(searchQuery, ignoreCase = true) ||
-                        summary.contactOrGroup.contains(searchQuery, ignoreCase = true)
+        viewModelScope.launch(Dispatchers.IO) {
+            val filtered = if (searchQuery.isNotBlank()) {
+                // Use FTS for better search performance
+                if (appFilter != null) {
+                    summaryRepository.searchFtsByApp(searchQuery, appFilter)
+                } else {
+                    summaryRepository.searchFts(searchQuery)
+                }
+            } else {
+                // No search query, just filter by app if needed
+                if (appFilter != null) {
+                    summaryRepository.getByApp(appFilter)
+                } else {
+                    summaryRepository.getAll()
+                }
             }
+            
+            _uiState.value = _uiState.value.copy(filteredSummaries = filtered)
         }
-
-        _uiState.value = _uiState.value.copy(filteredSummaries = filtered)
     }
 
     fun refreshSummaries() {

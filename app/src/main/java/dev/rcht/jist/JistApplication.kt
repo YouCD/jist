@@ -34,6 +34,7 @@ class JistApplication : Application() {
     lateinit var appRuleRepository: AppRuleRepository
     lateinit var llmConfigRepository: LlmConfigRepository
     lateinit var preferencesRepository: PreferencesRepository
+    lateinit var customPromptRepository: dev.rcht.jist.data.repository.CustomPromptRepository
 
     // Engines
     lateinit var summaryEngine: SummaryEngine
@@ -61,10 +62,12 @@ class JistApplication : Application() {
         summaryRepository = SummaryRepository(database.summaryDao())
         appRuleRepository = AppRuleRepository(database.appRuleDao())
         llmConfigRepository = LlmConfigRepository(database.llmConfigDao())
+        customPromptRepository = dev.rcht.jist.data.repository.CustomPromptRepository(database.customPromptDao())
         preferencesRepository = PreferencesRepository(this)
 
         // Initialize engines
         summaryEngine = SummaryEngine(
+            this,
             notificationRepository,
             summaryRepository,
             llmConfigRepository,

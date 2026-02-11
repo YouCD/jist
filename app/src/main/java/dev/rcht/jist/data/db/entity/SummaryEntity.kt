@@ -7,6 +7,7 @@ import androidx.room.PrimaryKey
 data class SummaryEntity(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,
+    val packageName: String,
     val conversationKey: String,
     val appName: String,
     val contactOrGroup: String,

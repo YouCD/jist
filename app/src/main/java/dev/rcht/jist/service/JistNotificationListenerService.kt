@@ -8,6 +8,7 @@ import android.service.notification.StatusBarNotification
 import android.util.Log
 import dev.rcht.jist.JistApplication
 import dev.rcht.jist.data.db.entity.NotificationEntity
+import dev.rcht.jist.util.ConversationKeyExtractor
 import dev.rcht.jist.util.NotificationParser
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -32,26 +33,29 @@ class JistNotificationListenerService : NotificationListenerService() {
                 return // Ignore notifications without text
             }
             
-            // Derive conversation key
-            val conversationKey = "${appInfo.packageName}:${appInfo.title}"
-            
-            // Create entity
+            // Create entity first
             val notification = NotificationEntity(
                 packageName = appInfo.packageName,
                 appName = appInfo.appName,
                 title = appInfo.title ?: "",
                 content = appInfo.content ?: "",
-                conversationKey = conversationKey,
+                conversationKey = "",  // Will be set below
                 timestamp = System.currentTimeMillis(),
                 isSummarized = false,
                 senderName = appInfo.senderName
             )
             
+            // Derive conversation key with app-specific extraction
+            val conversationKey = ConversationKeyExtractor.extractConversationKey(notification)
+            
+            // Update with proper key
+            val notificationWithKey = notification.copy(conversationKey = conversationKey)
+            
             // Insert into database
             val app = applicationContext as? JistApplication
             app?.let {
                 scope.launch {
-                    it.notificationRepository.insert(notification)
+                    it.notificationRepository.insert(notificationWithKey)
                     Log.d(TAG, "Notification inserted: $conversationKey")
                 }
             }

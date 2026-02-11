@@ -40,4 +40,30 @@ class SummaryRepository(private val summaryDao: SummaryDao) {
     suspend fun getById(id: Long): SummaryEntity? {
         return summaryDao.getById(id)
     }
+    
+    suspend fun searchFts(query: String): List<SummaryEntity> {
+        return if (query.isBlank()) {
+            getAll()
+        } else {
+            try {
+                summaryDao.searchFts(query)
+            } catch (e: Exception) {
+                // Fallback to LIKE search if FTS fails
+                search(query)
+            }
+        }
+    }
+    
+    suspend fun searchFtsByApp(query: String, appName: String): List<SummaryEntity> {
+        return if (query.isBlank()) {
+            getByApp(appName)
+        } else {
+            try {
+                summaryDao.searchFtsByApp(query, appName)
+            } catch (e: Exception) {
+                // Fallback to LIKE search if FTS fails
+                search(query).filter { it.appName == appName }
+            }
+        }
+    }
 }

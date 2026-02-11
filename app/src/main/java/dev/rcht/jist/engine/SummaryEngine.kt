@@ -1,5 +1,6 @@
 package dev.rcht.jist.engine
 
+import android.content.Context
 import dev.rcht.jist.data.db.entity.SummaryEntity
 import dev.rcht.jist.data.repository.LlmConfigRepository
 import dev.rcht.jist.data.repository.NotificationRepository
@@ -10,6 +11,7 @@ import dev.rcht.jist.llm.LlmRequestConfig
 import dev.rcht.jist.llm.LlmResult
 import dev.rcht.jist.llm.NotificationForSummary
 import dev.rcht.jist.llm.PromptBuilder
+import dev.rcht.jist.util.AppIconExtractor
 import okhttp3.OkHttpClient
 import java.util.concurrent.TimeUnit
 
@@ -17,6 +19,7 @@ import java.util.concurrent.TimeUnit
  * Orchestrates notification batching and LLM-based summarization
  */
 class SummaryEngine(
+    private val context: Context,
     private val notificationRepository: NotificationRepository,
     private val summaryRepository: SummaryRepository,
     private val llmConfigRepository: LlmConfigRepository,
@@ -57,7 +60,14 @@ class SummaryEngine(
             }
 
             // Build prompt
+            val packageName = notifications.firstOrNull()?.packageName
             val appName = notifications.firstOrNull()?.appName
+            // Get human-readable app label if package name is available
+            val appLabelForDisplay = if (!packageName.isNullOrBlank() && packageName != "Unknown") {
+                AppIconExtractor.getAppLabel(context, packageName)
+            } else {
+                appName
+            }
             val contactOrGroup = notifications.firstOrNull()?.title
             val messages = promptBuilder.buildMessages(
                 notificationsForPrompt,
@@ -81,8 +91,9 @@ class SummaryEngine(
                     val summary = response.data
                     // Store summary in database
                     val summaryEntity = SummaryEntity(
+                        packageName = packageName ?: "Unknown",
                         conversationKey = conversationKey,
-                        appName = appName ?: "Unknown",
+                        appName = appLabelForDisplay ?: "Unknown",
                         contactOrGroup = contactOrGroup ?: "Unknown",
                         summaryText = summary.text,
                         messageCount = notifications.size,

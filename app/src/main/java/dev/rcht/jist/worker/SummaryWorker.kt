@@ -30,10 +30,18 @@ class SummaryWorker(context: Context, params: WorkerParameters) :
             results.forEach { result ->
                 when (result) {
                     is SummaryResult.Success -> {
-                        notificationManager.postSummaryNotification(
-                            summaryId = result.summaryId,
-                            summaryText = result.summaryText
-                        )
+                        // Get the summary to extract packageName and conversationKey
+                        val summary = app.summaryRepository.getById(result.summaryId)
+                        if (summary != null) {
+                            notificationManager.postSummaryNotification(
+                                summaryId = result.summaryId,
+                                summaryText = result.summaryText,
+                                packageName = summary.packageName,
+                                conversationKey = summary.conversationKey,
+                                appName = summary.appName,
+                                contactOrGroup = summary.contactOrGroup
+                            )
+                        }
                     }
                     is SummaryResult.Error -> {
                         Log.w(TAG, "Summarization error: ${result.message}")

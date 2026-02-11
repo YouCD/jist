@@ -38,4 +38,24 @@ interface SummaryDao {
     
     @Query("SELECT * FROM summaries WHERE id = :id")
     suspend fun getById(id: Long): SummaryEntity?
+    
+    // Full-text search queries
+    @Query("""
+        SELECT s.* FROM summaries s
+        WHERE s.id IN (
+            SELECT rowid FROM summaries_fts WHERE summaries_fts MATCH :query
+        )
+        ORDER BY s.createdAt DESC
+    """)
+    suspend fun searchFts(query: String): List<SummaryEntity>
+    
+    @Query("""
+        SELECT s.* FROM summaries s
+        WHERE appName = :appName
+        AND s.id IN (
+            SELECT rowid FROM summaries_fts WHERE summaries_fts MATCH :query
+        )
+        ORDER BY s.createdAt DESC
+    """)
+    suspend fun searchFtsByApp(query: String, appName: String): List<SummaryEntity>
 }

@@ -26,19 +26,42 @@ class SummaryNotificationManager(private val context: Context) {
     /**
      * Post a summary notification for a generated summary
      */
-    fun postSummaryNotification(summaryId: Long, summaryText: String) {
+    fun postSummaryNotification(
+        summaryId: Long,
+        summaryText: String,
+        packageName: String = "Unknown",
+        conversationKey: String = "",
+        appName: String = "Notification",
+        contactOrGroup: String = "Summary"
+    ) {
         try {
-            val title = "Notification Summary"
-            val content = if (summaryText.length > 50) {
-                summaryText.substring(0, 50) + "..."
+            // Create a descriptive title with app name and contact/group
+            val title = if (contactOrGroup != "Unknown" && contactOrGroup.isNotBlank()) {
+                "$appName - $contactOrGroup"
             } else {
-                summaryText
+                "$appName Summary"
             }
+            
+            // Create clean preview text (first line only)
+            val lines = summaryText.split("\n")
+            val content = lines.firstOrNull()?.let { firstLine ->
+                if (firstLine.length > 60) {
+                    firstLine.substring(0, 60) + "..."
+                } else {
+                    firstLine
+                }
+            } ?: "Summary ready"
 
-            // Create intent to open app when tapped
-            val tapIntent = Intent(context, MainActivity::class.java).apply {
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            // Try to build app-specific intent, fallback to MainActivity
+            val tapIntent = (dev.rcht.jist.util.ChatIntentBuilder.buildChatIntent(
+                context,
+                packageName,
+                conversationKey,
+                contactOrGroup
+            ) ?: Intent(context, MainActivity::class.java).apply {
                 putExtra("summary_id", summaryId)
+            }).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
             }
 
             val pendingIntent = PendingIntent.getActivity(
@@ -48,34 +71,55 @@ class SummaryNotificationManager(private val context: Context) {
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
             )
 
-            // Create the summary notification
-            val notification = NotificationCompat.Builder(
+            // Try to get original app icon, fallback to Jist icon
+            val appIcon = if (packageName != "Unknown") {
+                dev.rcht.jist.util.AppIconExtractor.getAppIcon(context, packageName)
+            } else {
+                null
+            }
+
+            // Create the summary notification with app branding
+            val notificationBuilder = NotificationCompat.Builder(
                 context,
                 JistApplication.CHANNEL_SUMMARIES
             )
-                .setSmallIcon(R.mipmap.ic_launcher) // Use app icon
                 .setContentTitle(title)
                 .setContentText(content)
                 .setStyle(NotificationCompat.BigTextStyle().bigText(summaryText))
                 .setContentIntent(pendingIntent)
                 .setAutoCancel(true)
                 .setPriority(NotificationCompat.PRIORITY_DEFAULT)
-                .setGroup("summaries") // Group by app
+                .setGroup("summaries")
                 .setGroupSummary(false)
-                .build()
+                .setShowWhen(true)
+
+            // Use app icon if available, otherwise use Jist icon
+            if (appIcon != null) {
+                val bitmap = dev.rcht.jist.util.DrawableUtil.drawableToBitmap(appIcon)
+                notificationBuilder.setLargeIcon(bitmap)
+                Log.d(TAG, "✓ Large icon set from app: $packageName")
+            } else {
+                Log.d(TAG, "✗ No app icon available for: $packageName")
+                notificationBuilder.setSmallIcon(R.mipmap.ic_launcher)
+            }
+
+            // Always set small icon (required by Android)
+            notificationBuilder.setSmallIcon(R.mipmap.ic_launcher)
+
+            val notification = notificationBuilder.build()
 
             // Post the notification
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 // For Android 13+, check permission (should be granted by app)
                 try {
                     notificationManager.notify(summaryId.toInt(), notification)
-                    Log.d(TAG, "Summary notification posted: $summaryId")
+                    Log.d(TAG, "Summary notification posted: $summaryId ($title)")
                 } catch (e: SecurityException) {
                     Log.w(TAG, "Missing POST_NOTIFICATIONS permission", e)
                 }
             } else {
                 notificationManager.notify(summaryId.toInt(), notification)
-                Log.d(TAG, "Summary notification posted: $summaryId")
+                Log.d(TAG, "Summary notification posted: $summaryId ($title)")
             }
         } catch (e: Exception) {
             Log.e(TAG, "Error posting summary notification", e)
@@ -194,11 +238,19 @@ class SummarizeActionReceiver : BroadcastReceiver() {
                         // Cancel the action notification
                         notificationManager.cancelNotification(conversationKey.hashCode())
 
-                        // Post summary notification
-                        notificationManager.postSummaryNotification(
-                            result.summaryId,
-                            result.summaryText
-                        )
+                        // Get the summary to extract packageName and other info
+                        val summary = app.summaryRepository.getById(result.summaryId)
+                        if (summary != null) {
+                            // Post summary notification
+                            notificationManager.postSummaryNotification(
+                                summaryId = result.summaryId,
+                                summaryText = result.summaryText,
+                                packageName = summary.packageName,
+                                conversationKey = summary.conversationKey,
+                                appName = summary.appName,
+                                contactOrGroup = summary.contactOrGroup
+                            )
+                        }
                         Log.d(TAG, "Summary generated successfully")
                     }
 
