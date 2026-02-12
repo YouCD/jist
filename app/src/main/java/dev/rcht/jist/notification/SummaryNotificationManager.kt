@@ -233,17 +233,60 @@ class SummaryNotificationManager(private val context: Context) {
             val inboxStyle = NotificationCompat.InboxStyle()
                 .setBigContentTitle(title)
             
-            // Add each summary as a line
+            // Convert app icon to bitmap once
+            val appBitmap = appIcon?.let { dev.rcht.jist.util.DrawableUtil.drawableToBitmap(it) }
+            
+            // Create a child notification per conversation so each line can be clicked to open the exact chat
             summaries.forEach { summary ->
                 // First line of summary as preview
                 val previewText = summary.summaryText.split("\n").firstOrNull()?.take(40) ?: ""
                 inboxStyle.addLine("${summary.contactOrGroup}: $previewText")
+                
+                try {
+                    // Prefer the original PendingIntent captured by the NotificationListener
+                    val childPendingIntent = dev.rcht.jist.notification.PendingIntentStore.get(summary.conversationKey)
+                        ?: run {
+                            val childTapIntent = dev.rcht.jist.util.ChatIntentBuilder.buildChatIntent(
+                                context,
+                                summary.packageName,
+                                summary.conversationKey,
+                                summary.contactOrGroup
+                            ) ?: Intent(context, MainActivity::class.java).apply {
+                                putExtra("summary_id", summary.id)
+                            }
+                            PendingIntent.getActivity(
+                                context,
+                                summary.conversationKey.hashCode(),
+                                childTapIntent,
+                                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                            )
+                        }
+                    
+                    val childBuilder = NotificationCompat.Builder(context, JistApplication.CHANNEL_SUMMARIES)
+                        .setContentTitle(summary.contactOrGroup)
+                        .setContentText(previewText)
+                        .setStyle(NotificationCompat.BigTextStyle().bigText(summary.summaryText))
+                        .setAutoCancel(true)
+                        .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+                        .setGroup("summaries_$packageName")
+                        .setGroupSummary(false)
+                        .setShowWhen(true)
+                        .setContentIntent(childPendingIntent)
+                    
+                    if (appBitmap != null) childBuilder.setLargeIcon(appBitmap)
+                    childBuilder.setSmallIcon(R.mipmap.ic_launcher)
+                    
+                    val childId = summary.conversationKey.hashCode()
+                    notificationManager.notify(childId, childBuilder.build())
+                } catch (e: Exception) {
+                    Log.w(TAG, "Failed to post child notification for ${summary.conversationKey}", e)
+                }
             }
             
             // Set summary at the end
             inboxStyle.setSummaryText("${summaries.size} conversations summarized")
             
-            // Create main notification
+            // Create main group summary notification
             val notificationBuilder = NotificationCompat.Builder(
                 context,
                 JistApplication.CHANNEL_SUMMARIES
@@ -258,10 +301,8 @@ class SummaryNotificationManager(private val context: Context) {
                 .setShowWhen(true)
             
             // Set app icon if available
-            if (appIcon != null) {
-                notificationBuilder.setLargeIcon(
-                    dev.rcht.jist.util.DrawableUtil.drawableToBitmap(appIcon)
-                )
+            if (appBitmap != null) {
+                notificationBuilder.setLargeIcon(appBitmap)
             }
             
             // Set small icon

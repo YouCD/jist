@@ -13,5 +13,8 @@ data class JistPreferences(
     val deleteRawAfterSummarizing: Boolean = false,
     val theme: String = "SYSTEM", // SYSTEM, LIGHT, DARK
     val summaryNotificationSound: Boolean = true,
-    val summaryNotificationVibrate: Boolean = true
+    val summaryNotificationVibrate: Boolean = true,
+    val writingStyle: String = "CONCISE", // CONCISE, BULLET_POINTS, DETAILED
+    val summaryTone: String = "PROFESSIONAL", // PROFESSIONAL, CASUAL, WITTY, URGENT
+    val summaryLength: String = "MEDIUM" // SHORT, MEDIUM, LONG
 )

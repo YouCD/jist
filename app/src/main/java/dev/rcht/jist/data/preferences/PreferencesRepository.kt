@@ -26,6 +26,9 @@ class PreferencesRepository(private val context: Context) {
         val THEME = stringPreferencesKey("theme")
         val SUMMARY_NOTIFICATION_SOUND = booleanPreferencesKey("summary_notification_sound")
         val SUMMARY_NOTIFICATION_VIBRATE = booleanPreferencesKey("summary_notification_vibrate")
+        val WRITING_STYLE = stringPreferencesKey("writing_style")
+        val SUMMARY_TONE = stringPreferencesKey("summary_tone")
+        val SUMMARY_LENGTH = stringPreferencesKey("summary_length")
     }
     
     val preferencesFlow: Flow<JistPreferences> = context.dataStore.data.map { preferences ->
@@ -39,7 +42,10 @@ class PreferencesRepository(private val context: Context) {
             deleteRawAfterSummarizing = preferences[PreferenceKeys.DELETE_RAW_AFTER_SUMMARIZING] ?: false,
             theme = preferences[PreferenceKeys.THEME] ?: "SYSTEM",
             summaryNotificationSound = preferences[PreferenceKeys.SUMMARY_NOTIFICATION_SOUND] ?: true,
-            summaryNotificationVibrate = preferences[PreferenceKeys.SUMMARY_NOTIFICATION_VIBRATE] ?: true
+            summaryNotificationVibrate = preferences[PreferenceKeys.SUMMARY_NOTIFICATION_VIBRATE] ?: true,
+            writingStyle = preferences[PreferenceKeys.WRITING_STYLE] ?: "CONCISE",
+            summaryTone = preferences[PreferenceKeys.SUMMARY_TONE] ?: "PROFESSIONAL",
+            summaryLength = preferences[PreferenceKeys.SUMMARY_LENGTH] ?: "MEDIUM"
         )
     }
     
@@ -70,6 +76,24 @@ class PreferencesRepository(private val context: Context) {
     suspend fun setTheme(theme: String) {
         context.dataStore.edit { preferences ->
             preferences[PreferenceKeys.THEME] = theme
+        }
+    }
+
+    suspend fun setWritingStyle(style: String) {
+        context.dataStore.edit { preferences ->
+            preferences[PreferenceKeys.WRITING_STYLE] = style
+        }
+    }
+
+    suspend fun setSummaryTone(tone: String) {
+        context.dataStore.edit { preferences ->
+            preferences[PreferenceKeys.SUMMARY_TONE] = tone
+        }
+    }
+
+    suspend fun setSummaryLength(length: String) {
+        context.dataStore.edit { preferences ->
+            preferences[PreferenceKeys.SUMMARY_LENGTH] = length
         }
     }
 }

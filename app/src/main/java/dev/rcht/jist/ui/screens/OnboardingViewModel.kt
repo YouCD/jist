@@ -16,7 +16,11 @@ import kotlinx.coroutines.launch
 data class OnboardingUiState(
     val isLoading: Boolean = false,
     val error: String? = null,
-    val setupComplete: Boolean = false
+    val setupComplete: Boolean = false,
+    val writingStyle: String = "CONCISE",
+    val llmConfigured: Boolean = false,
+    val summaryTone: String = "PROFESSIONAL",
+    val summaryLength: String = "MEDIUM"
 )
 
 class OnboardingViewModel(private val context: Context) : ViewModel() {
@@ -28,6 +32,73 @@ class OnboardingViewModel(private val context: Context) : ViewModel() {
 
     companion object {
         private const val TAG = "OnboardingViewModel"
+    }
+
+    init {
+        viewModelScope.launch {
+            // Load preferences
+            app.preferencesRepository.preferencesFlow.collect { prefs ->
+                _uiState.value = _uiState.value.copy(
+                    writingStyle = prefs.writingStyle,
+                    summaryTone = prefs.summaryTone,
+                    summaryLength = prefs.summaryLength
+                )
+            }
+        }
+        
+        viewModelScope.launch {
+             // Check LLM config
+             try {
+                val hasConfig = app.llmConfigRepository.getAll().any { it.apiKey.isNotBlank() }
+                _uiState.value = _uiState.value.copy(llmConfigured = hasConfig)
+             } catch (e: Exception) {
+                 Log.e(TAG, "Error checking LLM config", e)
+             }
+        }
+    }
+
+    fun setWritingStyle(style: String) {
+        viewModelScope.launch {
+            app.preferencesRepository.setWritingStyle(style)
+        }
+    }
+
+    fun setSummaryTone(tone: String) {
+        viewModelScope.launch {
+            app.preferencesRepository.setSummaryTone(tone)
+        }
+    }
+
+    fun setSummaryLength(length: String) {
+        viewModelScope.launch {
+            app.preferencesRepository.setSummaryLength(length)
+        }
+    }
+    
+    fun saveLlmConfig(apiKey: String, provider: String = "openai", model: String = "gpt-4-turbo") {
+         viewModelScope.launch {
+            try {
+                // For simplicity in onboarding, we'll just create/update a default config
+                val existing = app.llmConfigRepository.getAll().firstOrNull { it.provider == provider }
+                
+                if (existing != null) {
+                    app.llmConfigRepository.update(existing.copy(apiKey = apiKey, modelId = model))
+                } else {
+                    val newConfig = dev.rcht.jist.data.db.entity.LlmConfigEntity(
+                        name = provider.replaceFirstChar { it.uppercase() },
+                        provider = provider,
+                        apiKey = apiKey,
+                        baseUrl = "https://api.openai.com/v1/", // Default for OpenAI
+                        modelId = model,
+                        isDefault = true
+                    )
+                    app.llmConfigRepository.insert(newConfig)
+                }
+                _uiState.value = _uiState.value.copy(llmConfigured = true)
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to save LLM config", e)
+            }
+         }
     }
 
     // Do not auto-run setup; UI will call startSetup()

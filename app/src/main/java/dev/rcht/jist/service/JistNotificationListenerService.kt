@@ -53,6 +53,18 @@ class JistNotificationListenerService : NotificationListenerService() {
             
             // Insert into database
             val app = applicationContext as? JistApplication
+
+            // Store original content intent (if available) for later reuse in summary notifications
+            try {
+                val originalPendingIntent = sbn.notification?.contentIntent
+                if (originalPendingIntent != null) {
+                    dev.rcht.jist.notification.PendingIntentStore.put(conversationKey, originalPendingIntent)
+                    Log.d(TAG, "Stored pending intent for conversation: $conversationKey")
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "Unable to store original pending intent", e)
+            }
+
             app?.let {
                 scope.launch {
                     it.notificationRepository.insert(notificationWithKey)
