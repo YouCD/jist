@@ -26,27 +26,27 @@ class SummaryWorker(context: Context, params: WorkerParameters) :
             // Get all pending conversations and summarize them
             val results = app.summaryEngine.summarizeAllPending()
 
-            // Post notifications for summaries
+            // Collect all successful summaries
+            val summaries = mutableListOf<dev.rcht.jist.data.db.entity.SummaryEntity>()
+            
             results.forEach { result ->
                 when (result) {
                     is SummaryResult.Success -> {
-                        // Get the summary to extract packageName and conversationKey
+                        // Get the summary to extract metadata
                         val summary = app.summaryRepository.getById(result.summaryId)
                         if (summary != null) {
-                            notificationManager.postSummaryNotification(
-                                summaryId = result.summaryId,
-                                summaryText = result.summaryText,
-                                packageName = summary.packageName,
-                                conversationKey = summary.conversationKey,
-                                appName = summary.appName,
-                                contactOrGroup = summary.contactOrGroup
-                            )
+                            summaries.add(summary)
                         }
                     }
                     is SummaryResult.Error -> {
                         Log.w(TAG, "Summarization error: ${result.message}")
                     }
                 }
+            }
+            
+            // Post grouped notifications for all summaries
+            if (summaries.isNotEmpty()) {
+                notificationManager.postGroupedSummaryNotifications(summaries)
             }
 
             Log.d(TAG, "Periodic summarization work completed successfully")

@@ -30,7 +30,8 @@ object DatabaseSeeder {
             seedDefaultLlmConfig(database)
 
             // Seed common app rules
-            seedCommonAppRules(database)
+            // Disabled automatic seeding of app rules to ensure onboarding screen shows on first run/reinstall
+            // seedCommonAppRules(database)
 
             // Mark as seeded
             prefs.edit().putBoolean(KEY_SEEDED, true).apply()

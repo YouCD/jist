@@ -2,6 +2,7 @@ package dev.rcht.jist.engine
 
 import android.content.Context
 import dev.rcht.jist.data.db.entity.SummaryEntity
+import dev.rcht.jist.data.repository.AppRuleRepository
 import dev.rcht.jist.data.repository.LlmConfigRepository
 import dev.rcht.jist.data.repository.NotificationRepository
 import dev.rcht.jist.data.repository.SummaryRepository
@@ -13,7 +14,6 @@ import dev.rcht.jist.llm.NotificationForSummary
 import dev.rcht.jist.llm.PromptBuilder
 import dev.rcht.jist.util.AppIconExtractor
 import okhttp3.OkHttpClient
-import java.util.concurrent.TimeUnit
 
 /**
  * Orchestrates notification batching and LLM-based summarization
@@ -23,6 +23,7 @@ class SummaryEngine(
     private val notificationRepository: NotificationRepository,
     private val summaryRepository: SummaryRepository,
     private val llmConfigRepository: LlmConfigRepository,
+    private val appRuleRepository: AppRuleRepository,
     private val httpClient: OkHttpClient
 ) {
 
@@ -138,12 +139,17 @@ class SummaryEngine(
             val results = mutableListOf<SummaryResult>()
 
             for ((conversationKey, notifications) in conversationsByKey) {
-                // Simple heuristic: summarize if we have 3+ messages or it's been 15+ minutes
-                val timeSinceFirst = System.currentTimeMillis() - notifications.first().timestamp
-                val shouldSummarize = notifications.size >= 3 ||
-                        timeSinceFirst > TimeUnit.MINUTES.toMillis(15)
+                // Check if app is enabled
+                val packageName = notifications.firstOrNull()?.packageName
+                if (!packageName.isNullOrBlank() && packageName != "Unknown") {
+                    val appRule = appRuleRepository.getForApp(packageName)
+                    if (appRule != null && !appRule.enabled) {
+                        continue // Skip disabled apps
+                    }
+                }
 
-                if (shouldSummarize) {
+                // Summarize when there are 5+ messages from the same chat
+                if (notifications.size >= 5) {
                     val result = summarizeConversation(conversationKey)
                     results.add(result)
                 }

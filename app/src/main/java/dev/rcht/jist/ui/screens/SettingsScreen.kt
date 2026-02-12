@@ -59,6 +59,8 @@ fun SettingsScreen(
     onTestConnection: (LlmConfigEntity) -> Unit = {},
     onClearTestResult: () -> Unit = {},
     onSetDefault: (LlmConfigEntity) -> Unit = {},
+    onNavigateToAppSettings: () -> Unit = {},
+    onRunOnboarding: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
@@ -91,6 +93,27 @@ fun SettingsScreen(
                     .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
+                item {
+                    Button(
+                        onClick = { onNavigateToAppSettings() },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(48.dp)
+                    ) {
+                        Text("Manage Apps")
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Button(
+                        onClick = { onRunOnboarding() },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(48.dp)
+                    ) {
+                        Text("Run Onboarding")
+                    }
+                    Spacer(modifier = Modifier.height(16.dp))
+                }
+
                 item {
                     Text(
                         text = "LLM Configurations",

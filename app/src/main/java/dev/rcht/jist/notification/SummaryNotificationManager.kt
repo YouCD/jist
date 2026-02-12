@@ -190,11 +190,125 @@ class SummaryNotificationManager(private val context: Context) {
     }
 
     /**
-     * Cancel a notification by ID
+     * Post grouped notifications by app
+     * Groups multiple summaries by packageName and shows them in one notification with InboxStyle
      */
-    fun cancelNotification(notificationId: Int) {
-        notificationManager.cancel(notificationId)
-        Log.d(TAG, "Notification cancelled: $notificationId")
+    fun postGroupedSummaryNotifications(summaries: List<dev.rcht.jist.data.db.entity.SummaryEntity>) {
+        try {
+            // Group summaries by packageName
+            val summariesByApp = summaries.groupBy { it.packageName }
+            
+            for ((packageName, appSummaries) in summariesByApp) {
+                postAppGroupedNotification(packageName, appSummaries)
+            }
+            
+            Log.d(TAG, "Posted grouped notifications for ${summariesByApp.size} apps")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error posting grouped notifications", e)
+        }
+    }
+    
+    private fun postAppGroupedNotification(
+        packageName: String,
+        summaries: List<dev.rcht.jist.data.db.entity.SummaryEntity>
+    ) {
+        try {
+            if (summaries.isEmpty()) return
+            
+            // Use first summary's app info
+            val firstSummary = summaries[0]
+            val appName = firstSummary.appName
+            
+            // Create title
+            val title = "$appName (${summaries.size} chats)"
+            
+            // Get app icon
+            val appIcon = if (packageName != "Unknown") {
+                dev.rcht.jist.util.AppIconExtractor.getAppIcon(context, packageName)
+            } else {
+                null
+            }
+            
+            // Create InboxStyle notification with all summaries
+            val inboxStyle = NotificationCompat.InboxStyle()
+                .setBigContentTitle(title)
+            
+            // Add each summary as a line
+            summaries.forEach { summary ->
+                // First line of summary as preview
+                val previewText = summary.summaryText.split("\n").firstOrNull()?.take(40) ?: ""
+                inboxStyle.addLine("${summary.contactOrGroup}: $previewText")
+            }
+            
+            // Set summary at the end
+            inboxStyle.setSummaryText("${summaries.size} conversations summarized")
+            
+            // Create main notification
+            val notificationBuilder = NotificationCompat.Builder(
+                context,
+                JistApplication.CHANNEL_SUMMARIES
+            )
+                .setContentTitle(title)
+                .setContentText("${summaries.size} summaries ready")
+                .setStyle(inboxStyle)
+                .setAutoCancel(true)
+                .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+                .setGroup("summaries_$packageName")
+                .setGroupSummary(true)
+                .setShowWhen(true)
+            
+            // Set app icon if available
+            if (appIcon != null) {
+                notificationBuilder.setLargeIcon(
+                    dev.rcht.jist.util.DrawableUtil.drawableToBitmap(appIcon)
+                )
+            }
+            
+            // Set small icon
+            notificationBuilder.setSmallIcon(R.mipmap.ic_launcher)
+            
+            // Create content intent - open main app launch intent for the app
+            val tapIntent = dev.rcht.jist.util.ChatIntentBuilder.buildChatIntent(
+                context,
+                packageName,
+                "",
+                ""
+            ) ?: Intent(context, MainActivity::class.java)
+            
+            val pendingIntent = PendingIntent.getActivity(
+                context,
+                packageName.hashCode(),
+                tapIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+            
+            notificationBuilder.setContentIntent(pendingIntent)
+            
+            val notification = notificationBuilder.build()
+            
+            // Post the notification
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                try {
+                    notificationManager.notify(packageName.hashCode(), notification)
+                    Log.d(TAG, "✓ Grouped notification posted for $appName with ${summaries.size} summaries")
+                } catch (e: SecurityException) {
+                    Log.w(TAG, "Missing POST_NOTIFICATIONS permission", e)
+                }
+            } else {
+                notificationManager.notify(packageName.hashCode(), notification)
+                Log.d(TAG, "✓ Grouped notification posted for $appName with ${summaries.size} summaries")
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error posting app grouped notification for $packageName", e)
+        }
+    }
+
+    /**
+     * Cancel a notification by package name
+     */
+    fun cancelNotificationForApp(packageName: String) {
+        notificationManager.cancel(packageName.hashCode())
+        Log.d(TAG, "Notification cancelled for: $packageName")
     }
 
     companion object {
@@ -236,20 +350,15 @@ class SummarizeActionReceiver : BroadcastReceiver() {
                 when (result) {
                     is dev.rcht.jist.engine.SummaryResult.Success -> {
                         // Cancel the action notification
-                        notificationManager.cancelNotification(conversationKey.hashCode())
+                        val systemNotificationManager =
+                            context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+                        systemNotificationManager.cancel(conversationKey.hashCode())
 
                         // Get the summary to extract packageName and other info
                         val summary = app.summaryRepository.getById(result.summaryId)
                         if (summary != null) {
-                            // Post summary notification
-                            notificationManager.postSummaryNotification(
-                                summaryId = result.summaryId,
-                                summaryText = result.summaryText,
-                                packageName = summary.packageName,
-                                conversationKey = summary.conversationKey,
-                                appName = summary.appName,
-                                contactOrGroup = summary.contactOrGroup
-                            )
+                            // Post grouped notification using the same mechanism
+                            notificationManager.postGroupedSummaryNotifications(listOf(summary))
                         }
                         Log.d(TAG, "Summary generated successfully")
                     }

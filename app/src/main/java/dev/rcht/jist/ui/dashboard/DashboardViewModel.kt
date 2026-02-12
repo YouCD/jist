@@ -115,6 +115,9 @@ class DashboardViewModel(
                 val results = summaryEngine.summarizeAllPending()
                 Log.d(TAG, "Step 2: SummaryEngine returned ${results.size} results")
 
+                // Collect all successful summaries
+                val summaries = mutableListOf<dev.rcht.jist.data.db.entity.SummaryEntity>()
+                
                 results.forEachIndexed { index, result ->
                     Log.d(TAG, "Processing result ${index + 1}/${results.size}")
                     when (result) {
@@ -124,16 +127,8 @@ class DashboardViewModel(
                             // Get the summary to extract metadata
                             val summary = summaryRepository.getById(result.summaryId)
                             if (summary != null) {
+                                summaries.add(summary)
                                 Log.d(TAG, "✓ Summary found: packageName=${summary.packageName}, appName=${summary.appName}, contact=${summary.contactOrGroup}")
-                                summaryNotificationManager.postSummaryNotification(
-                                    summaryId = result.summaryId,
-                                    summaryText = result.summaryText,
-                                    packageName = summary.packageName,
-                                    conversationKey = summary.conversationKey,
-                                    appName = summary.appName,
-                                    contactOrGroup = summary.contactOrGroup
-                                )
-                                Log.d(TAG, "✓ Notification posted for ${summary.appName} - ${summary.contactOrGroup}")
                             } else {
                                 Log.w(TAG, "✗ Summary not found with id=${result.summaryId}")
                             }
@@ -145,7 +140,14 @@ class DashboardViewModel(
                     }
                 }
 
-                Log.d(TAG, "Step 3: All results processed, refreshing dashboard data")
+                // Post grouped notifications for all summaries
+                if (summaries.isNotEmpty()) {
+                    Log.d(TAG, "Step 3: Posting grouped notifications for ${summaries.size} summaries")
+                    summaryNotificationManager.postGroupedSummaryNotifications(summaries)
+                    Log.d(TAG, "✓ Notifications posted")
+                }
+
+                Log.d(TAG, "Step 4: Refreshing dashboard data")
                 // Refresh data to show updated stats
                 loadDashboardData()
                 

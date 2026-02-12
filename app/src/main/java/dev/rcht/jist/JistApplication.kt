@@ -17,6 +17,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.flow.first
 import okhttp3.OkHttpClient
 import java.util.concurrent.TimeUnit
 
@@ -65,12 +66,26 @@ class JistApplication : Application() {
         customPromptRepository = dev.rcht.jist.data.repository.CustomPromptRepository(database.customPromptDao())
         preferencesRepository = PreferencesRepository(this)
 
+        // Ensure onboarding is shown when DB has no app rules even if preferences say complete (first-run recovery)
+        runBlocking {
+            try {
+                val prefs = preferencesRepository.preferencesFlow.first()
+                val rules = appRuleRepository.getAll()
+                if (prefs.isOnboardingComplete && rules.isEmpty()) {
+                    preferencesRepository.setOnboardingComplete(false)
+                }
+            } catch (e: Exception) {
+                // ignore
+            }
+        }
+
         // Initialize engines
         summaryEngine = SummaryEngine(
             this,
             notificationRepository,
             summaryRepository,
             llmConfigRepository,
+            appRuleRepository,
             httpClient
         )
         
