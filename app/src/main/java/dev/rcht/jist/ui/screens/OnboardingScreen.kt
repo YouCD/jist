@@ -155,7 +155,7 @@ fun OnboardingScreen(
                     ),
                     enabled = when (step) {
                         1 -> listenerEnabled // Step 2 requires Notification Listener
-                        4 -> apiKey.isNotBlank() // Step 5 requires API Key
+                        4 -> apiKey.isNotBlank() && selectedModel.isNotBlank() // Step 5 requires API Key & Model
                         else -> true
                     }
                 ) {
@@ -548,6 +548,27 @@ fun Step5LlmConfiguration(
     summaryLength: String,
     onSelectLength: (String) -> Unit
 ) {
+    // Define models per provider
+    val openAiModels = listOf("gpt-4-turbo", "gpt-4o", "gpt-3.5-turbo")
+    val geminiModels = listOf("gemini-1.5-pro", "gemini-1.5-flash", "gemini-pro")
+    val localModels = listOf("llama-3-8b", "mistral-7b", "gemma-7b")
+
+    val currentModels = when(selectedProvider) {
+        "OPENAI" -> openAiModels
+        "GEMINI" -> geminiModels
+        "LOCAL" -> localModels
+        else -> openAiModels
+    }
+    
+    var isCustomModel by remember { mutableStateOf(false) }
+    var expanded by remember { mutableStateOf(false) }
+
+    // Reset custom model state when provider changes
+    LaunchedEffect(selectedProvider) {
+        onSelectModel(currentModels.first())
+        isCustomModel = false
+    }
+
     Column(horizontalAlignment = Alignment.Start, modifier = Modifier.fillMaxWidth()) {
         Spacer(modifier = Modifier.height(10.dp))
         Text(text = "LLM Configuration", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, modifier = Modifier.align(Alignment.CenterHorizontally))
@@ -567,17 +588,55 @@ fun Step5LlmConfiguration(
         Text("Model Version", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Spacer(modifier = Modifier.height(8.dp))
         
-        // Simple Dropdown simulation
-        OutlinedCard(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(12.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha=0.1f)),
-            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha=0.3f))
-        ) {
-            Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text(text = if(selectedModel.isNotBlank()) selectedModel else "Select Model", modifier = Modifier.weight(1f))
-                Icon(Icons.Default.ArrowDropDown, null)
+        Box(modifier = Modifier.fillMaxWidth()) {
+            OutlinedCard(
+                modifier = Modifier.fillMaxWidth().clickable { expanded = true },
+                shape = RoundedCornerShape(12.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha=0.1f)),
+                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha=0.3f))
+            ) {
+                Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text(text = if (isCustomModel) "Custom Model" else selectedModel, modifier = Modifier.weight(1f))
+                    Icon(Icons.Default.ArrowDropDown, null)
+                }
             }
+            
+            DropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { expanded = false },
+                modifier = Modifier.fillMaxWidth(0.8f)
+            ) {
+                currentModels.forEach { model ->
+                    DropdownMenuItem(
+                        text = { Text(model) },
+                        onClick = {
+                            onSelectModel(model)
+                            isCustomModel = false
+                            expanded = false
+                        }
+                    )
+                }
+                DropdownMenuItem(
+                    text = { Text("Custom...") },
+                    onClick = {
+                        isCustomModel = true
+                        onSelectModel("") // Clear for input
+                        expanded = false
+                    }
+                )
+            }
+        }
+        
+        if (isCustomModel) {
+            Spacer(modifier = Modifier.height(8.dp))
+            OutlinedTextField(
+                value = selectedModel,
+                onValueChange = onSelectModel,
+                label = { Text("Enter Model Name") },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                shape = RoundedCornerShape(12.dp)
+            )
         }
         
         Spacer(modifier = Modifier.height(24.dp))
