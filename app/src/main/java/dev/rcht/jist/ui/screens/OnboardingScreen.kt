@@ -17,10 +17,17 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -29,7 +36,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.produceState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -97,155 +103,189 @@ fun OnboardingScreen(
     LaunchedEffect(step) {
         while (true) {
             refreshStatuses()
-            delay(1500)
+            delay(1200)
         }
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(24.dp),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Text(text = "Step ${step + 1} of $stepsCount", style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(bottom = 12.dp))
+    Surface(modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 24.dp), color = MaterialTheme.colorScheme.background) {
+        Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
 
-        Column(modifier = Modifier.fillMaxWidth(0.85f), horizontalAlignment = Alignment.CenterHorizontally) {
-            when (step) {
-                0 -> {
-                    Text(
-                        text = "Welcome to Jist",
-                        style = MaterialTheme.typography.headlineMedium,
-                        modifier = Modifier.padding(bottom = 12.dp)
-                    )
-                    Text(
-                        text = "Jist summarizes messages across your apps. This quick setup will guide you through the required permissions and configuration.",
-                        style = MaterialTheme.typography.bodyLarge,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.padding(bottom = 24.dp)
-                    )
+            Card(
+                modifier = Modifier.fillMaxWidth(0.94f),
+                shape = RoundedCornerShape(20.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+            ) {
+                Column(modifier = Modifier.padding(28.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(text = "Step ${step + 1} of $stepsCount", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Spacer(modifier = Modifier.height(8.dp))
 
-                    Button(onClick = { step = 1 }, modifier = Modifier.fillMaxWidth().height(52.dp)) {
-                        Text("Get Started")
-                    }
-                }
+                    when (step) {
+                        0 -> {
+                            Text(
+                                text = "Welcome to Jist",
+                                style = MaterialTheme.typography.headlineMedium,
+                                modifier = Modifier.padding(bottom = 12.dp),
+                                textAlign = TextAlign.Center
+                            )
+                            Text(
+                                text = "Jist summarizes messages across your apps. This quick setup will guide you through the required permissions and configuration.",
+                                style = MaterialTheme.typography.bodyLarge,
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier.padding(bottom = 20.dp)
+                            )
 
-                1 -> {
-                    Text(text = "Allow notifications", style = MaterialTheme.typography.headlineSmall, modifier = Modifier.padding(bottom = 8.dp))
-                    Text(text = "Jist needs to post and read notifications to summarize messages.", style = MaterialTheme.typography.bodyMedium, textAlign = TextAlign.Center, modifier = Modifier.padding(bottom = 16.dp))
-
-                    Button(onClick = {
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                            notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-                        } else {
-                            val intent = Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply { putExtra(Settings.EXTRA_APP_PACKAGE, pkg) }
-                            context.startActivity(intent)
-                        }
-                    }, modifier = Modifier.fillMaxWidth().height(52.dp)) {
-                        Text(if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) "Request Notification Permission" else "Open Notification Settings")
-                    }
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Button(onClick = { if (step > 0) step-- }, modifier = Modifier.width(140.dp).height(48.dp)) { Text("Back") }
-                        Button(onClick = { step++ }, enabled = notificationsEnabled, modifier = Modifier.width(140.dp).height(48.dp)) { Text("Next") }
-                    }
-
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    Button(onClick = { step++ }, modifier = Modifier.fillMaxWidth().height(44.dp)) { Text("Skip this step") }
-                }
-
-                2 -> {
-                    Text(text = "Enable notification access", style = MaterialTheme.typography.headlineSmall, modifier = Modifier.padding(bottom = 8.dp))
-                    Text(text = "To capture incoming messages for summarization, enable Notification Access for Jist.", style = MaterialTheme.typography.bodyMedium, textAlign = TextAlign.Center, modifier = Modifier.padding(bottom = 16.dp))
-
-                    Button(onClick = { context.startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)) }, modifier = Modifier.fillMaxWidth().height(52.dp)) { Text("Open Notification Access") }
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Button(onClick = { if (step > 0) step-- }, modifier = Modifier.width(140.dp).height(48.dp)) { Text("Back") }
-                        Button(onClick = { step++ }, enabled = listenerEnabled, modifier = Modifier.width(140.dp).height(48.dp)) { Text("Next") }
-                    }
-
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    Button(onClick = { step++ }, modifier = Modifier.fillMaxWidth().height(44.dp)) { Text("Skip this step") }
-                }
-
-                3 -> {
-                    Text(text = "Allow background activity", style = MaterialTheme.typography.headlineSmall, modifier = Modifier.padding(bottom = 8.dp))
-                    Text(text = "Whitelist Jist from battery optimizations so it can run reliably.", style = MaterialTheme.typography.bodyMedium, textAlign = TextAlign.Center, modifier = Modifier.padding(bottom = 16.dp))
-
-                    Button(onClick = {
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                            try {
-                                val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply { data = Uri.parse("package:$pkg") }
-                                context.startActivity(intent)
-                            } catch (e: Exception) {
-                                val intent = Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
-                                context.startActivity(intent)
+                            FilledTonalButton(
+                                onClick = { step = 1 },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(56.dp),
+                                shape = RoundedCornerShape(28.dp)
+                            ) {
+                                Text("Get Started", style = MaterialTheme.typography.labelLarge)
                             }
                         }
-                    }, modifier = Modifier.fillMaxWidth().height(52.dp)) { Text("Request Battery Whitelist") }
 
-                    Spacer(modifier = Modifier.height(16.dp))
+                        1 -> {
+                            Text(text = "Allow notifications", style = MaterialTheme.typography.headlineSmall, modifier = Modifier.padding(bottom = 8.dp))
+                            Text(text = "Jist needs to post and read notifications to summarize messages.", style = MaterialTheme.typography.bodyMedium, textAlign = TextAlign.Center, modifier = Modifier.padding(bottom = 20.dp))
 
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Button(onClick = { if (step > 0) step-- }, modifier = Modifier.width(140.dp).height(48.dp)) { Text("Back") }
-                        Button(onClick = { step++ }, enabled = batteryIgnored, modifier = Modifier.width(140.dp).height(48.dp)) { Text("Next") }
-                    }
-
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    Button(onClick = { step++ }, modifier = Modifier.fillMaxWidth().height(44.dp)) { Text("Skip this step") }
-                }
-
-                4 -> {
-                    Text(text = "Configure AI model (LLM)", style = MaterialTheme.typography.headlineSmall, modifier = Modifier.padding(bottom = 8.dp))
-                    Text(text = "Add your LLM API key to enable summaries.", style = MaterialTheme.typography.bodyMedium, textAlign = TextAlign.Center, modifier = Modifier.padding(bottom = 16.dp))
-
-                    Button(onClick = { onOpenSettings() }, modifier = Modifier.fillMaxWidth().height(52.dp)) { Text("Open LLM Settings") }
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Button(onClick = { if (step > 0) step-- }, modifier = Modifier.width(140.dp).height(48.dp)) { Text("Back") }
-                        Button(onClick = { step++ }, enabled = llmConfigured, modifier = Modifier.width(140.dp).height(48.dp)) { Text("Next") }
-                    }
-
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    Button(onClick = { step++ }, modifier = Modifier.fillMaxWidth().height(44.dp)) { Text("Skip this step") }
-                }
-
-                5 -> {
-                    Text(text = "Enable messaging apps & finish", style = MaterialTheme.typography.headlineSmall, modifier = Modifier.padding(bottom = 8.dp))
-                    Text(text = "This will enable summarization for detected messaging & email apps.", style = MaterialTheme.typography.bodyMedium, textAlign = TextAlign.Center, modifier = Modifier.padding(bottom = 16.dp))
-
-                    Button(onClick = {
-                        viewModel.startSetup()
-                        scope.launch {
-                            delay(500)
-                            refreshStatuses()
-                        }
-                    }, modifier = Modifier.fillMaxWidth().height(52.dp)) { Text("Start Setup (Enable messaging apps)") }
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Button(onClick = { if (step > 0) step-- }, modifier = Modifier.width(140.dp).height(48.dp)) { Text("Back") }
-                        Button(onClick = {
-                            scope.launch {
-                                viewModel.finishOnboarding()
-                                onOnboardingComplete()
+                            FilledTonalButton(
+                                onClick = {
+                                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                        notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                                    } else {
+                                        val intent = Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply { putExtra(Settings.EXTRA_APP_PACKAGE, pkg) }
+                                        context.startActivity(intent)
+                                    }
+                                },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(56.dp),
+                                shape = RoundedCornerShape(28.dp)
+                            ) {
+                                Text(if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) "Request Notification Permission" else "Open Notification Settings", style = MaterialTheme.typography.labelLarge)
                             }
-                        }, modifier = Modifier.width(140.dp).height(48.dp)) { Text("Finish") }
+
+                            Spacer(modifier = Modifier.height(18.dp))
+
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                OutlinedButton(
+                                    onClick = { if (step > 0) step-- },
+                                    modifier = Modifier.width(160.dp).height(48.dp),
+                                    shape = RoundedCornerShape(24.dp)
+                                ) { Text("Back") }
+
+                                FilledTonalButton(
+                                    onClick = { step++ },
+                                    enabled = notificationsEnabled,
+                                    modifier = Modifier.width(160.dp).height(48.dp),
+                                    shape = RoundedCornerShape(24.dp)
+                                ) { Text("Next") }
+                            }
+
+                            Spacer(modifier = Modifier.height(12.dp))
+
+                            TextButton(onClick = { step++ }, modifier = Modifier.fillMaxWidth().height(44.dp)) { Text("Skip this step") }
+                        }
+
+                        2 -> {
+                            Text(text = "Enable notification access", style = MaterialTheme.typography.headlineSmall, modifier = Modifier.padding(bottom = 8.dp))
+                            Text(text = "To capture incoming messages for summarization, enable Notification Access for Jist.", style = MaterialTheme.typography.bodyMedium, textAlign = TextAlign.Center, modifier = Modifier.padding(bottom = 20.dp))
+
+                            FilledTonalButton(onClick = { context.startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)) }, modifier = Modifier.fillMaxWidth().height(56.dp), shape = RoundedCornerShape(28.dp)) { Text("Open Notification Access") }
+
+                            Spacer(modifier = Modifier.height(18.dp))
+
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                OutlinedButton(onClick = { if (step > 0) step-- }, modifier = Modifier.width(160.dp).height(48.dp), shape = RoundedCornerShape(24.dp)) { Text("Back") }
+                                FilledTonalButton(onClick = { step++ }, enabled = listenerEnabled, modifier = Modifier.width(160.dp).height(48.dp), shape = RoundedCornerShape(24.dp)) { Text("Next") }
+                            }
+
+                            Spacer(modifier = Modifier.height(12.dp))
+
+                            TextButton(onClick = { step++ }, modifier = Modifier.fillMaxWidth().height(44.dp)) { Text("Skip this step") }
+                        }
+
+                        3 -> {
+                            Text(text = "Allow background activity", style = MaterialTheme.typography.headlineSmall, modifier = Modifier.padding(bottom = 8.dp))
+                            Text(text = "Whitelist Jist from battery optimizations so it can run reliably.", style = MaterialTheme.typography.bodyMedium, textAlign = TextAlign.Center, modifier = Modifier.padding(bottom = 20.dp))
+
+                            FilledTonalButton(onClick = {
+                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                                    try {
+                                        val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply { data = Uri.parse("package:$pkg") }
+                                        context.startActivity(intent)
+                                    } catch (e: Exception) {
+                                        val intent = Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
+                                        context.startActivity(intent)
+                                    }
+                                }
+                            }, modifier = Modifier.fillMaxWidth().height(56.dp), shape = RoundedCornerShape(28.dp)) { Text("Request Battery Whitelist") }
+
+                            Spacer(modifier = Modifier.height(18.dp))
+
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                OutlinedButton(onClick = { if (step > 0) step-- }, modifier = Modifier.width(160.dp).height(48.dp), shape = RoundedCornerShape(24.dp)) { Text("Back") }
+                                FilledTonalButton(onClick = { step++ }, enabled = batteryIgnored, modifier = Modifier.width(160.dp).height(48.dp), shape = RoundedCornerShape(24.dp)) { Text("Next") }
+                            }
+
+                            Spacer(modifier = Modifier.height(12.dp))
+
+                            TextButton(onClick = { step++ }, modifier = Modifier.fillMaxWidth().height(44.dp)) { Text("Skip this step") }
+                        }
+
+                        4 -> {
+                            Text(text = "Configure AI model (LLM)", style = MaterialTheme.typography.headlineSmall, modifier = Modifier.padding(bottom = 8.dp))
+                            Text(text = "Add your LLM API key to enable summaries.", style = MaterialTheme.typography.bodyMedium, textAlign = TextAlign.Center, modifier = Modifier.padding(bottom = 20.dp))
+
+                            FilledTonalButton(onClick = { onOpenSettings() }, modifier = Modifier.fillMaxWidth().height(56.dp), shape = RoundedCornerShape(28.dp)) { Text("Open LLM Settings") }
+
+                            Spacer(modifier = Modifier.height(18.dp))
+
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                OutlinedButton(onClick = { if (step > 0) step-- }, modifier = Modifier.width(160.dp).height(48.dp), shape = RoundedCornerShape(24.dp)) { Text("Back") }
+                                FilledTonalButton(onClick = { step++ }, enabled = llmConfigured, modifier = Modifier.width(160.dp).height(48.dp), shape = RoundedCornerShape(24.dp)) { Text("Next") }
+                            }
+
+                            Spacer(modifier = Modifier.height(12.dp))
+
+                            TextButton(onClick = { step++ }, modifier = Modifier.fillMaxWidth().height(44.dp)) { Text("Skip this step") }
+                        }
+
+                        5 -> {
+                            Text(text = "Enable messaging apps & finish", style = MaterialTheme.typography.headlineSmall, modifier = Modifier.padding(bottom = 8.dp))
+                            Text(text = "This will enable summarization for detected messaging & email apps.", style = MaterialTheme.typography.bodyMedium, textAlign = TextAlign.Center, modifier = Modifier.padding(bottom = 20.dp))
+
+                            FilledTonalButton(onClick = {
+                                viewModel.startSetup()
+                                scope.launch {
+                                    delay(500)
+                                    refreshStatuses()
+                                }
+                            }, modifier = Modifier.fillMaxWidth().height(56.dp), shape = RoundedCornerShape(28.dp)) { Text("Start Setup (Enable messaging apps)") }
+
+                            Spacer(modifier = Modifier.height(16.dp))
+
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                OutlinedButton(onClick = { if (step > 0) step-- }, modifier = Modifier.width(160.dp).height(48.dp), shape = RoundedCornerShape(24.dp)) { Text("Back") }
+                                FilledTonalButton(onClick = {
+                                    scope.launch {
+                                        viewModel.finishOnboarding()
+                                        onOnboardingComplete()
+                                    }
+                                }, modifier = Modifier.width(160.dp).height(48.dp), shape = RoundedCornerShape(24.dp)) { Text("Finish") }
+                            }
+                        }
                     }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    LinearProgressIndicator(progress = (step + 1f) / stepsCount, modifier = Modifier.fillMaxWidth().height(6.dp))
                 }
             }
+
+            Spacer(modifier = Modifier.height(14.dp))
         }
     }
 }
@@ -253,6 +293,6 @@ fun OnboardingScreen(
 @Composable
 private fun TextActionRight(text: String, onClick: () -> Unit) {
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-        Button(onClick = onClick) { Text(text) }
+        OutlinedButton(onClick = onClick) { Text(text) }
     }
 }
