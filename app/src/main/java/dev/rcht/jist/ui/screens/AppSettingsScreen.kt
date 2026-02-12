@@ -1,44 +1,47 @@
 package dev.rcht.jist.ui.screens
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
+import android.graphics.Bitmap
+import android.graphics.drawable.Drawable
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Switch
-import androidx.compose.material3.Text
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.core.graphics.drawable.toBitmap
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import dev.rcht.jist.JistApplication
 import dev.rcht.jist.data.db.entity.AppRuleEntity
 import dev.rcht.jist.ui.settings.AppSettingsViewModel
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
+@OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun AppSettingsScreen(
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onNavigateBack: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val app = context.applicationContext as JistApplication
@@ -59,183 +62,148 @@ fun AppSettingsScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     Scaffold(
-        modifier = modifier.fillMaxSize()
+        topBar = {
+            CenterAlignedTopAppBar(
+                title = { Text("Monitored Apps", fontWeight = FontWeight.SemiBold) },
+                navigationIcon = {
+                     // Back button placeholder if needed
+                },
+                actions = {
+                    TextButton(onClick = { 
+                        onNavigateBack()
+                    }) {
+                        Text("Done", fontWeight = FontWeight.Bold)
+                    }
+                },
+                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.background
+                )
+            )
+        },
+        containerColor = MaterialTheme.colorScheme.background
+        // FAB Removed
     ) { paddingValues ->
         if (uiState.isLoading) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues),
-                contentAlignment = Alignment.Center
-            ) {
-                CircularProgressIndicator()
-            }
-        } else if (uiState.messagingApps.isEmpty() && uiState.otherApps.isEmpty()) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues),
-                contentAlignment = Alignment.Center
-            ) {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = Modifier.padding(16.dp)
-                ) {
-                    Text(
-                        text = "No apps found",
-                        style = MaterialTheme.typography.headlineSmall
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = "Unable to load installed apps",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
+             Box(modifier = Modifier.fillMaxSize().padding(paddingValues), contentAlignment = Alignment.Center) {
+                 CircularProgressIndicator()
+             }
         } else {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(paddingValues)
+                    .padding(horizontal = 16.dp)
             ) {
-                // Header - fixed at top
-                Column(
+                // Search Bar
+                OutlinedTextField(
+                    value = uiState.searchQuery,
+                    onValueChange = { viewModel.updateSearchQuery(it) },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(16.dp)
+                        .padding(bottom = 16.dp),
+                    placeholder = { Text("Search apps...", color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha=0.5f)) },
+                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant) },
+                     trailingIcon = {
+                        if (uiState.searchQuery.isNotEmpty()) {
+                            IconButton(onClick = { viewModel.updateSearchQuery("") }) {
+                                Icon(Icons.Default.Clear, contentDescription = "Clear", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        }
+                    },
+                    shape = RoundedCornerShape(12.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha=0.3f),
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha=0.3f),
+                        focusedBorderColor = Color.Transparent,
+                        unfocusedBorderColor = Color.Transparent
+                    )
+                )
+
+                // Stats Row
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "Installed Apps",
-                        style = MaterialTheme.typography.headlineMedium
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = "${uiState.messagingApps.size + uiState.otherApps.size} total (${uiState.messagingApps.size} messaging, ${uiState.otherApps.size} other)",
-                        style = MaterialTheme.typography.bodySmall,
+                        text = "${uiState.allAppsCount} APPS INSTALLED",
+                        style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    
-                    // Search bar
-                    OutlinedTextField(
-                        value = uiState.searchQuery,
-                        onValueChange = { viewModel.updateSearchQuery(it) },
-                        modifier = Modifier.fillMaxWidth(),
-                        placeholder = { Text("Search apps...") },
-                        leadingIcon = { Icon(Icons.Filled.Search, contentDescription = "Search") },
-                        trailingIcon = {
-                            if (uiState.searchQuery.isNotEmpty()) {
-                                IconButton(onClick = { viewModel.updateSearchQuery("") }) {
-                                    Icon(Icons.Filled.Clear, contentDescription = "Clear")
+                    TextButton(onClick = { viewModel.toggleAll(true) }) {
+                         Text("Select All", fontSize = 12.sp)
+                    }
+                }
+
+                LazyColumn(
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    // Suggested Section
+                    if (uiState.suggestedApps.isNotEmpty()) {
+                        item {
+                            Text(
+                                text = "SUGGESTED",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha=0.7f),
+                                modifier = Modifier.padding(vertical = 8.dp)
+                            )
+                        }
+                        
+                        item {
+                            Card(
+                                shape = RoundedCornerShape(16.dp),
+                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha=0.3f))
+                            ) {
+                                Column(modifier = Modifier.padding(vertical = 8.dp)) {
+                                    uiState.suggestedApps.forEachIndexed { index, app ->
+                                        AppItem(
+                                            app = app,
+                                            onToggle = { viewModel.toggleAppEnabled(app) }
+                                        )
+                                        if (index < uiState.suggestedApps.size - 1) {
+                                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha=0.1f), modifier = Modifier.padding(horizontal = 16.dp))
+                                        }
+                                    }
                                 }
                             }
-                        },
-                        singleLine = true
-                    )
-                    
-                    if (uiState.searchQuery.isNotEmpty()) {
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            text = "${uiState.filteredMessagingApps.size + uiState.filteredOtherApps.size} results",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-                
-                // List - scrollable with sections
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(horizontal = 16.dp)
-                ) {
-                    // Messaging & Email Section - ALWAYS show
-                    item {
-                        Text(
-                            text = "Messaging & Email (${uiState.filteredMessagingApps.size})",
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.padding(vertical = 8.dp)
-                        )
-                    }
-                    
-                    if (uiState.filteredMessagingApps.isEmpty()) {
-                        item {
-                            Text(
-                                text = "No messaging/email apps found",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.padding(16.dp)
-                            )
-                        }
-                    } else {
-                        items(
-                            items = uiState.filteredMessagingApps,
-                            key = { it.packageName }
-                        ) { app ->
-                            AppSettingCard(
-                                app = app,
-                                onToggle = { viewModel.toggleAppEnabled(app) }
-                            )
+                            Spacer(modifier = Modifier.height(16.dp))
                         }
                     }
-                    
-                    // Other Apps Section - ALWAYS show
-                    item {
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Text(
-                            text = "Other Apps (${uiState.filteredOtherApps.size})",
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.padding(vertical = 8.dp)
-                        )
-                    }
-                    
-                    if (uiState.filteredOtherApps.isEmpty()) {
-                        item {
-                            Text(
-                                text = "No other apps found",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.padding(16.dp)
-                            )
-                        }
-                    } else {
-                        items(
-                            items = uiState.filteredOtherApps,
-                            key = { it.packageName }
-                        ) { app ->
-                            AppSettingCard(
-                                app = app,
-                                onToggle = { viewModel.toggleAppEnabled(app) }
-                            )
-                        }
-                    }
-                }
-            }
-        }
 
-        if (uiState.error != null) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues),
-                contentAlignment = Alignment.BottomCenter
-            ) {
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.errorContainer
-                    )
-                ) {
-                    Text(
-                        text = uiState.error ?: "",
-                        color = MaterialTheme.colorScheme.onErrorContainer,
-                        modifier = Modifier.padding(16.dp)
-                    )
+                    // All Other Apps (No grouping)
+                    if (uiState.otherApps.isNotEmpty()) {
+                        item {
+                             Text(
+                                text = "ALL APPS",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha=0.7f),
+                                modifier = Modifier.padding(vertical = 8.dp)
+                            )
+                        }
+                        
+                        item {
+                            Card(
+                                shape = RoundedCornerShape(16.dp),
+                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha=0.3f))
+                            ) {
+                                Column(modifier = Modifier.padding(vertical = 8.dp)) {
+                                    uiState.otherApps.forEachIndexed { index, app ->
+                                        AppItem(
+                                            app = app,
+                                            onToggle = { viewModel.toggleAppEnabled(app) }
+                                        )
+                                        if (index < uiState.otherApps.size - 1) {
+                                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha=0.1f), modifier = Modifier.padding(horizontal = 16.dp))
+                                        }
+                                    }
+                                }
+                            }
+                            Spacer(modifier = Modifier.height(60.dp))
+                        }
+                    }
                 }
             }
         }
@@ -243,50 +211,79 @@ fun AppSettingsScreen(
 }
 
 @Composable
-private fun AppSettingCard(
-    app: AppRuleEntity,
-    onToggle: () -> Unit
-) {
-    Card(
+fun AppItem(app: AppRuleEntity, onToggle: (Boolean) -> Unit) {
+    Row(
         modifier = Modifier
             .fillMaxWidth()
-            .height(64.dp)
-            .padding(vertical = 2.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant
-        )
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 12.dp, vertical = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            // App info
-            Column(
-                modifier = Modifier
-                    .weight(1f)
-                    .padding(end = 8.dp)
-            ) {
-                Text(
-                    text = app.appName,
-                    style = MaterialTheme.typography.titleSmall,
-                    maxLines = 1
-                )
-                Text(
-                    text = app.packageName,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1
-                )
-            }
-
-            // Toggle switch
-            Switch(
-                checked = app.enabled,
-                onCheckedChange = { onToggle() }
+        // Real App Icon
+        AppIcon(
+            packageName = app.packageName,
+            appName = app.appName, // fallback
+            modifier = Modifier.size(40.dp)
+        )
+        
+        Spacer(modifier = Modifier.width(16.dp))
+        
+        Column(modifier = Modifier.weight(1f)) {
+            Text(text = app.appName, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
+            Text(
+                text = if (app.enabled) "Active" else "Disabled", 
+                style = MaterialTheme.typography.bodySmall, 
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+        }
+        
+        Switch(
+            checked = app.enabled,
+            onCheckedChange = onToggle
+        )
+    }
+}
+
+@Composable
+fun AppIcon(packageName: String, appName: String, modifier: Modifier = Modifier) {
+    val context = LocalContext.current
+    var iconBitmap by remember(packageName) { mutableStateOf<androidx.compose.ui.graphics.ImageBitmap?>(null) }
+
+    LaunchedEffect(packageName) {
+        withContext(Dispatchers.IO) {
+            try {
+                val drawable = context.packageManager.getApplicationIcon(packageName)
+                val bitmap = drawable.toBitmap()
+                iconBitmap = bitmap.asImageBitmap()
+            } catch (e: Exception) {
+                // Ignore, keep null
+            }
+        }
+    }
+
+    if (iconBitmap != null) {
+        Image(
+            bitmap = iconBitmap!!,
+            contentDescription = null,
+            modifier = modifier
+        )
+    } else {
+        // Fallback: Colored Box + First Letter
+        Box(
+            modifier = modifier
+                .background(
+                    if (packageName.contains("whatsapp")) Color(0xFF25D366) 
+                    else if (packageName.contains("slack")) Color(0xFF4A154B)
+                    else if (packageName.contains("discord")) Color(0xFF5865F2)
+                    else MaterialTheme.colorScheme.primaryContainer,
+                    RoundedCornerShape(8.dp)
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+             Text(
+                 text = appName.take(1).uppercase(),
+                 color = MaterialTheme.colorScheme.onPrimaryContainer,
+                 fontWeight = FontWeight.Bold
+             )
         }
     }
 }

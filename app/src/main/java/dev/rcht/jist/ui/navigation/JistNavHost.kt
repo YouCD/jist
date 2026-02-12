@@ -234,7 +234,9 @@ fun JistNavHost(
             )
         }
         composable(Screen.AppSettings.route) {
-            AppSettingsScreen()
+            AppSettingsScreen(
+                onNavigateBack = { navController.popBackStack() }
+            )
         }
         composable(Screen.NotificationLog.route) {
             NotificationLogScreen()

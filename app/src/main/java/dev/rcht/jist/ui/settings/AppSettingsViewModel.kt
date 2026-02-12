@@ -15,10 +15,9 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
 data class AppSettingsUiState(
-    val messagingApps: List<AppRuleEntity> = emptyList(),
+    val suggestedApps: List<AppRuleEntity> = emptyList(),
     val otherApps: List<AppRuleEntity> = emptyList(),
-    val filteredMessagingApps: List<AppRuleEntity> = emptyList(),
-    val filteredOtherApps: List<AppRuleEntity> = emptyList(),
+    val allAppsCount: Int = 0,
     val searchQuery: String = "",
     val isLoading: Boolean = false,
     val error: String? = null
@@ -32,6 +31,9 @@ class AppSettingsViewModel(
 
     private val _uiState = MutableStateFlow(AppSettingsUiState())
     val uiState: StateFlow<AppSettingsUiState> = _uiState
+    
+    // Keep full list in memory for filtering
+    private var allAppsCache: List<AppRuleEntity> = emptyList()
 
     init {
         loadAppRules()
@@ -44,48 +46,24 @@ class AppSettingsViewModel(
                 val packageManager = context.packageManager
                 val installedApps = packageManager.getInstalledApplications(PackageManager.GET_META_DATA)
                 
-                Log.d(TAG, "=== LOADING APPS ===")
-                Log.d(TAG, "Total installed apps: ${installedApps.size}")
-                
-                // Log first 20 and last 5 to check if WhatsApp/Telegram are there
-                installedApps.forEachIndexed { i, app ->
-                    if (i < 5 || i >= installedApps.size - 5) {
-                        Log.d(TAG, "ALL[$i]: ${app.packageName}")
-                    }
-                }
-                
                 // Get existing rules from database
                 val existingRules = appRuleRepository.getAll().associateBy { it.packageName }
 
-                Log.d(TAG, "Apps in database: ${existingRules.size}")
-
-                // Build app list: use database rules if exist, else create with defaults
+                // Build app list
                 val allApps = installedApps.mapNotNull { appInfo ->
                     try {
                         val packageName = appInfo.packageName
                         val appLabel = try {
                             packageManager.getApplicationLabel(appInfo).toString()
                         } catch (e: Exception) {
-                            Log.w(TAG, "Failed to get label for $packageName: ${e.message}")
                             packageName
                         }
                         
-                        val isMessaging = isMessagingOrEmailApp(packageName)
+                        // Skip system components (simple heuristic)
+                        val isSystemComponent = appLabel == packageName && packageName.count { it == '.' } >= 3
                         
-                        // Skip system components
-                        val isSystemComponent = appLabel == packageName && (
-                            packageName.count { it == '.' } >= 4 ||
-                            packageName.contains("overlay", ignoreCase = true) ||
-                            packageName.contains("modules", ignoreCase = true) ||
-                            packageName.contains("sdksandbox", ignoreCase = true)
-                        )
-                        
-                        if (isSystemComponent) {
-                            Log.d(TAG, "SKIP: $appLabel ($packageName) - system component")
-                            null
-                        } else {
-                            Log.d(TAG, "KEEP: $appLabel ($packageName) - messaging=$isMessaging")
-                            // Use database rule if exists, else create with defaults
+                        if (isSystemComponent) null else {
+                            val isMessaging = isMessagingOrEmailApp(packageName)
                             existingRules[packageName] ?: AppRuleEntity(
                                 packageName = packageName,
                                 appName = appLabel,
@@ -93,36 +71,14 @@ class AppSettingsViewModel(
                             )
                         }
                     } catch (e: Exception) {
-                        Log.w(TAG, "ERROR: ${appInfo.packageName}: ${e.message}")
                         null
                     }
                 }.sortedBy { it.appName }
 
-                // Categorize apps
-                val messagingApps = allApps.filter { isMessagingOrEmailApp(it.packageName) }
-                val otherApps = allApps.filterNot { isMessagingOrEmailApp(it.packageName) }
+                allAppsCache = allApps
+                updateUiState(allApps)
 
-                Log.d(TAG, "Final count: ${allApps.size} total")
-                Log.d(TAG, "Messaging apps found: ${messagingApps.size}")
-                Log.d(TAG, "Other apps: ${otherApps.size}")
-                
-                if (messagingApps.isNotEmpty()) {
-                    messagingApps.forEach { Log.d(TAG, "  ✓ Messaging: ${it.appName} (${it.packageName})") }
-                } else {
-                    Log.d(TAG, "No messaging apps installed - when you install WhatsApp, Telegram, Gmail, etc., they will appear here")
-                    Log.d(TAG, "MessagingApps list has ${dev.rcht.jist.util.MessagingApps.MESSAGING_APP_PACKAGES.size} known apps")
-                }
-                
-                _uiState.value = _uiState.value.copy(
-                    messagingApps = messagingApps,
-                    otherApps = otherApps,
-                    filteredMessagingApps = messagingApps,
-                    filteredOtherApps = otherApps,
-                    isLoading = false,
-                    error = null
-                )
             } catch (e: Exception) {
-                Log.e(TAG, "Error loading apps: ${e.message}", e)
                 _uiState.value = _uiState.value.copy(
                     error = "Error loading apps: ${e.message}",
                     isLoading = false
@@ -131,101 +87,74 @@ class AppSettingsViewModel(
         }
     }
 
-    private fun isMessagingOrEmailApp(packageName: String): Boolean {
-        return dev.rcht.jist.util.MessagingApps.isMessagingOrEmailApp(packageName)
+    private fun updateUiState(apps: List<AppRuleEntity>) {
+        // 1. Filter by search query
+        val query = _uiState.value.searchQuery
+        val filteredApps = if (query.isBlank()) {
+            apps
+        } else {
+            apps.filter { 
+                it.appName.contains(query, ignoreCase = true) || 
+                it.packageName.contains(query, ignoreCase = true) 
+            }
+        }
+
+        // 2. Separate Suggested (Messaging) apps
+        val suggested = filteredApps.filter { isMessagingOrEmailApp(it.packageName) }
+        
+        // 3. Other apps
+        val others = filteredApps.filterNot { isMessagingOrEmailApp(it.packageName) }
+        
+        _uiState.value = _uiState.value.copy(
+            suggestedApps = suggested,
+            otherApps = others,
+            allAppsCount = allAppsCache.size,
+            isLoading = false,
+            error = null
+        )
     }
 
     fun toggleAppEnabled(appRule: AppRuleEntity) {
         viewModelScope.launch(Dispatchers.IO) {
-            try {
-                val updatedRule = appRule.copy(enabled = !appRule.enabled)
-                
-                // Insert if new, update if existing
-                if (appRule.id == 0L) {
-                    val newId = appRuleRepository.insert(updatedRule)
-                    // Update with new ID
-                    updateAppInState(updatedRule.copy(id = newId))
-                } else {
-                    appRuleRepository.update(updatedRule)
-                    updateAppInState(updatedRule)
-                }
-                
-                Log.d(TAG, "✓ App ${appRule.appName} enabled=${updatedRule.enabled}")
-            } catch (e: Exception) {
-                Log.e(TAG, "Error updating app rule: ${e.message}", e)
-                _uiState.value = _uiState.value.copy(
-                    error = "Error updating app rule: ${e.message}"
-                )
+            val updatedRule = appRule.copy(enabled = !appRule.enabled)
+            
+            // DB Update
+            if (appRule.id == 0L) {
+                val newId = appRuleRepository.insert(updatedRule)
+                updateCache(updatedRule.copy(id = newId))
+            } else {
+                appRuleRepository.update(updatedRule)
+                updateCache(updatedRule)
             }
         }
     }
+    
+    fun toggleAll(enabled: Boolean) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val updatedApps = allAppsCache.map { it.copy(enabled = enabled) }
+            // Batch update in DB logic would go here, loop for now
+            updatedApps.forEach { 
+                if (it.id == 0L) appRuleRepository.insert(it) else appRuleRepository.update(it) 
+            }
+            allAppsCache = updatedApps
+            updateUiState(updatedApps)
+        }
+    }
 
-    private fun updateAppInState(updatedApp: AppRuleEntity) {
-        val allApps = _uiState.value.messagingApps + _uiState.value.otherApps
-        val updatedAllApps = allApps.map { app ->
-            if (app.packageName == updatedApp.packageName) {
-                updatedApp
-            } else {
-                app
-            }
+    private fun updateCache(updatedApp: AppRuleEntity) {
+        allAppsCache = allAppsCache.map { 
+            if (it.packageName == updatedApp.packageName) updatedApp else it 
         }
-        
-        // Re-categorize
-        val messagingApps = updatedAllApps.filter { isMessagingOrEmailApp(it.packageName) }
-        val otherApps = updatedAllApps.filterNot { isMessagingOrEmailApp(it.packageName) }
-        
-        // Update filtered lists too
-        val filteredMessaging = if (_uiState.value.searchQuery.isBlank()) {
-            messagingApps
-        } else {
-            messagingApps.filter { app ->
-                app.appName.contains(_uiState.value.searchQuery, ignoreCase = true) ||
-                app.packageName.contains(_uiState.value.searchQuery, ignoreCase = true)
-            }
-        }
-        
-        val filteredOther = if (_uiState.value.searchQuery.isBlank()) {
-            otherApps
-        } else {
-            otherApps.filter { app ->
-                app.appName.contains(_uiState.value.searchQuery, ignoreCase = true) ||
-                app.packageName.contains(_uiState.value.searchQuery, ignoreCase = true)
-            }
-        }
-        
-        _uiState.value = _uiState.value.copy(
-            messagingApps = messagingApps,
-            otherApps = otherApps,
-            filteredMessagingApps = filteredMessaging,
-            filteredOtherApps = filteredOther
-        )
+        updateUiState(allAppsCache)
     }
 
     fun updateSearchQuery(query: String) {
         _uiState.value = _uiState.value.copy(searchQuery = query)
-        
-        val filteredMessaging = if (query.isBlank()) {
-            _uiState.value.messagingApps
-        } else {
-            _uiState.value.messagingApps.filter { app ->
-                app.appName.contains(query, ignoreCase = true) ||
-                app.packageName.contains(query, ignoreCase = true)
-            }
-        }
-        
-        val filteredOther = if (query.isBlank()) {
-            _uiState.value.otherApps
-        } else {
-            _uiState.value.otherApps.filter { app ->
-                app.appName.contains(query, ignoreCase = true) ||
-                app.packageName.contains(query, ignoreCase = true)
-            }
-        }
-        
-        _uiState.value = _uiState.value.copy(
-            filteredMessagingApps = filteredMessaging,
-            filteredOtherApps = filteredOther
-        )
+        updateUiState(allAppsCache)
+    }
+
+    private fun isMessagingOrEmailApp(packageName: String): Boolean {
+        return dev.rcht.jist.util.MessagingApps.isMessagingOrEmailApp(packageName)
     }
 
     companion object {
