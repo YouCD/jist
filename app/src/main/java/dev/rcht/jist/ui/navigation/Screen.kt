@@ -9,7 +9,9 @@ sealed class Screen(val route: String) {
     data object NotificationLog : Screen("notification_log")
     data object About : Screen("about")
     
+    data object LlmConfig : Screen("llm_config")
+    
     companion object {
-        val allScreens = listOf(Dashboard, Summaries, Settings, AppSettings, NotificationLog, About)
+        val allScreens = listOf(Dashboard, Summaries, Settings, AppSettings, NotificationLog, About, LlmConfig)
     }
 }

@@ -23,6 +23,7 @@ import dev.rcht.jist.ui.screens.AppSettingsScreen
 import dev.rcht.jist.ui.screens.DashboardScreen
 import dev.rcht.jist.ui.screens.NotificationLogScreen
 import dev.rcht.jist.ui.screens.OnboardingScreen
+import dev.rcht.jist.ui.screens.LlmConfigScreen
 import dev.rcht.jist.ui.screens.SettingsScreen
 import dev.rcht.jist.ui.screens.SummariesScreen
 import dev.rcht.jist.ui.screens.SummaryDetailScreen
@@ -190,11 +191,30 @@ fun JistNavHost(
             }
         }
         composable(Screen.Settings.route) {
-            val viewModel: SettingsViewModel = viewModel(
+            val viewModel: dev.rcht.jist.ui.settings.SettingsViewModel = viewModel(
                 factory = object : ViewModelProvider.Factory {
                     override fun <T : ViewModel> create(modelClass: Class<T>): T {
                         @Suppress("UNCHECKED_CAST")
-                        return SettingsViewModel(
+                        return dev.rcht.jist.ui.settings.SettingsViewModel(
+                            context,
+                            jistApp.preferencesRepository
+                        ) as T
+                    }
+                }
+            )
+            SettingsScreen(
+                onNavigateToLlmConfig = { navController.navigate(Screen.LlmConfig.route) },
+                onNavigateToApps = { navController.navigate(Screen.AppSettings.route) },
+                onNavigateToAbout = { navController.navigate(Screen.About.route) },
+                onSignOut = { /* Handle sign out */ }
+            )
+        }
+        composable(Screen.LlmConfig.route) {
+            val viewModel: dev.rcht.jist.ui.settings.LlmConfigViewModel = viewModel(
+                factory = object : ViewModelProvider.Factory {
+                    override fun <T : ViewModel> create(modelClass: Class<T>): T {
+                        @Suppress("UNCHECKED_CAST")
+                        return dev.rcht.jist.ui.settings.LlmConfigViewModel(
                             jistApp.llmConfigRepository,
                             jistApp.httpClient
                         ) as T
@@ -202,7 +222,7 @@ fun JistNavHost(
                 }
             )
             val uiState by viewModel.uiState.collectAsState()
-            SettingsScreen(
+            dev.rcht.jist.ui.screens.LlmConfigScreen(
                 uiState = uiState,
                 onSaveConfig = { config -> viewModel.saveConfig(config) },
                 onDeleteConfig = { config -> viewModel.deleteConfig(config) },

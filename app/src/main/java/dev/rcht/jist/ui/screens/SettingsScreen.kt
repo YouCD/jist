@@ -1,411 +1,349 @@
 package dev.rcht.jist.ui.screens
 
+import android.content.Intent
+import android.net.Uri
+import android.provider.Settings
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
+import androidx.compose.material.icons.automirrored.filled.ArrowForwardIos
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.outlined.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import dev.rcht.jist.data.db.entity.LlmConfigEntity
-import dev.rcht.jist.ui.settings.LlmConfigUiState
-import kotlinx.coroutines.launch
+import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
+import dev.rcht.jist.JistApplication
+import dev.rcht.jist.ui.settings.SettingsViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
-    uiState: LlmConfigUiState = LlmConfigUiState(),
-    onSaveConfig: (LlmConfigEntity) -> Unit = {},
-    onDeleteConfig: (LlmConfigEntity) -> Unit = {},
-    onTestConnection: (LlmConfigEntity) -> Unit = {},
-    onClearTestResult: () -> Unit = {},
-    onSetDefault: (LlmConfigEntity) -> Unit = {},
-    onNavigateToAppSettings: () -> Unit = {},
-    onRunOnboarding: () -> Unit = {},
-    modifier: Modifier = Modifier
+    startDestination: String? = null, // For deep linking if needed
+    onNavigateToLlmConfig: () -> Unit,
+    onNavigateToApps: () -> Unit,
+    onNavigateToAbout: () -> Unit,
+    onSignOut: () -> Unit // Placeholder
 ) {
-    val snackbarHostState = remember { SnackbarHostState() }
-    val scope = rememberCoroutineScope()
-    var showAddDialog by remember { mutableStateOf(false) }
-
-    Scaffold(
-        modifier = modifier.fillMaxSize(),
-        snackbarHost = { SnackbarHost(snackbarHostState) },
-        floatingActionButton = {
-            FloatingActionButton(onClick = { showAddDialog = true }) {
-                Icon(Icons.Filled.Add, contentDescription = "Add LLM Config")
-            }
-        }
-    ) { paddingValues ->
-        if (uiState.isLoading) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues),
-                contentAlignment = Alignment.Center
-            ) {
-                CircularProgressIndicator()
-            }
-        } else {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues)
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                item {
-                    Button(
-                        onClick = { onNavigateToAppSettings() },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(48.dp)
-                    ) {
-                        Text("Manage Apps")
-                    }
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Button(
-                        onClick = { onRunOnboarding() },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(48.dp)
-                    ) {
-                        Text("Run Onboarding")
-                    }
-                    Spacer(modifier = Modifier.height(16.dp))
-                }
-
-                item {
-                    Text(
-                        text = "LLM Configurations",
-                        style = MaterialTheme.typography.headlineMedium
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                }
-
-                items(uiState.configs.size) { index ->
-                    val config = uiState.configs[index]
-                    LlmConfigCard(
-                        config = config,
-                        isDefault = config.isDefault,
-                        onDelete = { onDeleteConfig(config) },
-                        onTest = { onTestConnection(config) },
-                        onSetDefault = { onSetDefault(config) },
-                        isTestLoading = uiState.testConnectionLoading,
-                        testResult = uiState.testConnectionResult,
-                        onClearTestResult = { onClearTestResult() }
-                    )
-                }
-
-                item {
-                    if (uiState.configs.isEmpty()) {
-                        Card(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 16.dp)
-                        ) {
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(24.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally
-                            ) {
-                                Text(
-                                    text = "No LLM configurations",
-                                    style = MaterialTheme.typography.bodyLarge
-                                )
-                                Text(
-                                    text = "Tap + to add one",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        if (uiState.error != null) {
-            LaunchedEffect(uiState.error) {
-                snackbarHostState.showSnackbar(uiState.error!!)
-            }
-        }
-    }
-
-    if (showAddDialog) {
-        AddConfigDialog(
-            providers = uiState.providers,
-            onDismiss = { showAddDialog = false },
-            onSave = { config ->
-                onSaveConfig(config)
-                showAddDialog = false
-            }
-        )
-    }
-}
-
-@Composable
-private fun LlmConfigCard(
-    config: LlmConfigEntity,
-    isDefault: Boolean,
-    onDelete: () -> Unit,
-    onTest: () -> Unit,
-    onSetDefault: () -> Unit,
-    isTestLoading: Boolean = false,
-    testResult: String? = null,
-    onClearTestResult: () -> Unit = {}
-) {
-    var showTestResult by remember { mutableStateOf(false) }
-    
-    if (testResult != null && showTestResult) {
-        androidx.compose.material3.AlertDialog(
-            onDismissRequest = {
-                showTestResult = false
-                onClearTestResult()
-            },
-            title = { Text("Connection Test Result") },
-            text = { Text(testResult) },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        showTestResult = false
-                        onClearTestResult()
-                    }
-                ) {
-                    Text("OK")
-                }
-            }
-        )
-    }
-    
-    Card(modifier = Modifier.fillMaxWidth()) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = config.name,
-                        style = MaterialTheme.typography.titleMedium
-                    )
-                    Text(
-                        text = "${config.provider} - ${config.modelId}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-                if (isDefault) {
-                    Icon(
-                        imageVector = Icons.Filled.Check,
-                        contentDescription = "Default",
-                        tint = MaterialTheme.colorScheme.primary
-                    )
-                }
-            }
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                TextButton(
-                    onClick = {
-                        onTest()
-                        showTestResult = true
-                    },
-                    enabled = !isTestLoading,
-                    modifier = Modifier.weight(1f)
-                ) {
-                    if (isTestLoading) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(16.dp),
-                            strokeWidth = 2.dp
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                    }
-                    Text(if (isTestLoading) "Testing..." else "Test")
-                }
-                TextButton(
-                    onClick = onSetDefault,
-                    enabled = !isDefault,
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Text("Set Default")
-                }
-                IconButton(onClick = onDelete, modifier = Modifier.weight(0.3f)) {
-                    Icon(
-                        imageVector = Icons.Filled.Delete,
-                        contentDescription = "Delete",
-                        tint = MaterialTheme.colorScheme.error
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun AddConfigDialog(
-    providers: List<String>,
-    onDismiss: () -> Unit,
-    onSave: (LlmConfigEntity) -> Unit
-) {
-    var name by remember { mutableStateOf("") }
-    var selectedProvider by remember { mutableStateOf(providers.firstOrNull() ?: "OPENAI") }
-    var apiKey by remember { mutableStateOf("") }
-    var baseUrl by remember { mutableStateOf("") }
-    var modelId by remember { mutableStateOf("") }
-    var expandedProvider by remember { mutableStateOf(false) }
-
-    androidx.compose.material3.AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Add LLM Configuration") },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                OutlinedTextField(
-                    value = name,
-                    onValueChange = { name = it },
-                    label = { Text("Name") },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true
-                )
-
-                Box(
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    OutlinedTextField(
-                        value = selectedProvider,
-                        onValueChange = {},
-                        label = { Text("Provider") },
-                        modifier = Modifier.fillMaxWidth(),
-                        readOnly = true
-                    )
-                    // Invisible clickable overlay to open dropdown
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(56.dp)
-                            .clickable(enabled = true) { expandedProvider = !expandedProvider }
-                    )
-                    DropdownMenu(
-                        expanded = expandedProvider,
-                        onDismissRequest = { expandedProvider = false },
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        providers.forEach { provider ->
-                            DropdownMenuItem(
-                                text = { Text(provider) },
-                                onClick = {
-                                    selectedProvider = provider
-                                    expandedProvider = false
-                                    baseUrl = "" // Reset when provider changes
-                                    modelId = ""
-                                }
-                            )
-                        }
-                    }
-                }
-
-                OutlinedTextField(
-                    value = apiKey,
-                    onValueChange = { apiKey = it },
-                    label = { Text("API Key") },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true,
-                    visualTransformation = PasswordVisualTransformation()
-                )
-
-                OutlinedTextField(
-                    value = baseUrl,
-                    onValueChange = { baseUrl = it },
-                    label = { Text("Base URL (optional)") },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true
-                )
-
-                OutlinedTextField(
-                    value = modelId,
-                    onValueChange = { modelId = it },
-                    label = { Text("Model ID") },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true
-                )
-            }
-        },
-        confirmButton = {
-            Button(
-                onClick = {
-                    if (name.isNotBlank() && apiKey.isNotBlank() && modelId.isNotBlank()) {
-                        val config = LlmConfigEntity(
-                            name = name,
-                            provider = selectedProvider,
-                            apiKey = apiKey,
-                            baseUrl = baseUrl.ifBlank { 
-                                dev.rcht.jist.llm.LlmClientFactory.getDefaultBaseUrl(selectedProvider) 
-                            },
-                            modelId = modelId,
-                            isDefault = false,
-                            maxTokens = 1000,
-                            temperature = 0.7f
-                        )
-                        onSave(config)
-                    }
-                },
-                enabled = name.isNotBlank() && apiKey.isNotBlank() && modelId.isNotBlank()
-            ) {
-                Text("Save")
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Cancel")
+    val context = LocalContext.current
+    val app = context.applicationContext as JistApplication
+    val viewModel: SettingsViewModel = viewModel(
+        factory = object : ViewModelProvider.Factory {
+            override fun <T : ViewModel> create(modelClass: Class<T>): T {
+                @Suppress("UNCHECKED_CAST")
+                return SettingsViewModel(context, app.preferencesRepository) as T
             }
         }
     )
+    val uiState by viewModel.uiState.collectAsState()
+
+    Scaffold(
+        topBar = {
+            CenterAlignedTopAppBar(
+                title = { Text("Settings", fontWeight = FontWeight.SemiBold) },
+                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.background
+                )
+            )
+        },
+        containerColor = MaterialTheme.colorScheme.background
+    ) { paddingValues ->
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+                .padding(horizontal = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(24.dp)
+        ) {
+            // Header Title (Large)
+            item {
+                Text(
+                    text = "Settings",
+                    style = MaterialTheme.typography.displaySmall,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+            }
+
+            // Profile Section
+            item {
+                ProfileCard(
+                    name = uiState.userName,
+                    email = uiState.userEmail,
+                    onClick = { /* Manage Account placeholder */ }
+                )
+            }
+
+            // Intelligence Section
+            item {
+                SettingsSection(title = "INTELLIGENCE") {
+                    SettingsItem(
+                        icon = Icons.Outlined.SmartToy, // or similar
+                        title = "LLM Model",
+                        value = uiState.llmModelName,
+                        onClick = onNavigateToLlmConfig
+                    )
+                    Divider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha=0.2f))
+                    SettingsItem(
+                        icon = Icons.Outlined.Description,
+                        title = "Summarization Style",
+                        value = uiState.summarizationStyle,
+                        onClick = { /* Navigate to Style settings (maybe reuse onboarding step or simple dialog) */ onNavigateToLlmConfig() }
+                    )
+                }
+            }
+
+            // Content Sources Section
+            item {
+                SettingsSection(title = "CONTENT SOURCES") {
+                    SettingsItem(
+                        icon = Icons.Outlined.Apps,
+                        title = "App Selection",
+                        value = "${uiState.activeAppCount} Active", // Logic to update this needed
+                        onClick = onNavigateToApps
+                    )
+                    Divider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha=0.2f))
+                    SettingsItem(
+                        icon = Icons.Outlined.Block,
+                        title = "Blocked Words",
+                        onClick = { /* Placeholder */ }
+                    )
+                }
+            }
+
+            // Behavior Section
+            item {
+                SettingsSection(title = "BEHAVIOR") {
+                    SettingsSwitchItem(
+                        icon = Icons.Outlined.Notifications,
+                        title = "Push Notifications",
+                        checked = uiState.notificationsEnabled,
+                        onCheckedChange = { 
+                            viewModel.toggleNotifications(it)
+                            val intent = Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply { putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName) }
+                            context.startActivity(intent)
+                        }
+                    )
+                    Divider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha=0.2f))
+                    SettingsItem(
+                        icon = Icons.Outlined.Schedule,
+                        title = "Daily Digest",
+                        value = uiState.dailyDigestTime,
+                        onClick = { /* Time picker placeholder */ }
+                    )
+                    // Haptic Feedback omitted as requested
+                }
+            }
+
+            // About Section
+            item {
+                SettingsSection(title = "ABOUT") {
+                    SettingsItem(
+                        title = "Help & Support",
+                        trailingIcon = Icons.Outlined.OpenInNew,
+                        onClick = { /* Open URL */ }
+                    )
+                    Divider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha=0.2f))
+                    SettingsItem(
+                        title = "Privacy Policy",
+                         trailingIcon = Icons.Outlined.OpenInNew,
+                        onClick = { /* Open URL */ }
+                    )
+                    Divider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha=0.2f))
+                    SettingsItem(
+                        title = "Version",
+                        value = uiState.version,
+                        showChevron = false,
+                        onClick = {}
+                    )
+                }
+            }
+
+            // Sign Out
+            item {
+                Button(
+                    onClick = onSignOut,
+                    modifier = Modifier.fillMaxWidth().height(56.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha=0.5f),
+                        contentColor = MaterialTheme.colorScheme.error
+                    ),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text("Sign Out", fontSize = 16.sp)
+                }
+                
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                Text(
+                    text = "Jist Intelligence Inc. © 2024",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.fillMaxWidth(),
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                )
+                
+                 Spacer(modifier = Modifier.height(32.dp))
+            }
+        }
+    }
+}
+
+@Composable
+fun ProfileCard(name: String, email: String, onClick: () -> Unit) {
+    Card(
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Avatar Placeholder
+            Box(
+                modifier = Modifier
+                    .size(56.dp)
+                    .background(MaterialTheme.colorScheme.primaryContainer, CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                 Icon(Icons.Default.Person, null, tint = MaterialTheme.colorScheme.onPrimaryContainer)
+            }
+            
+            Spacer(modifier = Modifier.width(16.dp))
+            
+            Column(modifier = Modifier.weight(1f)) {
+                Text(text = name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Text(text = email, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(text = "Manage Account", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+            }
+            
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.ArrowForwardIos,
+                contentDescription = null,
+                modifier = Modifier.size(16.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+@Composable
+fun SettingsSection(title: String, content: @Composable ColumnScope.() -> Unit) {
+    Column {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+            modifier = Modifier.padding(start = 16.dp, bottom = 8.dp)
+        )
+        Card(
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
+        ) {
+            Column(modifier = Modifier.fillMaxWidth()) {
+                content()
+            }
+        }
+    }
+}
+
+@Composable
+fun SettingsItem(
+    icon: ImageVector? = null,
+    title: String,
+    value: String? = null,
+    showChevron: Boolean = true,
+    trailingIcon: ImageVector? = null,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 16.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        if (icon != null) {
+            Box(
+                modifier = Modifier
+                    .size(32.dp)
+                    .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(8.dp)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(icon, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+            }
+             Spacer(modifier = Modifier.width(16.dp))
+        }
+       
+        Text(text = title, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+        
+        if (value != null) {
+            Text(
+                text = value,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(end = 8.dp)
+            )
+        }
+        
+        if (trailingIcon != null) {
+             Icon(
+                imageVector = trailingIcon,
+                contentDescription = null,
+                modifier = Modifier.size(18.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        } else if (showChevron) {
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.ArrowForwardIos,
+                contentDescription = null,
+                modifier = Modifier.size(14.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+@Composable
+fun SettingsSwitchItem(
+    icon: ImageVector,
+    title: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+         Box(
+            modifier = Modifier
+                .size(32.dp)
+                .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(8.dp)),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(icon, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+        }
+        Spacer(modifier = Modifier.width(16.dp))
+        Text(text = title, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+        Switch(checked = checked, onCheckedChange = onCheckedChange)
+    }
 }
