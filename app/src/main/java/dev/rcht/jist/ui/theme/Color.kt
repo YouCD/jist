@@ -71,3 +71,11 @@ val md_theme_dark_outline = Color(0xFF938F96)
 val md_theme_dark_outlineVariant = Color(0xFF49454E)
 
 val md_theme_dark_scrim = Color(0xFF000000)
+
+// Jist Glassmorphism Colors
+val JistBackgroundStart = Color(0xFF0D1B2A)
+val JistBackgroundEnd = Color(0xFF000000)
+val JistCyan = Color(0xFF00E5FF)
+val JistPurple = Color(0xFFD500F9)
+val GlassSurface = Color(0xFF1E1E1E).copy(alpha = 0.6f)
+val GlassBorder = Color(0xFFFFFFFF).copy(alpha = 0.1f)

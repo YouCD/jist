@@ -73,3 +73,11 @@ fun AboutScreen(
         }
     }
 }
+
+@androidx.compose.ui.tooling.preview.Preview
+@Composable
+private fun AboutScreenPreview() {
+    dev.rcht.jist.ui.theme.JistTheme {
+        AboutScreen()
+    }
+}

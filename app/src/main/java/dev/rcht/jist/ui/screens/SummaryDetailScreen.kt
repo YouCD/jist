@@ -197,3 +197,39 @@ private fun NotificationPreviewCard(
         }
     }
 }
+
+@androidx.compose.ui.tooling.preview.Preview
+@Composable
+private fun SummaryDetailScreenPreview() {
+    dev.rcht.jist.ui.theme.JistTheme {
+        SummaryDetailScreen(
+            summaryText = "The team discussed new UI changes including glassmorphism effects, gradient backgrounds, and updated navigation. Sarah shared updated Figma links and requested review by EOD.",
+            appName = "WhatsApp",
+            contactOrGroup = "Design Team",
+            messageCount = 12,
+            createdAt = System.currentTimeMillis(),
+            notifications = listOf(
+                NotificationEntity(
+                    id = 1,
+                    packageName = "com.whatsapp",
+                    appName = "WhatsApp",
+                    title = "Design Team",
+                    senderName = "Sarah",
+                    content = "Hey, I've updated the Figma file with the new dashboard mockups",
+                    conversationKey = "team_chat",
+                    timestamp = System.currentTimeMillis() - 600000
+                ),
+                NotificationEntity(
+                    id = 2,
+                    packageName = "com.whatsapp",
+                    appName = "WhatsApp",
+                    title = "Design Team",
+                    senderName = "Mike",
+                    content = "Looks great! I'll review the color changes this afternoon",
+                    conversationKey = "team_chat",
+                    timestamp = System.currentTimeMillis() - 300000
+                )
+            )
+        )
+    }
+}

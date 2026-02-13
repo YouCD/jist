@@ -191,3 +191,39 @@ private fun SummaryCard(
         }
     }
 }
+
+@androidx.compose.ui.tooling.preview.Preview
+@Composable
+private fun SummariesScreenPreview() {
+    dev.rcht.jist.ui.theme.JistTheme {
+        SummariesScreen(
+            uiState = SummariesUiState(
+                isLoading = false,
+                filteredSummaries = listOf(
+                    dev.rcht.jist.data.db.entity.SummaryEntity(
+                        id = 1,
+                        packageName = "com.whatsapp",
+                        conversationKey = "team_chat",
+                        appName = "WhatsApp",
+                        contactOrGroup = "Design Team",
+                        summaryText = "Sarah shared new mockups for the dashboard redesign. The team discussed color palette changes and approved the glassmorphism approach.",
+                        messageCount = 12,
+                        modelUsed = "gemini-pro",
+                        createdAt = System.currentTimeMillis()
+                    ),
+                    dev.rcht.jist.data.db.entity.SummaryEntity(
+                        id = 2,
+                        packageName = "com.slack",
+                        conversationKey = "general",
+                        appName = "Slack",
+                        contactOrGroup = "#general",
+                        summaryText = "Sprint planning meeting moved to Friday. New deployment pipeline is ready for testing.",
+                        messageCount = 8,
+                        modelUsed = "gpt-4",
+                        createdAt = System.currentTimeMillis() - 3600000
+                    )
+                )
+            )
+        )
+    }
+}

@@ -19,6 +19,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.foundation.background
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -52,9 +55,18 @@ fun JistApp() {
     val showBottomBar = currentRoute in mainTabRoutes
 
     Scaffold(
+        containerColor = Color.Black,
         bottomBar = {
             if (showBottomBar) {
-                NavigationBar {
+                NavigationBar(
+                    containerColor = Color.Transparent,
+                    contentColor = Color.White,
+                    modifier = Modifier.background(
+                         androidx.compose.ui.graphics.Brush.verticalGradient(
+                             colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.8f))
+                         )
+                    )
+                ) {
                     bottomNavItems.forEach { item ->
                         val selected = currentRoute == item.route
                         NavigationBarItem(
@@ -76,7 +88,14 @@ fun JistApp() {
                                     contentDescription = item.label
                                 )
                             },
-                            label = { Text(item.label) }
+                            label = { Text(item.label) },
+                            colors = androidx.compose.material3.NavigationBarItemDefaults.colors(
+                                selectedIconColor = dev.rcht.jist.ui.theme.JistCyan,
+                                selectedTextColor = dev.rcht.jist.ui.theme.JistCyan,
+                                unselectedIconColor = Color.LightGray,
+                                unselectedTextColor = Color.LightGray,
+                                indicatorColor = dev.rcht.jist.ui.theme.JistCyan.copy(alpha = 0.15f)
+                            )
                         )
                     }
                 }

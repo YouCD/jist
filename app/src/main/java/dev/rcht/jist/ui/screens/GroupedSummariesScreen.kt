@@ -206,3 +206,15 @@ private fun SummaryCard(
         }
     }
 }
+
+@androidx.compose.ui.tooling.preview.Preview
+@Composable
+private fun GroupedSummariesScreenPreview() {
+    dev.rcht.jist.ui.theme.JistTheme {
+        GroupedSummariesScreen(
+            uiState = dev.rcht.jist.ui.summaries.GroupedSummariesUiState(
+                isLoading = false
+            )
+        )
+    }
+}

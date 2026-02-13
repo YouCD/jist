@@ -7,43 +7,69 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowForward
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.HourglassEmpty
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.outlined.AutoAwesome
+import androidx.compose.material.icons.outlined.Security
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import dev.rcht.jist.ui.components.GlassCard
+import dev.rcht.jist.ui.components.GlassScaffold
 import dev.rcht.jist.ui.dashboard.DashboardUiState
+import dev.rcht.jist.ui.theme.JistCyan
+import dev.rcht.jist.ui.theme.JistPurple
+import dev.rcht.jist.ui.components.PermissionBanner
+import dev.rcht.jist.ui.components.BatteryOptimizationBanner
 import dev.rcht.jist.util.BatteryOptimizationHelper
 import dev.rcht.jist.util.PermissionHelper
-import androidx.compose.material3.CenterAlignedTopAppBar
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.ui.text.font.FontWeight
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -51,28 +77,29 @@ fun DashboardScreen(
     uiState: DashboardUiState = DashboardUiState(),
     onSummarizeNow: () -> Unit = {},
     onSettingsClick: () -> Unit = {},
+    hasNotificationListenerPermission: Boolean = false,
+    isBatteryOptimizationDisabled: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
-    val hasNotificationListenerPermission = remember { mutableStateOf(PermissionHelper.hasNotificationListenerPermission(context)) }
-    val isBatteryOptimizationDisabled = remember { mutableStateOf(BatteryOptimizationHelper.isBatteryOptimizationDisabled(context)) }
-    
-    Scaffold(
+
+    GlassScaffold(
         modifier = modifier.fillMaxSize(),
         topBar = {
-            CenterAlignedTopAppBar(
-                title = { Text("Dashboard", fontWeight = FontWeight.SemiBold) },
-                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background
-                ),
+            TopAppBar(
+                title = { },
                 actions = {
                     IconButton(onClick = onSettingsClick) {
                         Icon(
                             imageVector = Icons.Filled.Settings,
-                            contentDescription = "Settings"
+                            contentDescription = "Settings",
+                            tint = Color.White.copy(alpha = 0.8f)
                         )
                     }
-                }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = Color.Transparent
+                )
             )
         }
     ) { paddingValues ->
@@ -83,368 +110,342 @@ fun DashboardScreen(
                     .padding(paddingValues),
                 contentAlignment = Alignment.Center
             ) {
-                CircularProgressIndicator()
+                CircularProgressIndicator(color = JistCyan)
             }
         } else {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(paddingValues)
-                    .padding(16.dp)
+                    .padding(horizontal = 24.dp)
                     .verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+                verticalArrangement = Arrangement.spacedBy(24.dp)
             ) {
+                // Header Section
+                Column {
+                    Text(
+                        text = "GOOD EVENING",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = Color.White.copy(alpha = 0.6f),
+                        letterSpacing = 1.sp
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        buildAnnotatedString {
+                            append("Jist ")
+                            withStyle(style = SpanStyle(color = JistCyan)) {
+                                append(if (uiState.isNotificationListenerActive) "Active" else "Inactive")
+                            }
+                        },
+                        style = MaterialTheme.typography.headlineMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
+                    )
+                }
+
                 // Permission banner if listener not enabled
-                if (!hasNotificationListenerPermission.value) {
+                if (!hasNotificationListenerPermission) {
                     PermissionBanner(
                         onEnable = {
                             PermissionHelper.openNotificationSettings(context)
                         },
-                        onDismiss = {
-                            hasNotificationListenerPermission.value = false
-                        }
+                        onDismiss = {}
                     )
                 }
-                
-                // Battery optimization banner if not disabled
-                if (!isBatteryOptimizationDisabled.value) {
-                    BatteryOptimizationBanner(
-                        onEnable = {
-                            BatteryOptimizationHelper.requestDisableBatteryOptimization(context)
-                        },
-                        onDismiss = {
-                            isBatteryOptimizationDisabled.value = true
-                        }
-                    )
-                }
-                
-                // Status card
-                StatusCard(
-                    isListenerActive = uiState.isNotificationListenerActive
-                )
 
-                Text(
-                    text = "Today's Activity",
-                    style = MaterialTheme.typography.titleLarge,
-                    modifier = Modifier.padding(top = 8.dp)
-                )
-
-                // Stats grid
+                // Stats Row
                 Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(bottom = 8.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    StatCard(
-                        label = "Notifications",
-                        value = uiState.notificationsTodayCount.toString(),
-                        modifier = Modifier.weight(1f)
-                    )
-                    StatCard(
-                        label = "Summaries",
-                        value = uiState.summariesTodayCount.toString(),
-                        modifier = Modifier.weight(1f)
-                    )
-                }
-
-                Text(
-                    text = "Overall Stats",
-                    style = MaterialTheme.typography.titleLarge,
-                    modifier = Modifier.padding(top = 8.dp)
-                )
-
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(bottom = 8.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    StatCard(
-                        label = "Total Notifications",
-                        value = uiState.totalNotificationsCount.toString(),
-                        modifier = Modifier.weight(1f)
-                    )
-                    StatCard(
-                        label = "Unsummarized",
-                        value = uiState.unsummarizedCount.toString(),
-                        modifier = Modifier.weight(1f)
-                    )
-                }
-
-                // Last summarized
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 8.dp)
-                ) {
-                    Row(
+                    // Intercepted Card
+                    GlassCard(
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                            .weight(1f)
+                            .height(160.dp)
                     ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = "Last Summarized",
-                                style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            Text(
-                                text = uiState.lastSummarizedTime,
-                                style = MaterialTheme.typography.titleMedium
-                            )
-                        }
-                    }
-                }
-
-                // Summarize Now button
-                Button(
-                    onClick = onSummarizeNow,
-                    enabled = !uiState.isSummarizing && uiState.unsummarizedCount > 0,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 8.dp)
-                ) {
-                    if (uiState.isSummarizing) {
-                        CircularProgressIndicator(
+                        Column(
                             modifier = Modifier
-                                .padding(end = 8.dp)
-                                .then(Modifier.width(20.dp).height(20.dp)),
-                            strokeWidth = 2.dp,
-                            color = MaterialTheme.colorScheme.onPrimary
-                        )
-                    }
-                    Text(
-                        text = if (uiState.isSummarizing) "Summarizing..." else "Summarize Now"
-                    )
-                }
-
-                // Error message
-                if (uiState.summarizeError != null) {
-                    Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(top = 8.dp)
-                            .background(MaterialTheme.colorScheme.errorContainer)
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(12.dp),
-                            horizontalArrangement = Arrangement.spacedBy(12.dp),
-                            verticalAlignment = Alignment.CenterVertically
+                                .fillMaxSize()
+                                .padding(16.dp),
+                            verticalArrangement = Arrangement.SpaceBetween
                         ) {
-                            Icon(
-                                imageVector = Icons.Filled.Warning,
-                                contentDescription = "Error",
-                                tint = MaterialTheme.colorScheme.error,
-                                modifier = Modifier.padding(4.dp)
-                            )
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    text = "Summarization Error",
-                                    style = MaterialTheme.typography.labelMedium,
-                                    color = MaterialTheme.colorScheme.onErrorContainer
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    imageVector = Icons.Outlined.Security,
+                                    contentDescription = null,
+                                    tint = JistCyan,
+                                    modifier = Modifier.size(16.dp)
                                 )
+                                Spacer(modifier = Modifier.width(8.dp))
                                 Text(
-                                    text = uiState.summarizeError ?: "Unknown error",
+                                    text = "INTERCEPTED",
                                     style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.onErrorContainer
+                                    color = JistCyan,
+                                    fontWeight = FontWeight.Bold
                                 )
+                            }
+                            
+                            Column {
+                                Text(
+                                    buildAnnotatedString {
+                                        withStyle(style = SpanStyle(fontSize = 32.sp, fontWeight = FontWeight.Bold)) {
+                                            append(uiState.totalNotificationsCount.toString())
+                                        }
+                                        withStyle(style = SpanStyle(fontSize = 12.sp, color = Color.White.copy(alpha = 0.6f))) {
+                                            append("\nnotifications")
+                                        }
+                                    },
+                                    color = Color.White
+                                )
+                            }
+
+                            LinearProgressIndicator(
+                                progress = { 0.7f }, // Placeholder progress
+                                modifier = Modifier.fillMaxWidth(),
+                                color = JistCyan,
+                                trackColor = JistCyan.copy(alpha = 0.2f),
+                            )
+                        }
+                    }
+
+                    // Summarized Card
+                    GlassCard(
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(160.dp)
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(16.dp),
+                            verticalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    imageVector = Icons.Outlined.AutoAwesome,
+                                    contentDescription = null,
+                                    tint = JistPurple,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = "SUMMARIZED",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = JistPurple,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+
+                            Column {
+                                Text(
+                                    buildAnnotatedString {
+                                        withStyle(style = SpanStyle(fontSize = 32.sp, fontWeight = FontWeight.Bold)) {
+                                            append(uiState.summariesTodayCount.toString())
+                                        }
+                                        withStyle(style = SpanStyle(fontSize = 12.sp, color = Color.White.copy(alpha = 0.6f))) {
+                                            append("\ndigests")
+                                        }
+                                    },
+                                    color = Color.White
+                                )
+                            }
+                            // Battery optimization banner if not disabled
+                            if (!isBatteryOptimizationDisabled) {
+                                BatteryOptimizationBanner(
+                                    onEnable = {
+                                        BatteryOptimizationHelper.requestDisableBatteryOptimization(context)
+                                    },
+                                    onDismiss = {
+                                        // In a real app we might want to remember this dismissal
+                                    }
+                                )
+                            }
+                            // Fake dashed progress
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                repeat(3) {
+                                    Box(
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .height(4.dp)
+                                            .background(
+                                                color = if(it < 2) JistPurple.copy(alpha = 0.5f) else JistPurple,
+                                                shape = RoundedCornerShape(2.dp)
+                                            )
+                                    )
+                                }
                             }
                         }
                     }
                 }
+
+                // Time Saved Card
+                GlassCard(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(80.dp)
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(horizontal = 20.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(
+                                modifier = Modifier
+                                    .size(40.dp)
+                                    .background(Color(0xFF0D47A1).copy(alpha = 0.3f), CircleShape)
+                                    .padding(8.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Filled.HourglassEmpty,
+                                    contentDescription = null,
+                                    tint = JistCyan
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(16.dp))
+                            Column {
+                                Text(
+                                    text = "Time saved today",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = Color.White.copy(alpha = 0.6f)
+                                )
+                                Text(
+                                    text = "~42 minutes", // Placeholder logic
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color.White
+                                )
+                            }
+                        }
+                        Icon(
+                            imageVector = Icons.Filled.ArrowForward,
+                            contentDescription = null,
+                            tint = Color.White.copy(alpha = 0.4f)
+                        )
+                    }
+                }
+
+                // Recent Activity Header
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Recent Activity",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = Color.White,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Text(
+                        text = "View All →",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = JistCyan
+                    )
+                }
+
+                // Recent Activity List (Mock Items for now matching the design)
+                ActivityItem(
+                    appName = "Slack",
+                    title = "#Design-Team",
+                    description = "Sarah updated the Figma file and requested a review of the dashboard components by 3 PM.",
+                    time = "2m ago",
+                    accentColor = JistCyan
+                )
+                
+                ActivityItem(
+                    appName = "Gmail",
+                    title = "Gmail • Newsletter",
+                    description = "\"Weekly Tech Digest\" discusses new AI regulations and 5 productivity tools for developers.",
+                    time = "15m ago",
+                    accentColor = Color(0xFFFF5252) // Red for Gmail
+                )
+
+
+
+                Spacer(modifier = Modifier.height(80.dp)) // Bottom padding for nav bar
             }
         }
     }
 }
 
 @Composable
-private fun StatusCard(isListenerActive: Boolean) {
-    Card(
+fun ActivityItem(
+    appName: String,
+    title: String,
+    description: String,
+    time: String,
+    accentColor: Color
+) {
+    GlassCard(
         modifier = Modifier.fillMaxWidth()
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            if (isListenerActive) {
-                Icon(
-                    imageVector = Icons.Filled.Check,
-                    contentDescription = "Listener Active",
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.padding(4.dp)
-                )
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = "Notification Listener",
-                        style = MaterialTheme.typography.titleMedium
-                    )
-                    Text(
-                        text = "Active and monitoring notifications",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            } else {
-                Icon(
-                    imageVector = Icons.Filled.Warning,
-                    contentDescription = "Listener Inactive",
-                    tint = MaterialTheme.colorScheme.error,
-                    modifier = Modifier.padding(4.dp)
-                )
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = "Notification Listener",
-                        style = MaterialTheme.typography.titleMedium
-                    )
-                    Text(
-                        text = "Enable in Settings to start capturing",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun StatCard(label: String, value: String, modifier: Modifier = Modifier) {
-    Card(modifier = modifier) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-        ) {
-            Text(
-                text = value,
-                style = MaterialTheme.typography.displaySmall,
-                color = MaterialTheme.colorScheme.primary
-            )
-            Text(
-                text = label,
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.padding(top = 4.dp)
-            )
-        }
-    }
-}
-
-@Composable
-private fun PermissionBanner(
-    onEnable: () -> Unit,
-    onDismiss: () -> Unit
-) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.errorContainer)
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(12.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Row(
+        Row(modifier = Modifier.padding(16.dp)) {
+            // Accent Line
+            Box(
                 modifier = Modifier
-                    .weight(1f)
-                    .clickable(onClick = onEnable),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.Warning,
-                    contentDescription = "Permission Required",
-                    tint = MaterialTheme.colorScheme.error,
-                    modifier = Modifier.padding(4.dp)
-                )
-                Column {
+                    .width(4.dp)
+                    .height(60.dp)
+                    .clip(RoundedCornerShape(2.dp))
+                    .background(accentColor)
+            )
+            
+            Spacer(modifier = Modifier.width(16.dp))
+            
+            Column {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
                     Text(
-                        text = "Enable Notification Listener",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onErrorContainer
+                        text = title,
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
                     )
                     Text(
-                        text = "Tap to enable in Settings",
+                        text = time,
                         style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onErrorContainer
+                        color = Color.White.copy(alpha = 0.5f)
                     )
                 }
-            }
-            IconButton(onClick = onDismiss) {
-                Icon(
-                    imageVector = Icons.Filled.Close,
-                    contentDescription = "Dismiss",
-                    tint = MaterialTheme.colorScheme.error
+                
+                Spacer(modifier = Modifier.height(8.dp))
+                
+                Text(
+                    text = description,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color.White.copy(alpha = 0.8f),
+                    lineHeight = 20.sp
                 )
             }
         }
     }
 }
 
+@androidx.compose.ui.tooling.preview.Preview
 @Composable
-private fun BatteryOptimizationBanner(
-    onEnable: () -> Unit,
-    onDismiss: () -> Unit
-) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.tertiaryContainer)
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(12.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Row(
-                modifier = Modifier
-                    .weight(1f)
-                    .clickable(onClick = onEnable),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.Warning,
-                    contentDescription = "Battery Optimization",
-                    tint = MaterialTheme.colorScheme.onTertiaryContainer,
-                    modifier = Modifier.padding(4.dp)
-                )
-                Column {
-                    Text(
-                        text = "Disable Battery Optimization",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onTertiaryContainer
-                    )
-                    Text(
-                        text = "For 24/7 background monitoring, tap to enable",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onTertiaryContainer
-                    )
-                }
-            }
-            IconButton(onClick = onDismiss) {
-                Icon(
-                    imageVector = Icons.Filled.Close,
-                    contentDescription = "Dismiss",
-                    tint = MaterialTheme.colorScheme.onTertiaryContainer
-                )
-            }
-        }
+private fun DashboardScreenPreview() {
+    dev.rcht.jist.ui.theme.JistTheme {
+        DashboardScreen(
+            uiState = DashboardUiState(
+                isLoading = false,
+                isNotificationListenerActive = true,
+                notificationsTodayCount = 128,
+                summariesTodayCount = 45,
+                totalNotificationsCount = 12450,
+                unsummarizedCount = 12,
+                lastSummarizedTime = "2 hours ago"
+            ),
+            hasNotificationListenerPermission = true,
+            isBatteryOptimizationDisabled = true
+        )
     }
 }

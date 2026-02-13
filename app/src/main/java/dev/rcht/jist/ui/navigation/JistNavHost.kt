@@ -30,6 +30,7 @@ import dev.rcht.jist.ui.screens.SummaryDetailScreen
 import dev.rcht.jist.ui.settings.SettingsViewModel
 import dev.rcht.jist.ui.summaries.SummariesViewModel
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import android.util.Log
 
@@ -127,11 +128,17 @@ fun JistNavHost(
                 }
             )
             val uiState by viewModel.uiState.collectAsState()
-            DashboardScreen(
-                uiState = uiState,
-                onSummarizeNow = { viewModel.summarizeNow() },
-                onSettingsClick = { navController.navigate(Screen.Settings.route) }
-            )
+                val context = LocalContext.current
+                val hasNotificationListenerPermission = remember { mutableStateOf(dev.rcht.jist.util.PermissionHelper.hasNotificationListenerPermission(context)) }
+                val isBatteryOptimizationDisabled = remember { mutableStateOf(dev.rcht.jist.util.BatteryOptimizationHelper.isBatteryOptimizationDisabled(context)) }
+
+                DashboardScreen(
+                    uiState = uiState,
+                    onSummarizeNow = { viewModel.summarizeNow() },
+                    onSettingsClick = { navController.navigate(Screen.Settings.route) },
+                    hasNotificationListenerPermission = hasNotificationListenerPermission.value,
+                    isBatteryOptimizationDisabled = isBatteryOptimizationDisabled.value
+                )
         }
         composable(Screen.Summaries.route) {
             val viewModel: SummariesViewModel = viewModel(

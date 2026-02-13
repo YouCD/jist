@@ -53,3 +53,11 @@ fun NotificationLogScreen(modifier: Modifier = Modifier) {
         }
     }
 }
+
+@androidx.compose.ui.tooling.preview.Preview
+@Composable
+private fun NotificationLogScreenPreview() {
+    dev.rcht.jist.ui.theme.JistTheme {
+        NotificationLogScreen()
+    }
+}

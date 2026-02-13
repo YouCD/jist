@@ -431,3 +431,34 @@ private fun AddConfigDialog(
         }
     )
 }
+
+@androidx.compose.ui.tooling.preview.Preview
+@Composable
+private fun LlmConfigScreenPreview() {
+    dev.rcht.jist.ui.theme.JistTheme {
+        LlmConfigScreen(
+            uiState = LlmConfigUiState(
+                configs = listOf(
+                    LlmConfigEntity(
+                        id = 1,
+                        name = "Gemini Pro",
+                        provider = "GEMINI",
+                        apiKey = "AIza••••••••",
+                        baseUrl = "https://generativelanguage.googleapis.com",
+                        modelId = "gemini-pro",
+                        isDefault = true
+                    ),
+                    LlmConfigEntity(
+                        id = 2,
+                        name = "GPT-4",
+                        provider = "OPENAI",
+                        apiKey = "sk-••••••••",
+                        baseUrl = "https://api.openai.com",
+                        modelId = "gpt-4",
+                        isDefault = false
+                    )
+                )
+            )
+        )
+    }
+}
