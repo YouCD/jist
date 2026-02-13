@@ -1,163 +1,92 @@
 package dev.rcht.jist.ui
 
 import android.app.Application
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Dashboard
-import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Summarize
-import androidx.compose.material3.DrawerValue
+import androidx.compose.material.icons.outlined.Dashboard
+import androidx.compose.material.icons.outlined.Notifications
+import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material.icons.outlined.Summarize
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalDrawerSheet
-import androidx.compose.material3.ModalNavigationDrawer
-import androidx.compose.material3.NavigationDrawerItem
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.unit.dp
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import dev.rcht.jist.ui.components.JistTopBar
 import dev.rcht.jist.ui.navigation.JistNavHost
 import dev.rcht.jist.ui.navigation.Screen
-import kotlinx.coroutines.launch
+
+data class BottomNavItem(
+    val label: String,
+    val route: String,
+    val selectedIcon: ImageVector,
+    val unselectedIcon: ImageVector
+)
+
+val bottomNavItems = listOf(
+    BottomNavItem("Dashboard", Screen.Dashboard.route, Icons.Filled.Dashboard, Icons.Outlined.Dashboard),
+    BottomNavItem("Summaries", Screen.Summaries.route, Icons.Filled.Summarize, Icons.Outlined.Summarize),
+    BottomNavItem("Alerts", Screen.NotificationLog.route, Icons.Filled.Notifications, Icons.Outlined.Notifications)
+)
+
+val mainTabRoutes = bottomNavItems.map { it.route }.toSet()
 
 @Composable
 fun JistApp() {
     val navController = rememberNavController()
-    val drawerState = rememberDrawerState(DrawerValue.Closed)
-    val coroutineScope = rememberCoroutineScope()
     val context = LocalContext.current
     val application = context.applicationContext as Application
 
-    ModalNavigationDrawer(
-        drawerState = drawerState,
-        drawerContent = {
-            ModalDrawerSheet(
-                modifier = Modifier.fillMaxHeight()
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp)
-                        .verticalScroll(rememberScrollState())
-                ) {
-                    Text(
-                        text = "Jist",
-                        style = MaterialTheme.typography.headlineMedium,
-                        modifier = Modifier.padding(vertical = 16.dp)
-                    )
+    val navBackStackEntry by navController.currentBackStackEntryAsState()
+    val currentRoute = navBackStackEntry?.destination?.route
+    val showBottomBar = currentRoute in mainTabRoutes
 
-                    // Drawer items
-                    DrawerItem(
-                        label = "Dashboard",
-                        icon = Icons.Filled.Dashboard,
-                        selected = navController.currentDestination?.route == Screen.Dashboard.route,
-                        onClick = {
-                            navController.navigate(Screen.Dashboard.route) {
-                                launchSingleTop = true
-                                popUpTo(Screen.Dashboard.route) { inclusive = true }
-                            }
-                            coroutineScope.launch { drawerState.close() }
-                        }
-                    )
-
-                    DrawerItem(
-                        label = "Summaries",
-                        icon = Icons.Filled.Summarize,
-                        selected = navController.currentDestination?.route == Screen.Summaries.route,
-                        onClick = {
-                            navController.navigate(Screen.Summaries.route) {
-                                launchSingleTop = true
-                                popUpTo(Screen.Dashboard.route)
-                            }
-                            coroutineScope.launch { drawerState.close() }
-                        }
-                    )
-
-                    DrawerItem(
-                        label = "Notification Log",
-                        icon = Icons.Filled.Notifications,
-                        selected = navController.currentDestination?.route == Screen.NotificationLog.route,
-                        onClick = {
-                            navController.navigate(Screen.NotificationLog.route) {
-                                launchSingleTop = true
-                                popUpTo(Screen.Dashboard.route)
-                            }
-                            coroutineScope.launch { drawerState.close() }
-                        }
-                    )
-
-                    DrawerItem(
-                        label = "Settings",
-                        icon = Icons.Filled.Settings,
-                        selected = navController.currentDestination?.route == Screen.Settings.route,
-                        onClick = {
-                            navController.navigate(Screen.Settings.route) {
-                                launchSingleTop = true
-                                popUpTo(Screen.Dashboard.route)
-                            }
-                            coroutineScope.launch { drawerState.close() }
-                        }
-                    )
-
-                    DrawerItem(
-                        label = "About",
-                        icon = Icons.Filled.Info,
-                        selected = navController.currentDestination?.route == Screen.About.route,
-                        onClick = {
-                            navController.navigate(Screen.About.route) {
-                                launchSingleTop = true
-                                popUpTo(Screen.Dashboard.route)
-                            }
-                            coroutineScope.launch { drawerState.close() }
-                        }
-                    )
+    Scaffold(
+        bottomBar = {
+            if (showBottomBar) {
+                NavigationBar {
+                    bottomNavItems.forEach { item ->
+                        val selected = currentRoute == item.route
+                        NavigationBarItem(
+                            selected = selected,
+                            onClick = {
+                                if (!selected) {
+                                    navController.navigate(item.route) {
+                                        launchSingleTop = true
+                                        popUpTo(Screen.Dashboard.route) {
+                                            saveState = true
+                                        }
+                                        restoreState = true
+                                    }
+                                }
+                            },
+                            icon = {
+                                Icon(
+                                    imageVector = if (selected) item.selectedIcon else item.unselectedIcon,
+                                    contentDescription = item.label
+                                )
+                            },
+                            label = { Text(item.label) }
+                        )
+                    }
                 }
             }
         }
-    ) {
-        Scaffold(
-            topBar = {
-                JistTopBar(
-                    onMenuClick = {
-                        coroutineScope.launch { drawerState.open() }
-                    }
-                )
-            }
-        ) { paddingValues ->
-            JistNavHost(
-                navController = navController,
-                application = application,
-                modifier = Modifier.padding(paddingValues)
-            )
-        }
+    ) { paddingValues ->
+        JistNavHost(
+            navController = navController,
+            application = application,
+            modifier = Modifier.padding(bottom = paddingValues.calculateBottomPadding())
+        )
     }
-}
-
-@Composable
-private fun DrawerItem(
-    label: String,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    selected: Boolean,
-    onClick: () -> Unit
-) {
-    NavigationDrawerItem(
-        label = { Text(label) },
-        icon = { Icon(imageVector = icon, contentDescription = label) },
-        selected = selected,
-        onClick = onClick,
-        modifier = Modifier.padding(vertical = 4.dp)
-    )
 }

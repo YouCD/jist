@@ -129,7 +129,8 @@ fun JistNavHost(
             val uiState by viewModel.uiState.collectAsState()
             DashboardScreen(
                 uiState = uiState,
-                onSummarizeNow = { viewModel.summarizeNow() }
+                onSummarizeNow = { viewModel.summarizeNow() },
+                onSettingsClick = { navController.navigate(Screen.Settings.route) }
             )
         }
         composable(Screen.Summaries.route) {
@@ -203,6 +204,7 @@ fun JistNavHost(
                 }
             )
             SettingsScreen(
+                onNavigateBack = { navController.popBackStack() },
                 onNavigateToLlmConfig = { navController.navigate(Screen.LlmConfig.route) },
                 onNavigateToApps = { navController.navigate(Screen.AppSettings.route) },
                 onNavigateToAbout = { navController.navigate(Screen.About.route) },
@@ -229,6 +231,7 @@ fun JistNavHost(
                 onTestConnection = { config -> viewModel.testConnection(config) },
                 onClearTestResult = { viewModel.clearTestResult() },
                 onSetDefault = { config -> viewModel.setDefaultConfig(config) },
+                onNavigateBack = { navController.popBackStack() },
                 onNavigateToAppSettings = { navController.navigate(Screen.AppSettings.route) },
                 onRunOnboarding = { navController.navigate(Screen.Onboarding.route) }
             )
@@ -242,7 +245,9 @@ fun JistNavHost(
             NotificationLogScreen()
         }
         composable(Screen.About.route) {
-            AboutScreen()
+            AboutScreen(
+                onNavigateBack = { navController.popBackStack() }
+            )
         }
     }
 }

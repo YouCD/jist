@@ -11,6 +11,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForwardIos
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
@@ -35,6 +36,7 @@ import dev.rcht.jist.ui.settings.SettingsViewModel
 @Composable
 fun SettingsScreen(
     startDestination: String? = null, // For deep linking if needed
+    onNavigateBack: () -> Unit = {},
     onNavigateToLlmConfig: () -> Unit,
     onNavigateToApps: () -> Unit,
     onNavigateToAbout: () -> Unit,
@@ -56,6 +58,14 @@ fun SettingsScreen(
         topBar = {
             CenterAlignedTopAppBar(
                 title = { Text("Settings", fontWeight = FontWeight.SemiBold) },
+                navigationIcon = {
+                     IconButton(onClick = onNavigateBack) {
+                         Icon(
+                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                             contentDescription = "Back"
+                         )
+                     }
+                },
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
                     containerColor = MaterialTheme.colorScheme.background
                 )
@@ -70,15 +80,8 @@ fun SettingsScreen(
                 .padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
-            // Header Title (Large)
-            item {
-                Text(
-                    text = "Settings",
-                    style = MaterialTheme.typography.displaySmall,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(bottom = 8.dp)
-                )
-            }
+            // Header Title (Large) - REMOVED
+
 
             // Profile Section
             item {

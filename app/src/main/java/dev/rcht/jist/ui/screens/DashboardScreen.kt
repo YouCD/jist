@@ -18,6 +18,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -39,18 +40,42 @@ import androidx.compose.ui.unit.dp
 import dev.rcht.jist.ui.dashboard.DashboardUiState
 import dev.rcht.jist.util.BatteryOptimizationHelper
 import dev.rcht.jist.util.PermissionHelper
+import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.ui.text.font.FontWeight
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DashboardScreen(
     uiState: DashboardUiState = DashboardUiState(),
     onSummarizeNow: () -> Unit = {},
+    onSettingsClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
     val hasNotificationListenerPermission = remember { mutableStateOf(PermissionHelper.hasNotificationListenerPermission(context)) }
     val isBatteryOptimizationDisabled = remember { mutableStateOf(BatteryOptimizationHelper.isBatteryOptimizationDisabled(context)) }
     
-    Scaffold(modifier = modifier.fillMaxSize()) { paddingValues ->
+    Scaffold(
+        modifier = modifier.fillMaxSize(),
+        topBar = {
+            CenterAlignedTopAppBar(
+                title = { Text("Dashboard", fontWeight = FontWeight.SemiBold) },
+                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.background
+                ),
+                actions = {
+                    IconButton(onClick = onSettingsClick) {
+                        Icon(
+                            imageVector = Icons.Filled.Settings,
+                            contentDescription = "Settings"
+                        )
+                    }
+                }
+            )
+        }
+    ) { paddingValues ->
         if (uiState.isLoading) {
             Box(
                 modifier = Modifier
