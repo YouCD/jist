@@ -40,6 +40,9 @@ val md_theme_light_outlineVariant = Color(0xFFCAC7D0)
 // Scrim (for overlays and dialogs)
 val md_theme_light_scrim = Color(0xFF000000)
 
+// App Background Color
+val AppBackground = Color(0xFF101C22)
+
 // Dark Theme Colors
 val md_theme_dark_primary = Color(0xFF80DEBC)
 val md_theme_dark_onPrimary = Color(0xFF003830)
@@ -61,9 +64,9 @@ val md_theme_dark_errorContainer = Color(0xFF8C1D18)
 val md_theme_dark_onError = Color(0xFF601410)
 val md_theme_dark_onErrorContainer = Color(0xFFF9DEDC)
 
-val md_theme_dark_background = Color(0xFF1C1B1F)
+val md_theme_dark_background = AppBackground
 val md_theme_dark_onBackground = Color(0xFFE6E1E6)
-val md_theme_dark_surface = Color(0xFF1C1B1F)
+val md_theme_dark_surface = AppBackground
 val md_theme_dark_onSurface = Color(0xFFE6E1E6)
 val md_theme_dark_surfaceVariant = Color(0xFF49454E)
 val md_theme_dark_onSurfaceVariant = Color(0xFFCAC7D0)
@@ -74,7 +77,7 @@ val md_theme_dark_scrim = Color(0xFF000000)
 
 // Jist Glassmorphism Colors
 val JistBackgroundStart = Color(0xFF0D1B2A)
-val JistBackgroundEnd = Color(0xFF000000)
+val JistBackgroundEnd = Color(0xFF101C22)
 val JistCyan = Color(0xFF00E5FF)
 val JistPurple = Color(0xFFD500F9)
 val GlassSurface = Color(0xFF1E1E1E).copy(alpha = 0.6f)

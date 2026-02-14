@@ -20,7 +20,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
+import dev.rcht.jist.ui.components.GlassScaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -46,7 +46,7 @@ fun GroupedSummariesScreen(
             .format(java.util.Date(timeMs))
     }
 ) {
-    Scaffold(modifier = modifier.fillMaxSize()) { paddingValues ->
+    GlassScaffold(modifier = modifier.fillMaxSize()) { paddingValues ->
         if (uiState.isLoading) {
             Box(
                 modifier = Modifier

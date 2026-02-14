@@ -75,8 +75,8 @@ private val LightColorScheme = lightColorScheme(
 @Composable
 fun JistTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
-    // Dynamic color is available on Android 12+
-    dynamicColor: Boolean = true,
+    // Dynamic color is available on Android 12+ (disabled to use custom Jist colors)
+    dynamicColor: Boolean = false,
     content: @Composable () -> Unit
 ) {
     val colorScheme = when {

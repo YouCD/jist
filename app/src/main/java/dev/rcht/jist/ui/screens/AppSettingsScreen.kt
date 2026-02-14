@@ -13,7 +13,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -35,6 +34,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import dev.rcht.jist.JistApplication
 import dev.rcht.jist.data.db.entity.AppRuleEntity
 import dev.rcht.jist.ui.settings.AppSettingsViewModel
+import dev.rcht.jist.ui.components.GlassScaffold
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -62,7 +62,7 @@ fun AppSettingsScreen(
     
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
-    Scaffold(
+    GlassScaffold(
         topBar = {
             CenterAlignedTopAppBar(
                 title = { Text("Monitored Apps", fontWeight = FontWeight.SemiBold) },
@@ -82,11 +82,10 @@ fun AppSettingsScreen(
                     }
                 },
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background
+                    containerColor = Color.Transparent
                 )
             )
-        },
-        containerColor = MaterialTheme.colorScheme.background
+        }
         // FAB Removed
     ) { paddingValues ->
         if (uiState.isLoading) {

@@ -30,6 +30,7 @@ import dev.chrisbanes.haze.rememberHazeState
 import dev.rcht.jist.ui.components.GlassBottomNavigation
 import dev.rcht.jist.ui.navigation.JistNavHost
 import dev.rcht.jist.ui.navigation.Screen
+import dev.rcht.jist.ui.theme.AppBackground
 import dev.rcht.jist.ui.theme.JistCyan
 import dev.rcht.jist.ui.theme.JistPurple
 
@@ -60,7 +61,7 @@ fun JistApp() {
     val hazeState = rememberHazeState()
 
     Scaffold(
-        containerColor = Color.Black,
+        containerColor = AppBackground,
         contentWindowInsets = androidx.compose.foundation.layout.WindowInsets(0, 0, 0, 0)
     ) { paddingValues ->
         Box(modifier = Modifier.fillMaxSize()) {

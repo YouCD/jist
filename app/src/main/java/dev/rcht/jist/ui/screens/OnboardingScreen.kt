@@ -56,6 +56,7 @@ import dev.rcht.jist.JistApplication
 import dev.rcht.jist.ui.screens.onboarding.OnboardingStepIndicator
 import dev.rcht.jist.ui.screens.onboarding.PermissionToggleCard
 import dev.rcht.jist.ui.screens.onboarding.WritingStyleCard
+import dev.rcht.jist.ui.components.GlassScaffold
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -119,7 +120,7 @@ fun OnboardingScreen(
         }
     }
 
-    Scaffold(
+    GlassScaffold(
         topBar = {
             OnboardingStepIndicator(
                 currentStep = step,

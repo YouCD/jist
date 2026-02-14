@@ -44,6 +44,7 @@ import dev.chrisbanes.haze.materials.ExperimentalHazeMaterialsApi
 import dev.chrisbanes.haze.materials.HazeMaterials
 import dev.rcht.jist.ui.BottomNavItem
 import dev.rcht.jist.ui.navigation.Screen
+import dev.rcht.jist.ui.theme.AppBackground
 import dev.rcht.jist.ui.theme.JistCyan
 import dev.rcht.jist.ui.theme.JistPurple
 
@@ -77,18 +78,11 @@ fun GlassBottomNavigation(
                 style = HazeMaterials.ultraThin()
             )
     ) {
-        // Base tint to avoid full transparency
+        // Base tint with AppBackground color at 85% opacity
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(
-                    brush = Brush.verticalGradient(
-                        colors = listOf(
-                            Color(0xFF1A1A2E).copy(alpha = 0.7f),
-                            Color(0xFF16213E).copy(alpha = 0.75f)
-                        )
-                    )
-                )
+                .background(AppBackground.copy(alpha = 0.6f))
         )
 
         // Border / highlight for glass effect
@@ -200,8 +194,7 @@ private fun GlassBottomNavItem(
 @Composable
 private fun GlassBottomNavigationPreview() {
     dev.rcht.jist.ui.theme.JistTheme {
-        Box(modifier = Modifier.background(Color.Black).padding(0
-            .dp)) {
+        Box(modifier = Modifier.background(AppBackground).padding(0.dp)) {
             val navController = androidx.navigation.compose.rememberNavController()
             val hazeState = remember { HazeState() }
             GlassBottomNavigation(
