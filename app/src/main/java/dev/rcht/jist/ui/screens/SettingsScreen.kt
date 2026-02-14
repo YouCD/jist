@@ -111,22 +111,22 @@ fun SettingsScreen(
             }
 
             // Content Sources Section
-            item {
-                SettingsSection(title = "CONTENT SOURCES") {
-                    SettingsItem(
-                        icon = Icons.Outlined.Apps,
-                        title = "App Selection",
-                        value = "${uiState.activeAppCount} Active", // Logic to update this needed
-                        onClick = onNavigateToApps
-                    )
-                    Divider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha=0.2f))
-                    SettingsItem(
-                        icon = Icons.Outlined.Block,
-                        title = "Blocked Words",
-                        onClick = { /* Placeholder */ }
-                    )
-                }
-            }
+            // item {
+            //     SettingsSection(title = "CONTENT SOURCES") {
+            //         SettingsItem(
+            //             icon = Icons.Outlined.Apps,
+            //             title = "App Selection",
+            //             value = "${uiState.activeAppCount} Active", // Logic to update this needed
+            //             onClick = onNavigateToApps
+            //         )
+            //         Divider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha=0.2f))
+            //         SettingsItem(
+            //             icon = Icons.Outlined.Block,
+            //             title = "Blocked Words",
+            //             onClick = { /* Placeholder */ }
+            //         )
+            //     }
+            // }
 
             // Behavior Section
             item {
@@ -149,7 +149,8 @@ fun SettingsScreen(
                     SettingsItem(
                         icon = Icons.Outlined.Schedule,
                         title = "Daily Digest",
-                        value = uiState.dailyDigestTime,
+                        // value = uiState.dailyDigestTime,
+                        value = "Coming Soon",
                         onClick = { /* Time picker placeholder */ }
                     )
                     // Haptic Feedback omitted as requested
@@ -185,7 +186,7 @@ fun SettingsScreen(
                 Spacer(modifier = Modifier.height(16.dp))
                 
                 Text(
-                    text = "Jist Intelligence Inc. © 2024",
+                    text = "Jist 2026",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.fillMaxWidth(),

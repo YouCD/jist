@@ -75,14 +75,14 @@ class OnboardingViewModel(private val context: Context) : ViewModel() {
         }
     }
     
-    fun saveLlmConfig(apiKey: String, provider: String = "openai", model: String = "gpt-4-turbo") {
+    fun saveLlmConfig(apiKey: String, provider: String = "openai", model: String = "gpt-4-turbo", temperature: Float = 0.7f, maxTokens: Int = 1000) {
          viewModelScope.launch {
             try {
                 // For simplicity in onboarding, we'll just create/update a default config
                 val existing = app.llmConfigRepository.getAll().firstOrNull { it.provider == provider }
                 
                 if (existing != null) {
-                    app.llmConfigRepository.update(existing.copy(apiKey = apiKey, modelId = model))
+                    app.llmConfigRepository.update(existing.copy(apiKey = apiKey, modelId = model, temperature = temperature, maxTokens = maxTokens))
                 } else {
                     val newConfig = dev.rcht.jist.data.db.entity.LlmConfigEntity(
                         name = provider.replaceFirstChar { it.uppercase() },
@@ -90,7 +90,9 @@ class OnboardingViewModel(private val context: Context) : ViewModel() {
                         apiKey = apiKey,
                         baseUrl = "https://api.openai.com/v1/", // Default for OpenAI
                         modelId = model,
-                        isDefault = true
+                        isDefault = true,
+                        temperature = temperature,
+                        maxTokens = maxTokens
                     )
                     app.llmConfigRepository.insert(newConfig)
                 }

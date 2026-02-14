@@ -9,7 +9,12 @@ import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.ExperimentalAnimationApi
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -19,6 +24,7 @@ import androidx.compose.animation.with
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -28,15 +34,20 @@ import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.BatteryStd
 import androidx.compose.material.icons.filled.Bolt
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Chat
 import androidx.compose.material.icons.filled.Contacts
 import androidx.compose.material.icons.filled.Diamond
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.FormatListBulleted
 import androidx.compose.material.icons.filled.Key
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.SdStorage
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.outlined.Apps
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -58,6 +69,7 @@ import androidx.compose.ui.res.painterResource
 import dev.rcht.jist.R
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.core.app.NotificationManagerCompat
@@ -65,6 +77,11 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import dev.rcht.jist.JistApplication
+import dev.rcht.jist.data.db.entity.LlmConfigEntity
+import dev.rcht.jist.llm.LlmClientFactory
+import dev.rcht.jist.llm.LlmRequestConfig
+import dev.rcht.jist.llm.LlmResult
+import dev.rcht.jist.llm.model.ChatMessage
 import dev.rcht.jist.ui.screens.onboarding.OnboardingStepIndicator
 import dev.rcht.jist.ui.screens.onboarding.PermissionToggleCard
 import dev.rcht.jist.ui.screens.onboarding.WritingStyleCard
@@ -72,6 +89,11 @@ import dev.rcht.jist.ui.components.GlassScaffold
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import dev.rcht.jist.ui.theme.JistCyan
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.draw.blur
+import androidx.compose.foundation.shape.CircleShape
+import okhttp3.OkHttpClient
+import java.util.concurrent.TimeUnit
 
 @OptIn(ExperimentalAnimationApi::class)
 @Composable
@@ -93,7 +115,7 @@ fun OnboardingScreen(
     val pkg = context.packageName
 
     var step by rememberSaveable { mutableStateOf(0) }
-    val totalSteps = 6
+    val totalSteps = 5
 
     // Permissions State
     var notificationsEnabled by remember { mutableStateOf(NotificationManagerCompat.from(context).areNotificationsEnabled()) }
@@ -114,6 +136,10 @@ fun OnboardingScreen(
     var apiKey by remember { mutableStateOf("") }
     var selectedProvider by remember { mutableStateOf("OPENAI") }
     var selectedModel by remember { mutableStateOf("gpt-4-turbo") }
+    var temperature by remember { mutableStateOf(0.7f) }
+    var maxTokens by remember { mutableStateOf(1000) }
+    var testConnectionResult by remember { mutableStateOf<String?>(null) }
+    var testConnectionLoading by remember { mutableStateOf(false) }
     
     // Refresh function
     fun refreshStatuses() {
@@ -123,6 +149,55 @@ fun OnboardingScreen(
             val pm = context.getSystemService(PowerManager::class.java)
             pm?.isIgnoringBatteryOptimizations(pkg) ?: false
         } catch (_: Exception) { false }
+    }
+
+    // Test connection function
+    fun testConnection() {
+        val config = LlmConfigEntity(
+            id = 0,
+            name = "$selectedProvider Config",
+            provider = selectedProvider,
+            apiKey = apiKey,
+            baseUrl = LlmClientFactory.getDefaultBaseUrl(selectedProvider),
+            modelId = selectedModel,
+            isDefault = true,
+            temperature = temperature,
+            maxTokens = maxTokens
+        )
+
+        val httpClient = OkHttpClient.Builder()
+            .connectTimeout(30, TimeUnit.SECONDS)
+            .readTimeout(30, TimeUnit.SECONDS)
+            .build()
+
+        testConnectionLoading = true
+        testConnectionResult = null
+
+        kotlinx.coroutines.GlobalScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            try {
+                val llmClient = LlmClientFactory.createClient(config, httpClient)
+                val testMessages = listOf(
+                    ChatMessage(role = "user", content = "Say 'OK' if you receive this.")
+                )
+                val requestConfig = LlmRequestConfig(
+                    model = selectedModel,
+                    maxTokens = 10,
+                    temperature = 0.7f,
+                    apiKey = apiKey,
+                    baseUrl = config.baseUrl
+                )
+
+                val result = llmClient.complete(testMessages, requestConfig)
+                testConnectionLoading = false
+                testConnectionResult = when (result) {
+                    is LlmResult.Success -> "✓ Connection successful!"
+                    is LlmResult.Error -> "✗ Connection failed: ${result.error.message}"
+                }
+            } catch (e: Exception) {
+                testConnectionLoading = false
+                testConnectionResult = "✗ Connection failed: ${e.message}"
+            }
+        }
     }
 
     // Poll for status updates
@@ -153,7 +228,7 @@ fun OnboardingScreen(
                         if (step < totalSteps - 1) {
                             step++
                         } else {
-                            viewModel.saveLlmConfig(apiKey, selectedProvider, selectedModel)
+                            viewModel.saveLlmConfig(apiKey, selectedProvider, selectedModel, temperature, maxTokens)
                             viewModel.startSetup()
                             viewModel.finishOnboarding()
                             onOnboardingComplete()
@@ -169,7 +244,7 @@ fun OnboardingScreen(
                     ),
                     enabled = when (step) {
                         1 -> listenerEnabled // Step 2 requires Notification Listener
-                        5 -> apiKey.isNotBlank() && selectedModel.isNotBlank() // Step 6 requires API Key & Model
+                        4 -> apiKey.isNotBlank() && selectedModel.isNotBlank() // Step 5 requires API Key & Model
                         else -> true
                     }
                 ) {
@@ -186,8 +261,7 @@ fun OnboardingScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .padding(horizontal = 24.dp)
-                .verticalScroll(rememberScrollState()),
+                .padding(horizontal = 24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Top
         ) {
@@ -206,7 +280,10 @@ fun OnboardingScreen(
             ) { currentStep ->
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .fillMaxHeight()
+                        .verticalScroll(rememberScrollState())
                 ) {
                     when (currentStep) {
                         0 -> Step1GetStarted(
@@ -243,17 +320,20 @@ fun OnboardingScreen(
                         3 -> Step4ManageApps(
                             onOpenAppSettings = onOpenAppSettings
                         )
-                        4 -> Step5WritingStyle(
-                            selectedStyle = uiState.writingStyle,
-                            onSelectStyle = { viewModel.setWritingStyle(it) }
-                        )
-                        5 -> Step6LlmConfiguration(
+                        4 -> Step6LlmConfiguration(
                             selectedProvider = selectedProvider,
                             onSelectProvider = { selectedProvider = it },
                             selectedModel = selectedModel,
                             onSelectModel = { selectedModel = it },
                             apiKey = apiKey,
                             onApiKeyChange = { apiKey = it },
+                            temperature = temperature,
+                            onTemperatureChange = { temperature = it },
+                            maxTokens = maxTokens,
+                            onMaxTokensChange = { maxTokens = it },
+                            onTestConnection = { testConnection() },
+                            testConnectionResult = testConnectionResult,
+                            testConnectionLoading = testConnectionLoading,
                             summaryTone = uiState.summaryTone,
                             onSelectTone = { viewModel.setSummaryTone(it) },
                             summaryLength = uiState.summaryLength,
@@ -362,72 +442,118 @@ fun Step2EnableAccess(
     onOpenSettings: () -> Unit
 ) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Spacer(modifier = Modifier.height(40.dp))
+        Spacer(modifier = Modifier.height(48.dp))
         
-        Card(
-            modifier = Modifier.fillMaxWidth().height(200.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)),
-            shape = RoundedCornerShape(24.dp)
+        // Notification Access Image with blur gradient background
+        Box(
+            modifier = Modifier.size(240.dp),
+            contentAlignment = Alignment.Center
         ) {
-            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                     Icon(
-                        imageVector = Icons.Default.Notifications,
-                        contentDescription = null,
-                        modifier = Modifier.size(48.dp),
-                        tint = MaterialTheme.colorScheme.primary
+            // Blur gradient ball behind the image
+            Box(
+                modifier = Modifier
+                    .size(180.dp)
+                    .offset(y = 20.dp)
+                    .background(
+                        brush = androidx.compose.ui.graphics.Brush.radialGradient(
+                            colors = listOf(
+                                MaterialTheme.colorScheme.primary.copy(alpha = 0.4f),
+                                MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
+                                MaterialTheme.colorScheme.primary.copy(alpha = 0f)
+                            )
+                        ),
+                        shape = androidx.compose.foundation.shape.CircleShape
                     )
-                     Spacer(modifier = Modifier.height(16.dp))
-                     Row(
-                         modifier = Modifier
-                             .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(12.dp))
-                             .padding(horizontal = 16.dp, vertical = 12.dp),
-                         verticalAlignment = Alignment.CenterVertically
-                     ) {
-                         Icon(
-                            imageVector = Icons.Default.Notifications,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(24.dp)
-                        )
-                         Spacer(modifier = Modifier.width(12.dp))
-                         Column {
-                             Text("Allow Notifications", style = MaterialTheme.typography.labelLarge)
-                             Text("Summaries & alerts", style = MaterialTheme.typography.labelSmall)
-                         }
-                         Spacer(modifier = Modifier.width(24.dp))
-                         Switch(checked = listenerEnabled, onCheckedChange = null)
-                     }
-                 }
-            }
+            )
+            
+            // Notification Access Image
+            Image(
+                painter = painterResource(id = R.drawable.notificationaccess),
+                contentDescription = "Notification Access",
+                modifier = Modifier
+                    .size(220.dp)
+                    .offset(y = (-10).dp),
+                contentScale = ContentScale.Fit
+            )
         }
         
-        Spacer(modifier = Modifier.height(40.dp))
+        Spacer(modifier = Modifier.height(24.dp))
         
         Text(
-            text = "Enable Access",
+            text = "Enable Notification Access",
             style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.Bold
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center
         )
         
         Spacer(modifier = Modifier.height(12.dp))
         
         Text(
-            text = "Allow Jist to read incoming alerts so our AI can summarize them instantly.",
+            text = "Allow Jist to read incoming notification so our AI can summarize them instantly.",
             style = MaterialTheme.typography.bodyLarge,
             textAlign = TextAlign.Center,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         
-        Spacer(modifier = Modifier.height(40.dp))
+        Spacer(modifier = Modifier.height(32.dp))
         
-        Button(
-            onClick = onOpenSettings,
-            modifier = Modifier.fillMaxWidth().height(56.dp),
-            shape = RoundedCornerShape(16.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+        // Toggle card showing current status
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)),
+            shape = RoundedCornerShape(16.dp)
         ) {
-            Text("Open Settings", color = MaterialTheme.colorScheme.onSurface)
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Notifications,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(24.dp)
+                )
+                Spacer(modifier = Modifier.width(12.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text("Notification Access", style = MaterialTheme.typography.labelLarge)
+                    Text(
+                        if (listenerEnabled) "Enabled" else "Disabled",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = if (listenerEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Switch(checked = listenerEnabled, onCheckedChange = null)
+            }
+        }
+        
+        Spacer(modifier = Modifier.height(24.dp))
+        
+        if (!listenerEnabled) {
+            Button(
+                onClick = onOpenSettings,
+                modifier = Modifier.fillMaxWidth().height(56.dp),
+                shape = RoundedCornerShape(16.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+            ) {
+                Text("Open Settings", color = MaterialTheme.colorScheme.onPrimary, fontWeight = FontWeight.Bold)
+            }
+        } else {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = Icons.Default.Notifications,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(20.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "Access Enabled",
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.Bold
+                )
+            }
         }
     }
 }
@@ -437,30 +563,45 @@ fun Step3InstantSummaries(
     batteryIgnored: Boolean,
     onRequestBattery: () -> Unit
 ) {
+    val context = LocalContext.current
+    
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Spacer(modifier = Modifier.height(40.dp))
+        Spacer(modifier = Modifier.height(48.dp))
         
+        // AI Summary Image with blur gradient background
         Box(
-            modifier = Modifier.size(160.dp),
+            modifier = Modifier.size(240.dp),
             contentAlignment = Alignment.Center
         ) {
-            // Placeholder for battery circle UI
-             Box(
+            // Blur gradient ball behind the image
+            Box(
                 modifier = Modifier
-                    .size(120.dp)
-                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha=0.3f), androidx.compose.foundation.shape.CircleShape),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Bolt,
-                    contentDescription = null,
-                    modifier = Modifier.size(48.dp),
-                    tint = MaterialTheme.colorScheme.primary
-                )
-            }
+                    .size(180.dp)
+                    .offset(y = (-20).dp)
+                    .background(
+                        brush = androidx.compose.ui.graphics.Brush.radialGradient(
+                            colors = listOf(
+                                MaterialTheme.colorScheme.primary.copy(alpha = 0.4f),
+                                MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
+                                MaterialTheme.colorScheme.primary.copy(alpha = 0f)
+                            )
+                        ),
+                        shape = androidx.compose.foundation.shape.CircleShape
+                    )
+            )
+            
+            // AI Summary Image
+            Image(
+                painter = painterResource(id = R.drawable.aisummary),
+                contentDescription = "AI Summary",
+                modifier = Modifier
+                    .size(300.dp)
+                    .offset(y = (-10).dp),
+                contentScale = ContentScale.Fit
+            )
         }
         
-        Spacer(modifier = Modifier.height(32.dp))
+        Spacer(modifier = Modifier.height(24.dp))
         
         Text(
             text = "Instant AI Summaries",
@@ -472,30 +613,64 @@ fun Step3InstantSummaries(
         Spacer(modifier = Modifier.height(12.dp))
         
         Text(
-            text = "Jist needs background access to summarize notifications as they arrive. No waiting for the AI to catch up when you unlock your phone.",
+            text = "Jist needs background access to summarize notifications as they arrive — so you see summaries instantly, not just when you open the app.",
             style = MaterialTheme.typography.bodyLarge,
             textAlign = TextAlign.Center,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         
-        Spacer(modifier = Modifier.height(32.dp))
+        Spacer(modifier = Modifier.height(24.dp))
         
+        // Battery info card with detailed instructions
         Card(
              modifier = Modifier.fillMaxWidth(),
              colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)),
              shape = RoundedCornerShape(16.dp)
         ) {
-            Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                Box(
-                    Modifier.size(40.dp).background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(8.dp)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(Icons.Default.BatteryStd, null, tint = MaterialTheme.colorScheme.primary)
+            Column(modifier = Modifier.padding(16.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        Modifier.size(40.dp).background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(8.dp)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(Icons.Default.BatteryStd, null, tint = MaterialTheme.colorScheme.primary)
+                    }
+                    Spacer(modifier = Modifier.width(16.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("Battery Settings", style = MaterialTheme.typography.labelLarge)
+                        Text(
+                            if (batteryIgnored) "Unrestricted access granted" else "Needs your attention",
+                            style = MaterialTheme.typography.bodySmall, 
+                            color = if (batteryIgnored) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
+                        )
+                    }
+                    if (batteryIgnored) {
+                        Icon(
+                            imageVector = Icons.Default.NotificationsActive,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
                 }
-                Spacer(modifier = Modifier.width(16.dp))
-                Column {
-                    Text("Battery Optimized", style = MaterialTheme.typography.labelLarge)
-                    Text("Minimal impact on your daily battery life.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                
+                if (!batteryIgnored) {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                    Spacer(modifier = Modifier.height(12.dp))
+                    
+                    Text(
+                        text = "On the next screen:",
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    
+                    Text(
+                        text = "1. Find \"Jist\" in the list\n2. Tap on it\n3. Select \"Unrestricted\" or \"Don't optimize\" (may be called \"Allow background activity\" on some phones)\n4. Confirm",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
             }
         }
@@ -503,20 +678,29 @@ fun Step3InstantSummaries(
         Spacer(modifier = Modifier.height(24.dp))
         
         if (!batteryIgnored) {
-             Button(
+            Button(
                 onClick = onRequestBattery,
                 modifier = Modifier.fillMaxWidth().height(56.dp),
                 shape = RoundedCornerShape(16.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
             ) {
-                Text("Enable Background Sync", color = MaterialTheme.colorScheme.onSurface)
+                Text("Open Battery Settings", color = MaterialTheme.colorScheme.onPrimary, fontWeight = FontWeight.Bold)
             }
+            
+            Spacer(modifier = Modifier.height(12.dp))
+            
+            Text(
+                text = "This ensures Jist works even when your phone is idle",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center
+            )
         } else {
-             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center, modifier = Modifier.fillMaxWidth()) {
-                 Icon(Icons.Default.NotificationsActive, null, tint = MaterialTheme.colorScheme.primary) // Green check ideally
-                 Spacer(modifier = Modifier.width(8.dp))
-                 Text("Background Sync Enabled", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
-             }
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center, modifier = Modifier.fillMaxWidth()) {
+                Icon(Icons.Default.NotificationsActive, null, tint = MaterialTheme.colorScheme.primary)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Background Access Enabled", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+            }
         }
     }
 }
@@ -594,57 +778,6 @@ fun Step4ManageApps(
 }
 
 @Composable
-fun Step5WritingStyle(
-    selectedStyle: String,
-    onSelectStyle: (String) -> Unit
-) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Spacer(modifier = Modifier.height(20.dp))
-        
-        Box(
-            modifier = Modifier.size(60.dp).background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha=0.3f), RoundedCornerShape(16.dp)),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(Icons.Default.Edit, null, tint = MaterialTheme.colorScheme.primary)
-        }
-        
-        Spacer(modifier = Modifier.height(16.dp))
-        
-        Text(
-            text = "How should Jist write?",
-            style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.Bold
-        )
-        
-        Text(
-            text = "Customize the AI personality.",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        
-        Spacer(modifier = Modifier.height(24.dp))
-        
-        WritingStyleCard(
-            title = "Concise",
-            description = "Brief, to-the-point summaries. Perfect for glancing quickly.",
-            previewText = "\"Meeting at 3pm.\"",
-            icon = Icons.Default.Bolt,
-            isSelected = selectedStyle == "CONCISE",
-            onClick = { onSelectStyle("CONCISE") }
-        )
-        
-        WritingStyleCard(
-            title = "Bullet Points",
-            description = "Key takeaways listed out. Easy to scan and digest.",
-            previewText = "• Marketing meeting at 3pm\n• Discuss Q4 goals",
-            icon = Icons.Default.FormatListBulleted,
-            isSelected = selectedStyle == "BULLET_POINTS",
-            onClick = { onSelectStyle("BULLET_POINTS") }
-        )
-    }
-}
-
-@Composable
 fun Step6LlmConfiguration(
     selectedProvider: String,
     onSelectProvider: (String) -> Unit,
@@ -652,72 +785,239 @@ fun Step6LlmConfiguration(
     onSelectModel: (String) -> Unit,
     apiKey: String,
     onApiKeyChange: (String) -> Unit,
+    temperature: Float,
+    onTemperatureChange: (Float) -> Unit,
+    maxTokens: Int,
+    onMaxTokensChange: (Int) -> Unit,
+    onTestConnection: () -> Unit,
+    testConnectionResult: String?,
+    testConnectionLoading: Boolean,
     summaryTone: String,
     onSelectTone: (String) -> Unit,
     summaryLength: String,
     onSelectLength: (String) -> Unit
 ) {
-    // Define models per provider
-    val openAiModels = listOf("gpt-4-turbo", "gpt-4o", "gpt-3.5-turbo")
-    val geminiModels = listOf("gemini-1.5-pro", "gemini-1.5-flash", "gemini-pro")
-    val localModels = listOf("llama-3-8b", "mistral-7b", "gemma-7b")
+    val context = LocalContext.current
+    
+    val openAiModels = listOf("gpt-5.2", "gpt-4o", "gpt-4o-mini", "o1", "o3-mini")
+    val geminiModels = listOf("gemini-2.5-pro", "gemini-2.5-flash", "gemini-2.0-flash")
+    val anthropicModels = listOf("claude-3-5-sonnet-20241022", "claude-3-5-haiku-20241022")
+    val openRouterModels = listOf("openai/gpt-4o", "anthropic/claude-3.5-sonnet", "google/gemini-pro-1.5")
 
     val currentModels = when(selectedProvider) {
         "OPENAI" -> openAiModels
         "GEMINI" -> geminiModels
-        "LOCAL" -> localModels
+        "ANTHROPIC" -> anthropicModels
+        "OPENROUTER" -> openRouterModels
         else -> openAiModels
     }
     
     var isCustomModel by remember { mutableStateOf(false) }
+    var customModelName by remember { mutableStateOf("") }
     var expanded by remember { mutableStateOf(false) }
+    var showApiKey by remember { mutableStateOf(false) }
+    var showAdvancedSettings by remember { mutableStateOf(false) }
 
-    // Reset custom model state when provider changes
     LaunchedEffect(selectedProvider) {
         onSelectModel(currentModels.first())
         isCustomModel = false
+        customModelName = ""
     }
 
-    Column(horizontalAlignment = Alignment.Start, modifier = Modifier.fillMaxWidth()) {
-        Spacer(modifier = Modifier.height(10.dp))
-        Text(text = "LLM Configuration", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, modifier = Modifier.align(Alignment.CenterHorizontally))
-        Spacer(modifier = Modifier.height(24.dp))
-
-        Text("AI PROVIDER", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    Column(
+        modifier = Modifier
+            .fillMaxWidth(),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Spacer(modifier = Modifier.height(16.dp))
+        
+        Text(
+            text = "Configure AI",
+            style = MaterialTheme.typography.headlineMedium,
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center
+        )
+        
         Spacer(modifier = Modifier.height(8.dp))
         
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            ProviderCard(name = "OpenAI", icon = Icons.Default.AutoAwesome, selected = selectedProvider == "OPENAI", onClick = { onSelectProvider("OPENAI") }, modifier = Modifier.weight(1f))
-            ProviderCard(name = "Gemini", icon = Icons.Default.Diamond, selected = selectedProvider == "GEMINI", onClick = { onSelectProvider("GEMINI") }, modifier = Modifier.weight(1f))
-            ProviderCard(name = "Local", icon = Icons.Default.SdStorage, selected = selectedProvider == "LOCAL", onClick = { onSelectProvider("LOCAL") }, modifier = Modifier.weight(1f))
-        }
-
+        Text(
+            text = "Choose your AI provider and model",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center
+        )
+        
         Spacer(modifier = Modifier.height(24.dp))
         
-        Text("Model Version", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        // Provider Cards - Similar to settings screen
+        Text(
+            text = "AI PROVIDER",
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+            modifier = Modifier.fillMaxWidth()
+        )
+        
+        Spacer(modifier = Modifier.height(12.dp))
+        
+        val providers = listOf("OPENAI", "ANTHROPIC", "GEMINI", "OPENROUTER")
+        
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            providers.forEach { provider ->
+                val isSelected = provider == selectedProvider
+                
+                val (primaryColor, _) = when (provider) {
+                    "OPENAI" -> Pair(Color(0xFF10A37F), "O")
+                    "ANTHROPIC" -> Pair(Color(0xFFCC785C), "A")
+                    "GEMINI" -> Pair(Color(0xFF4285F4), "G")
+                    "OPENROUTER" -> Pair(Color(0xFFFF6B35), "R")
+                    else -> Pair(MaterialTheme.colorScheme.primary, "?")
+                }
+                
+                Card(
+                    modifier = Modifier
+                        .width(110.dp)
+                        .height(110.dp)
+                        .clickable { 
+                            onSelectProvider(provider)
+                            isCustomModel = false
+                        },
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = if (isSelected) primaryColor.copy(alpha = 0.15f)
+                        else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+                    ),
+                    border = if (isSelected) androidx.compose.foundation.BorderStroke(2.dp, primaryColor) else null
+                ) {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center
+                        ) {
+                            Spacer(modifier = Modifier.weight(1f))
+                            
+                            // Logo image with blurred radial gradient background
+                            Box(
+                                modifier = Modifier
+                                    .size(64.dp)
+                                    .background(
+                                        if (isSelected) primaryColor.copy(alpha = 0.12f)
+                                        else MaterialTheme.colorScheme.surface.copy(alpha = 0.32f),
+                                        RoundedCornerShape(14.dp)
+                                    ),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                val drawableId = when (provider) {
+                                    "OPENAI" -> R.drawable.openai
+                                    "ANTHROPIC" -> R.drawable.anthropic
+                                    "GEMINI" -> R.drawable.gemini
+                                    "OPENROUTER" -> R.drawable.openrouter
+                                    else -> R.drawable.ic_launcher_foreground
+                                }
+
+                                // Blurred radial gradient ball behind the logo
+                                Box(
+                                    modifier = Modifier
+                                        .size(48.dp)
+                                        .offset(y = (0).dp)
+                                        .background(
+                                            brush = Brush.radialGradient(
+                                                colors = listOf(primaryColor.copy(alpha = 0.30f), Color.Transparent)
+                                            ),
+                                            shape = CircleShape
+                                        )
+                                        .blur(12.dp)
+                                )
+
+                                // Logo image with slight top margin
+                                Image(
+                                    painter = painterResource(id = drawableId),
+                                    contentDescription = "$provider logo",
+                                    modifier = Modifier
+                                        .size(40.dp)
+                                        .offset(y = 0.dp)
+                                )
+                            }
+                            
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = when (provider) {
+                                    "OPENAI" -> "OpenAI"
+                                    "ANTHROPIC" -> "Anthropic"
+                                    "GEMINI" -> "Gemini"
+                                    "OPENROUTER" -> "OpenRouter"
+                                    else -> provider
+                                },
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                color = if (isSelected) primaryColor else MaterialTheme.colorScheme.onSurface
+                            )
+                            Spacer(modifier = Modifier.weight(1f))
+                        }
+                    }
+                }
+            }
+        }
+        
+        Spacer(modifier = Modifier.height(24.dp))
+        
+        // Model Selection
+        Text(
+            text = "Model Version",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.fillMaxWidth()
+        )
+        
         Spacer(modifier = Modifier.height(8.dp))
         
         Box(modifier = Modifier.fillMaxWidth()) {
-            OutlinedCard(
-                modifier = Modifier.fillMaxWidth().clickable { expanded = true },
+            OutlinedTextField(
+                value = if (isCustomModel) customModelName else selectedModel,
+                onValueChange = {},
+                modifier = Modifier.fillMaxWidth(),
+                readOnly = true,
+                trailingIcon = {
+                    IconButton(onClick = { expanded = true }) {
+                        Icon(Icons.Default.KeyboardArrowDown, "Select model")
+                    }
+                },
                 shape = RoundedCornerShape(12.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha=0.1f)),
-                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha=0.3f))
-            ) {
-                Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Text(text = if (isCustomModel) "Custom Model" else selectedModel, modifier = Modifier.weight(1f))
-                    Icon(Icons.Default.ArrowDropDown, null)
-                }
-            }
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                    focusedBorderColor = Color.Transparent,
+                    unfocusedBorderColor = Color.Transparent
+                )
+            )
+            
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp)
+                    .clickable { expanded = true }
+            )
             
             DropdownMenu(
                 expanded = expanded,
                 onDismissRequest = { expanded = false },
-                modifier = Modifier.fillMaxWidth(0.8f)
+                modifier = Modifier.fillMaxWidth(0.9f)
             ) {
                 currentModels.forEach { model ->
                     DropdownMenuItem(
-                        text = { Text(model) },
+                        text = {
+                            Text(
+                                text = model,
+                                fontWeight = if (model == selectedModel && !isCustomModel) FontWeight.Bold else FontWeight.Normal
+                            )
+                        },
                         onClick = {
                             onSelectModel(model)
                             isCustomModel = false
@@ -726,10 +1026,15 @@ fun Step6LlmConfiguration(
                     )
                 }
                 DropdownMenuItem(
-                    text = { Text("Custom...") },
+                    text = {
+                        Text(
+                            text = "Custom Model...",
+                            fontWeight = if (isCustomModel) FontWeight.Bold else FontWeight.Normal,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    },
                     onClick = {
                         isCustomModel = true
-                        onSelectModel("") // Clear for input
                         expanded = false
                     }
                 )
@@ -737,77 +1042,296 @@ fun Step6LlmConfiguration(
         }
         
         if (isCustomModel) {
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(12.dp))
             OutlinedTextField(
-                value = selectedModel,
-                onValueChange = onSelectModel,
-                label = { Text("Enter Model Name") },
+                value = customModelName,
+                onValueChange = { customModelName = it },
                 modifier = Modifier.fillMaxWidth(),
+                placeholder = { Text("Enter custom model name") },
+                label = { Text("Custom Model") },
                 singleLine = true,
-                shape = RoundedCornerShape(12.dp)
+                shape = RoundedCornerShape(12.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                    focusedBorderColor = MaterialTheme.colorScheme.primary,
+                    unfocusedBorderColor = Color.Transparent
+                )
             )
         }
         
         Spacer(modifier = Modifier.height(24.dp))
         
-        Text("AUTHENTICATION", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Spacer(modifier = Modifier.height(8.dp))
+        // Authentication
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "AUTHENTICATION",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+            )
+            Icon(
+                imageVector = Icons.Default.Lock,
+                contentDescription = null,
+                modifier = Modifier.size(16.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+            )
+        }
+        
+        Spacer(modifier = Modifier.height(12.dp))
         
         OutlinedTextField(
             value = apiKey,
             onValueChange = onApiKeyChange,
             modifier = Modifier.fillMaxWidth(),
-            placeholder = { Text("API Key") },
-            visualTransformation = PasswordVisualTransformation(),
+            placeholder = { Text("Enter your API key") },
+            visualTransformation = if (showApiKey) VisualTransformation.None else PasswordVisualTransformation(),
             trailingIcon = {
-                TextButton(onClick = { /* Paste logic */ }) { Text("Paste") }
+                Row {
+                    IconButton(onClick = { showApiKey = !showApiKey }) {
+                        Icon(
+                            imageVector = if (showApiKey) Icons.Default.Lock else Icons.Default.Lock,
+                            contentDescription = if (showApiKey) "Hide" else "Show"
+                        )
+                    }
+                }
             },
             shape = RoundedCornerShape(12.dp),
             colors = OutlinedTextFieldDefaults.colors(
-                focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha=0.1f),
-                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha=0.1f),
-                focusedBorderColor = MaterialTheme.colorScheme.primary.copy(alpha=0.5f),
-                unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha=0.3f)
-            )
+                focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                focusedBorderColor = Color.Transparent,
+                unfocusedBorderColor = Color.Transparent
+            ),
+            singleLine = true
         )
-        Text("We prioritize privacy. Keys are encrypted.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top=4.dp))
-
+        
+        Spacer(modifier = Modifier.height(8.dp))
+        
+        Text(
+            text = "We prioritize privacy. Keys are encrypted.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+        )
+        
         Spacer(modifier = Modifier.height(24.dp))
         
-        Text("OUTPUT PREFERENCES", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Spacer(modifier = Modifier.height(12.dp))
-        
-        Text("Summary Tone", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Spacer(modifier = Modifier.height(8.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            ToneChip("Professional", summaryTone == "PROFESSIONAL") { onSelectTone("PROFESSIONAL") }
-            ToneChip("Casual", summaryTone == "CASUAL") { onSelectTone("CASUAL") }
-            ToneChip("Witty", summaryTone == "WITTY") { onSelectTone("WITTY") }
-             ToneChip("Urgent", summaryTone == "URGENT") { onSelectTone("URGENT") }
+        // Additional Settings (Collapsible)
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f)
+            )
+        ) {
+            Column(
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                // Header
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { showAdvancedSettings = !showAdvancedSettings }
+                        .padding(16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Additional Settings",
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.Medium
+                    )
+                    Icon(
+                        imageVector = if (showAdvancedSettings) 
+                            Icons.Default.KeyboardArrowUp 
+                        else 
+                            Icons.Default.KeyboardArrowDown,
+                        contentDescription = if (showAdvancedSettings) "Collapse" else "Expand"
+                    )
+                }
+                
+                // Expandable content
+                AnimatedVisibility(
+                    visible = showAdvancedSettings,
+                    enter = expandVertically() + fadeIn(),
+                    exit = shrinkVertically() + fadeOut()
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp)
+                            .padding(bottom = 16.dp),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        // Temperature
+                        Column {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text(
+                                    text = "Temperature",
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                                Text(
+                                    text = "${String.format("%.1f", temperature)}",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                            
+                            Slider(
+                                value = temperature,
+                                onValueChange = { onTemperatureChange(it) },
+                                valueRange = 0f..2f,
+                                steps = 19
+                            )
+                            
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text(
+                                    text = "Precise",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Text(
+                                    text = "Creative",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                        
+                        // Max Tokens
+                        Column {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text(
+                                    text = "Max Tokens",
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                                Text(
+                                    text = "$maxTokens",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                            
+                            Slider(
+                                value = maxTokens.toFloat(),
+                                onValueChange = { onMaxTokensChange(it.toInt()) },
+                                valueRange = 100f..4000f,
+                                steps = 38
+                            )
+                            
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text(
+                                    text = "100",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Text(
+                                    text = "4000",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
+                }
+            }
         }
         
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(24.dp))
         
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-             Text("Summary Length", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-             Text(summaryLength, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+        // Action Buttons
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            // Test Button
+            Button(
+                onClick = onTestConnection,
+                modifier = Modifier.weight(1f),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                    contentColor = MaterialTheme.colorScheme.onSurface
+                ),
+                enabled = apiKey.isNotBlank() && !testConnectionLoading
+            ) {
+                if (testConnectionLoading) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(16.dp),
+                        strokeWidth = 2.dp
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                }
+                Text("Test Connection")
+            }
+
+            // Save Button
+            Button(
+                onClick = { /* Save handled by main flow */ },
+                modifier = Modifier.weight(1f),
+                enabled = apiKey.isNotBlank() && selectedModel.isNotBlank()
+            ) {
+                Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Save")
+            }
         }
         
-        Slider(
-            value = when(summaryLength) { "SHORT" -> 0f; "MEDIUM" -> 1f; else -> 2f },
-            onValueChange = { 
-                val newLength = when(it.toInt()) { 0 -> "SHORT"; 1 -> "MEDIUM"; else -> "LONG" }
-                onSelectLength(newLength)
-            },
-            valueRange = 0f..2f,
-            steps = 1
-        )
-         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-             Text("CONCISE", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-             Text("DETAILED", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        // Test Connection Result
+        if (testConnectionResult != null) {
+            Spacer(modifier = Modifier.height(16.dp))
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = if (testConnectionResult!!.startsWith("✓"))
+                        Color(0xFF4CAF50).copy(alpha = 0.1f)
+                    else
+                        Color(0xFFE57373).copy(alpha = 0.1f)
+                )
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = if (testConnectionResult!!.startsWith("✓"))
+                            Icons.Default.Check
+                        else
+                            Icons.Default.Warning,
+                        contentDescription = null,
+                        tint = if (testConnectionResult!!.startsWith("✓"))
+                            Color(0xFF4CAF50)
+                        else
+                            Color(0xFFE57373)
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text(
+                        text = testConnectionResult!!,
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+            }
         }
         
-        Spacer(modifier = Modifier.height(80.dp)) // Padding for bottom bar
+        Spacer(modifier = Modifier.height(32.dp))
     }
 }
 
