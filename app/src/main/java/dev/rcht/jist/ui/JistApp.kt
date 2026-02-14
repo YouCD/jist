@@ -25,6 +25,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import dev.chrisbanes.haze.hazeSource
+import dev.chrisbanes.haze.rememberHazeState
 import dev.rcht.jist.ui.components.GlassBottomNavigation
 import dev.rcht.jist.ui.navigation.JistNavHost
 import dev.rcht.jist.ui.navigation.Screen
@@ -55,9 +57,11 @@ fun JistApp() {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
     val showBottomBar = currentRoute in mainTabRoutes
+    val hazeState = rememberHazeState()
 
     Scaffold(
-        containerColor = Color.Black
+        containerColor = Color.Black,
+        contentWindowInsets = androidx.compose.foundation.layout.WindowInsets(0, 0, 0, 0)
     ) { paddingValues ->
         Box(modifier = Modifier.fillMaxSize()) {
             JistNavHost(
@@ -65,7 +69,8 @@ fun JistApp() {
                 application = application,
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(bottom = 0.dp) // Allow content to go behind nav bar
+                    .padding(paddingValues)
+                    .hazeSource(hazeState, zIndex = 0f)
             )
             
             if (showBottomBar) {
@@ -73,9 +78,8 @@ fun JistApp() {
                     navController = navController,
                     items = bottomNavItems,
                     currentRoute = currentRoute,
-                    modifier = Modifier
-                        .align(Alignment.BottomCenter)
-                        .padding(bottom = 16.dp)
+                    hazeState = hazeState,
+                    modifier = Modifier.align(Alignment.BottomCenter)
                 )
             }
         }

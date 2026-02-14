@@ -8,8 +8,12 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -31,53 +35,82 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
 import androidx.navigation.NavController
+import dev.chrisbanes.haze.HazeState
+import dev.chrisbanes.haze.hazeSource
+import dev.chrisbanes.haze.hazeEffect
+import dev.chrisbanes.haze.materials.ExperimentalHazeMaterialsApi
+import dev.chrisbanes.haze.materials.HazeMaterials
 import dev.rcht.jist.ui.BottomNavItem
 import dev.rcht.jist.ui.navigation.Screen
 import dev.rcht.jist.ui.theme.JistCyan
 import dev.rcht.jist.ui.theme.JistPurple
 
 @Composable
+@OptIn(ExperimentalHazeMaterialsApi::class)
 fun GlassBottomNavigation(
     navController: NavController,
     items: List<BottomNavItem>,
     currentRoute: String?,
+    hazeState: HazeState,
     modifier: Modifier = Modifier
 ) {
+    val navShape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)
+    val contentHeight = 72.dp
+    val navigationBarPadding = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 0.dp, vertical = 0.dp)
+            .height(contentHeight + navigationBarPadding)
+            .zIndex(1f)
             .shadow(
                 elevation = 16.dp,
-                shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
+                shape = navShape,
                 spotColor = JistCyan.copy(alpha = 0.2f),
                 ambientColor = Color.Black
             )
-            .clip(RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp))
-            .background(
-                brush = Brush.verticalGradient(
-                    colors = listOf(
-                        Color(0xFF1A1A2E).copy(alpha = 0.95f),
-                        Color(0xFF16213E).copy(alpha = 0.98f)
-                    )
-                )
-            )
-            // Add border for glass effect
-            .background(
-                brush = Brush.linearGradient(
-                    colors = listOf(
-                        Color.White.copy(alpha = 0.05f),
-                        Color.White.copy(alpha = 0.05f)
-                    )
-                ),
-                shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)
+            .clip(navShape)
+            .hazeEffect(
+                state = hazeState,
+                style = HazeMaterials.ultraThin()
             )
     ) {
+        // Base tint to avoid full transparency
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(
+                    brush = Brush.verticalGradient(
+                        colors = listOf(
+                            Color(0xFF1A1A2E).copy(alpha = 0.7f),
+                            Color(0xFF16213E).copy(alpha = 0.75f)
+                        )
+                    )
+                )
+        )
+
+        // Border / highlight for glass effect
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(
+                    brush = Brush.linearGradient(
+                        colors = listOf(
+                            Color.White.copy(alpha = 0.05f),
+                            Color.White.copy(alpha = 0.05f)
+                        )
+                    ),
+                    shape = navShape
+                )
+        )
+
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = 0.dp),
+                .height(contentHeight)
+                .align(Alignment.TopCenter),
             horizontalArrangement = Arrangement.SpaceEvenly,
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -133,7 +166,7 @@ private fun GlassBottomNavItem(
                     shape = RoundedCornerShape(2.dp)
                 )
                 .shadow(
-                    elevation = if (selected) 4.dp else 0.dp,
+                    elevation = if (selected) 3.dp else 0.dp,
                     shape = RoundedCornerShape(2.dp),
                     spotColor = JistCyan,
                     ambientColor = JistCyan
@@ -159,7 +192,7 @@ private fun GlassBottomNavItem(
             color = if (selected) JistCyan else Color.White.copy(alpha = 0.4f),
             fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal
         )
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(4.dp))
     }
 }
 
@@ -170,10 +203,12 @@ private fun GlassBottomNavigationPreview() {
         Box(modifier = Modifier.background(Color.Black).padding(0
             .dp)) {
             val navController = androidx.navigation.compose.rememberNavController()
+            val hazeState = remember { HazeState() }
             GlassBottomNavigation(
                 navController = navController,
                 items = dev.rcht.jist.ui.bottomNavItems,
-                currentRoute = "dashboard"
+                currentRoute = "dashboard",
+                hazeState = hazeState
             )
         }
     }
