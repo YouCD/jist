@@ -219,8 +219,7 @@ fun JistNavHost(
                 onNavigateBack = { navController.popBackStack() },
                 onNavigateToLlmConfig = { navController.navigate(Screen.LlmConfig.route) },
                 onNavigateToApps = { navController.navigate(Screen.AppSettings.createRoute(fromOnboarding = false)) },
-                onNavigateToAbout = { navController.navigate(Screen.About.route) },
-                onSignOut = { /* Handle sign out */ }
+                onNavigateToAbout = { navController.navigate(Screen.About.route) }
             )
         }
         composable(Screen.LlmConfig.route) {

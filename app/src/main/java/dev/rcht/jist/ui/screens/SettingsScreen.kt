@@ -1,14 +1,11 @@
 package dev.rcht.jist.ui.screens
 
 import android.content.Intent
-import android.net.Uri
 import android.provider.Settings
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -22,13 +19,11 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
@@ -43,8 +38,7 @@ fun SettingsScreen(
     onNavigateBack: () -> Unit = {},
     onNavigateToLlmConfig: () -> Unit,
     onNavigateToApps: () -> Unit,
-    onNavigateToAbout: () -> Unit,
-    onSignOut: () -> Unit // Placeholder
+    onNavigateToAbout: () -> Unit
 ) {
     val context = LocalContext.current
     val app = context.applicationContext as JistApplication
@@ -97,18 +91,6 @@ fun SettingsScreen(
                 .padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
-            // Header Title (Large) - REMOVED
-
-
-            // Profile Section
-            item {
-                ProfileCard(
-                    name = uiState.userName,
-                    email = uiState.userEmail,
-                    onClick = { /* Manage Account placeholder */ }
-                )
-            }
-
             // Intelligence Section
             item {
                 SettingsSection(title = "INTELLIGENCE") {
@@ -198,20 +180,8 @@ fun SettingsScreen(
                 }
             }
 
-            // Sign Out
+            // Footer
             item {
-                Button(
-                    onClick = onSignOut,
-                    modifier = Modifier.fillMaxWidth().height(56.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha=0.5f),
-                        contentColor = MaterialTheme.colorScheme.error
-                    ),
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Text("Sign Out", fontSize = 16.sp)
-                }
-                
                 Spacer(modifier = Modifier.height(16.dp))
                 
                 Text(
@@ -224,46 +194,6 @@ fun SettingsScreen(
                 
                  Spacer(modifier = Modifier.height(32.dp))
             }
-        }
-    }
-}
-
-@Composable
-fun ProfileCard(name: String, email: String, onClick: () -> Unit) {
-    Card(
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
-    ) {
-        Row(
-            modifier = Modifier.padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            // Avatar Placeholder
-            Box(
-                modifier = Modifier
-                    .size(56.dp)
-                    .background(MaterialTheme.colorScheme.primaryContainer, CircleShape),
-                contentAlignment = Alignment.Center
-            ) {
-                 Icon(Icons.Default.Person, null, tint = MaterialTheme.colorScheme.onPrimaryContainer)
-            }
-            
-            Spacer(modifier = Modifier.width(16.dp))
-            
-            Column(modifier = Modifier.weight(1f)) {
-                Text(text = name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                Text(text = email, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(text = "Manage Account", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
-            }
-            
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.ArrowForwardIos,
-                contentDescription = null,
-                modifier = Modifier.size(16.dp),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
-            )
         }
     }
 }
