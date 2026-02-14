@@ -82,7 +82,10 @@ import dev.rcht.jist.ui.components.GlassScaffold
 import dev.rcht.jist.ui.settings.LlmConfigUiState
 import kotlinx.coroutines.launch
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.offset
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.draw.blur
+import androidx.compose.ui.graphics.Brush
 import dev.rcht.jist.R
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -276,14 +279,14 @@ fun LlmConfigScreen(
                                 ) {
                                     Spacer(modifier = Modifier.weight(1f))
                                     
-                                    // Logo image (use vector drawables placed in res/drawable)
+                                    // Logo image with blurred radial gradient background and a top margin
                                     Box(
                                         modifier = Modifier
-                                            .size(44.dp)
+                                            .size(64.dp)
                                             .background(
-                                                if (isSelected) primaryColor.copy(alpha = 0.2f)
-                                                else MaterialTheme.colorScheme.surface.copy(alpha = 0.5f),
-                                                RoundedCornerShape(12.dp)
+                                                if (isSelected) primaryColor.copy(alpha = 0.12f)
+                                                else MaterialTheme.colorScheme.surface.copy(alpha = 0.32f),
+                                                RoundedCornerShape(14.dp)
                                             ),
                                         contentAlignment = Alignment.Center
                                     ) {
@@ -294,10 +297,28 @@ fun LlmConfigScreen(
                                             "OPENROUTER" -> R.drawable.openrouter
                                             else -> R.drawable.ic_launcher_foreground
                                         }
+
+                                        // Blurred radial gradient ball behind the logo (slightly offset upward)
+                                        Box(
+                                            modifier = Modifier
+                                                .size(48.dp)
+                                                .offset(y = (-8).dp)
+                                                .background(
+                                                    brush = Brush.radialGradient(
+                                                        colors = listOf(primaryColor.copy(alpha = 0.30f), Color.Transparent)
+                                                    ),
+                                                    shape = CircleShape
+                                                )
+                                                .blur(12.dp)
+                                        )
+
+                                        // Logo image (bigger) with slight top margin
                                         Image(
                                             painter = painterResource(id = drawableId),
                                             contentDescription = "$provider logo",
-                                            modifier = Modifier.size(28.dp)
+                                            modifier = Modifier
+                                                .size(40.dp)
+                                                .offset(y = 6.dp)
                                         )
                                     }
                                     

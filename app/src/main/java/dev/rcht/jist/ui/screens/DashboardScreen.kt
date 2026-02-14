@@ -59,6 +59,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
@@ -95,7 +96,8 @@ fun DashboardScreen(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
-    val hazeState = rememberHazeState()
+    val isPreviewMode = LocalInspectionMode.current
+    val hazeState = if (isPreviewMode) null else rememberHazeState()
 
     GlassScaffold(
         modifier = modifier.fillMaxSize(),
@@ -119,31 +121,33 @@ fun DashboardScreen(
             }
         } else {
             Box(modifier = Modifier.fillMaxSize()) {
-                // Background layer with hazeSource
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .hazeSource(hazeState)
-                ) {
-                    // Blue blur oval in background
+                // Background layer with hazeSource (only in non-preview mode)
+                if (!isPreviewMode && hazeState != null) {
                     Box(
                         modifier = Modifier
-                            .width(0.dp)
-                            .height(0.dp)
-                            .offset(y = 700.dp)
-                            .align(Alignment.TopCenter)
-                            .background(
-                                brush = Brush.radialGradient(
-                                    colors = listOf(
-                                        Color(0xFF00E5FF).copy(alpha = 0.4f),
-                                        Color(0xFF00E5FF).copy(alpha = 0.2f),
-                                        Color.Transparent
-                                    )
-                                ),
-                                shape = RoundedCornerShape(0)
-                            )
-                            .blur(radius = 60.dp)
-                    )
+                            .fillMaxSize()
+                            .hazeSource(hazeState)
+                    ) {
+                        // Blue blur oval in background
+                        Box(
+                            modifier = Modifier
+                                .width(0.dp)
+                                .height(0.dp)
+                                .offset(y = 700.dp)
+                                .align(Alignment.TopCenter)
+                                .background(
+                                    brush = Brush.radialGradient(
+                                        colors = listOf(
+                                            Color(0xFF00E5FF).copy(alpha = 0.4f),
+                                            Color(0xFF00E5FF).copy(alpha = 0.2f),
+                                            Color.Transparent
+                                        )
+                                    ),
+                                    shape = RoundedCornerShape(0)
+                                )
+                                .blur(radius = 60.dp)
+                        )
+                    }
                 }
                 
                 // Foreground layer with glass cards
@@ -356,7 +360,7 @@ fun DashboardScreen(
                             Box(
                                 modifier = Modifier
                                     .size(40.dp)
-                                    .background(Color(0xFF0D47A1).copy(alpha = 0.3f), CircleShape)
+                                    .background(JistCyan.copy(alpha = 0.15f), CircleShape)
                                     .padding(8.dp),
                                 contentAlignment = Alignment.Center
                             ) {
@@ -460,7 +464,7 @@ fun ActivityItem(
     description: String,
     time: String,
     accentColor: Color,
-    hazeState: HazeState
+    hazeState: HazeState?
 ) {
     val context = LocalContext.current
 

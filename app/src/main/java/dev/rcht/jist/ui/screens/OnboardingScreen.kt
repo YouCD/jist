@@ -52,7 +52,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
+import dev.rcht.jist.R
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
@@ -68,6 +71,7 @@ import dev.rcht.jist.ui.screens.onboarding.WritingStyleCard
 import dev.rcht.jist.ui.components.GlassScaffold
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import dev.rcht.jist.ui.theme.JistCyan
 
 @OptIn(ExperimentalAnimationApi::class)
 @Composable
@@ -134,7 +138,7 @@ fun OnboardingScreen(
             OnboardingStepIndicator(
                 currentStep = step,
                 totalSteps = totalSteps,
-                modifier = Modifier.statusBarsPadding()
+                modifier = Modifier.statusBarsPadding(),
             )
         },
         bottomBar = {
@@ -160,7 +164,7 @@ fun OnboardingScreen(
                         .height(56.dp),
                     shape = RoundedCornerShape(16.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.primary,
+                        containerColor = JistCyan,
                         contentColor = MaterialTheme.colorScheme.onPrimary
                     ),
                     enabled = when (step) {
@@ -267,25 +271,45 @@ fun Step1GetStarted(
     notificationsEnabled: Boolean,
     onToggleNotifications: (Boolean) -> Unit
 ) {
+    val context = LocalContext.current
+    
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Spacer(modifier = Modifier.height(20.dp))
+        Spacer(modifier = Modifier.height(48.dp))
         
-        // Hero Icon/Image placeholder
+        // Central Element Image with blur gradient background
         Box(
-            modifier = Modifier
-                .size(120.dp)
-                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha=0.5f), RoundedCornerShape(32.dp)),
+            modifier = Modifier.size(240.dp),
             contentAlignment = Alignment.Center
         ) {
-             Icon(
-                imageVector = Icons.Default.NotificationsActive,
-                contentDescription = null,
-                modifier = Modifier.size(48.dp),
-                tint = MaterialTheme.colorScheme.primary
+            // Blur gradient ball behind the image
+            Box(
+                modifier = Modifier
+                    .size(500.dp)
+                    .offset(y = (-40).dp)
+                    .background(
+                        brush = androidx.compose.ui.graphics.Brush.radialGradient(
+                            colors = listOf(
+                                MaterialTheme.colorScheme.primary.copy(alpha = 0.4f),
+                                MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
+                                MaterialTheme.colorScheme.primary.copy(alpha = 0f)
+                            )
+                        ),
+                        shape = androidx.compose.foundation.shape.CircleShape
+                    )
+            )
+            
+            // Central Element Image
+            Image(
+                painter = painterResource(id = R.drawable.central_element),
+                contentDescription = "Jist App Icon",
+                modifier = Modifier
+                    .size(220.dp)
+                    .offset(y = (-10).dp),
+                contentScale = ContentScale.Fit
             )
         }
         
-        Spacer(modifier = Modifier.height(32.dp))
+        Spacer(modifier = Modifier.height(24.dp))
         
         Text(
             text = "Get Started",
