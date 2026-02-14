@@ -2,24 +2,37 @@ package dev.rcht.jist.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-// Jist Brand Colors - Material 3 Expressive with vibrant teal primary
-// Primary: Vibrant teal (modern, tech-forward)
-val md_theme_light_primary = Color(0xFF00796B)
-val md_theme_light_onPrimary = Color(0xFFFFFFFF)
-val md_theme_light_primaryContainer = Color(0xFFA7FFDA)
-val md_theme_light_onPrimaryContainer = Color(0xFF002019)
+// Jist Brand Colors - Consistent Cyan/Purple theme across all screens
+// Primary: Vibrant Cyan (modern, tech-forward) - matches Dashboard
+val JistCyan = Color(0xFF00E5FF)
+val JistPurple = Color(0xFFD500F9)
 
-// Secondary: Deep purple (accent for secondary actions)
-val md_theme_light_secondary = Color(0xFF6750A4)
+// App Background Colors
+val AppBackground = Color(0xFF101C22)
+val JistBackgroundStart = Color(0xFF0D1B2A)
+val JistBackgroundEnd = Color(0xFF101C22)
+
+// Glassmorphism Colors
+val GlassSurface = Color(0xFF1E1E1E).copy(alpha = 0.6f)
+val GlassBorder = Color(0xFFFFFFFF).copy(alpha = 0.1f)
+
+// Light Theme Colors (using JistCyan as primary)
+val md_theme_light_primary = JistCyan
+val md_theme_light_onPrimary = Color(0xFF003744)
+val md_theme_light_primaryContainer = Color(0xFFB3F5FF)
+val md_theme_light_onPrimaryContainer = Color(0xFF001F28)
+
+// Secondary: JistPurple (accent for secondary actions)
+val md_theme_light_secondary = JistPurple
 val md_theme_light_onSecondary = Color(0xFFFFFFFF)
-val md_theme_light_secondaryContainer = Color(0xFFEADDFF)
-val md_theme_light_onSecondaryContainer = Color(0xFF21005E)
+val md_theme_light_secondaryContainer = Color(0xFFF3D9FF)
+val md_theme_light_onSecondaryContainer = Color(0xFF3C0059)
 
-// Tertiary: Orange (accent for highlights and important elements)
-val md_theme_light_tertiary = Color(0xFF7D5260)
-val md_theme_light_onTertiary = Color(0xFFFFFFFF)
-val md_theme_light_tertiaryContainer = Color(0xFFFFD8E4)
-val md_theme_light_onTertiaryContainer = Color(0xFF31101D)
+// Tertiary: Cyan variant (accent for highlights)
+val md_theme_light_tertiary = Color(0xFF00B8D4)
+val md_theme_light_onTertiary = Color(0xFF003640)
+val md_theme_light_tertiaryContainer = Color(0xFFB3F5FF)
+val md_theme_light_onTertiaryContainer = Color(0xFF001F28)
 
 // Error: Standard Material 3 error red
 val md_theme_light_error = Color(0xFFB3261E)
@@ -40,24 +53,21 @@ val md_theme_light_outlineVariant = Color(0xFFCAC7D0)
 // Scrim (for overlays and dialogs)
 val md_theme_light_scrim = Color(0xFF000000)
 
-// App Background Color
-val AppBackground = Color(0xFF101C22)
+// Dark Theme Colors - Using JistCyan and JistPurple for consistency
+val md_theme_dark_primary = JistCyan
+val md_theme_dark_onPrimary = Color(0xFF003744)
+val md_theme_dark_primaryContainer = Color(0xFF004D5C)
+val md_theme_dark_onPrimaryContainer = Color(0xFFB3F5FF)
 
-// Dark Theme Colors
-val md_theme_dark_primary = Color(0xFF80DEBC)
-val md_theme_dark_onPrimary = Color(0xFF003830)
-val md_theme_dark_primaryContainer = Color(0xFF005047)
-val md_theme_dark_onPrimaryContainer = Color(0xFFA7FFDA)
+val md_theme_dark_secondary = JistPurple
+val md_theme_dark_onSecondary = Color(0xFF570080)
+val md_theme_dark_secondaryContainer = Color(0xFF7A00B3)
+val md_theme_dark_onSecondaryContainer = Color(0xFFF3D9FF)
 
-val md_theme_dark_secondary = Color(0xFFCFBCFF)
-val md_theme_dark_onSecondary = Color(0xFF371E72)
-val md_theme_dark_secondaryContainer = Color(0xFF4F378A)
-val md_theme_dark_onSecondaryContainer = Color(0xFFEADDFF)
-
-val md_theme_dark_tertiary = Color(0xFFF4B1C3)
-val md_theme_dark_onTertiary = Color(0xFF4A2C3E)
-val md_theme_dark_tertiaryContainer = Color(0xFF633B52)
-val md_theme_dark_onTertiaryContainer = Color(0xFFFFD8E4)
+val md_theme_dark_tertiary = Color(0xFF00B8D4)
+val md_theme_dark_onTertiary = Color(0xFF003640)
+val md_theme_dark_tertiaryContainer = Color(0xFF004D5C)
+val md_theme_dark_onTertiaryContainer = Color(0xFFB3F5FF)
 
 val md_theme_dark_error = Color(0xFFF2B8B5)
 val md_theme_dark_errorContainer = Color(0xFF8C1D18)
@@ -68,17 +78,9 @@ val md_theme_dark_background = AppBackground
 val md_theme_dark_onBackground = Color(0xFFE6E1E6)
 val md_theme_dark_surface = AppBackground
 val md_theme_dark_onSurface = Color(0xFFE6E1E6)
-val md_theme_dark_surfaceVariant = Color(0xFF49454E)
-val md_theme_dark_onSurfaceVariant = Color(0xFFCAC7D0)
-val md_theme_dark_outline = Color(0xFF938F96)
-val md_theme_dark_outlineVariant = Color(0xFF49454E)
+val md_theme_dark_surfaceVariant = Color(0xFF2A3A42)
+val md_theme_dark_onSurfaceVariant = Color(0xFFBFC8CC)
+val md_theme_dark_outline = Color(0xFF6B7A82)
+val md_theme_dark_outlineVariant = Color(0xFF3A4A52)
 
 val md_theme_dark_scrim = Color(0xFF000000)
-
-// Jist Glassmorphism Colors
-val JistBackgroundStart = Color(0xFF0D1B2A)
-val JistBackgroundEnd = Color(0xFF101C22)
-val JistCyan = Color(0xFF00E5FF)
-val JistPurple = Color(0xFFD500F9)
-val GlassSurface = Color(0xFF1E1E1E).copy(alpha = 0.6f)
-val GlassBorder = Color(0xFFFFFFFF).copy(alpha = 0.1f)
