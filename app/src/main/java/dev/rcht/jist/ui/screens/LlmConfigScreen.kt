@@ -1,6 +1,14 @@
 package dev.rcht.jist.ui.screens
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -12,33 +20,41 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.ContentPaste
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.outlined.Diamond
+import androidx.compose.material.icons.outlined.Memory
+import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.OutlinedTextField
-import dev.rcht.jist.ui.components.GlassScaffold
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Slider
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.ui.graphics.Color
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -49,12 +65,25 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import dev.rcht.jist.data.db.entity.LlmConfigEntity
+import dev.rcht.jist.llm.LlmClientFactory
+import dev.rcht.jist.ui.components.GlassScaffold
 import dev.rcht.jist.ui.settings.LlmConfigUiState
 import kotlinx.coroutines.launch
+import androidx.compose.foundation.Image
+import androidx.compose.ui.res.painterResource
+import dev.rcht.jist.R
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -72,8 +101,67 @@ fun LlmConfigScreen(
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
-    var showAddDialog by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+    val clipboardManager = LocalClipboardManager.current
+    
+    // Provider and model state
+    val providers = listOf("OPENAI", "ANTHROPIC", "GEMINI", "OPENROUTER")
+    val modelsByProvider = mapOf(
+        "OPENAI" to listOf("gpt-5.2", "gpt-5-mini-2025-08-07", "gpt-4o", "gpt-4o-mini", "o1", "o3-mini"),
+        "ANTHROPIC" to listOf("claude-3-5-sonnet-20241022", "claude-3-5-haiku-20241022", "claude-3-opus-20240229", "claude-3-haiku-20240307"),
+        "GEMINI" to listOf("gemini-3-pro-preview", "gemini-3-flash-preview", "gemini-2.5-pro", "gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-2.0-flash", "gemini-2.0-pro"),
+        "OPENROUTER" to listOf("openai/gpt-4o", "openai/gpt-4o-mini", "anthropic/claude-3.5-sonnet", "google/gemini-pro-1.5", "google/gemini-flash-1.5")
+    )
+    
+    // Form state
+    var selectedProvider by remember { mutableStateOf(uiState.selectedConfig?.provider ?: "OPENAI") }
+    var isCustomModel by remember { mutableStateOf(false) }
+    var customModelName by remember { mutableStateOf("") }
+    var selectedModel by remember { mutableStateOf(uiState.selectedConfig?.modelId ?: modelsByProvider["OPENAI"]?.firstOrNull() ?: "") }
+    var apiKey by remember { mutableStateOf(uiState.selectedConfig?.apiKey ?: "") }
+    var showApiKey by remember { mutableStateOf(false) }
+    
+    // Additional settings state
+    var showAdvancedSettings by remember { mutableStateOf(false) }
+    var temperature by remember { mutableStateOf(uiState.selectedConfig?.temperature ?: 0.7f) }
+    var maxTokens by remember { mutableStateOf(uiState.selectedConfig?.maxTokens ?: 1000) }
+    
+    // Dropdown state
+    var expandedModel by remember { mutableStateOf(false) }
+    
+    // Update state when selected config changes
+    LaunchedEffect(uiState.selectedConfig) {
+        uiState.selectedConfig?.let { config ->
+            selectedProvider = config.provider
+            apiKey = config.apiKey
+            temperature = config.temperature
+            maxTokens = config.maxTokens
 
+            // Check if the saved model is in the known list
+            val availableModels = modelsByProvider[config.provider] ?: emptyList()
+            if (config.modelId in availableModels) {
+                selectedModel = config.modelId
+                isCustomModel = false
+                customModelName = ""
+            } else {
+                // It's a custom model
+                isCustomModel = true
+                customModelName = config.modelId
+                if (availableModels.isNotEmpty()) {
+                    selectedModel = availableModels.first()
+                }
+            }
+        }
+    }
+
+    // Update model when provider changes
+    LaunchedEffect(selectedProvider) {
+        val availableModels = modelsByProvider[selectedProvider] ?: emptyList()
+        if (!isCustomModel && selectedModel !in availableModels && availableModels.isNotEmpty()) {
+            selectedModel = availableModels.first()
+        }
+    }
+    
     GlassScaffold(
         modifier = modifier.fillMaxSize(),
         topBar = {
@@ -92,374 +180,639 @@ fun LlmConfigScreen(
                 )
             )
         },
-        snackbarHost = { SnackbarHost(snackbarHostState) },
-        floatingActionButton = {
-            FloatingActionButton(onClick = { showAddDialog = true }) {
-                Icon(Icons.Filled.Add, contentDescription = "Add LLM Config")
-            }
-        }
+        snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { paddingValues ->
-        if (uiState.isLoading) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues),
-                contentAlignment = Alignment.Center
-            ) {
-                CircularProgressIndicator()
-            }
-        } else {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues)
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                item {
-                    Button(
-                        onClick = { onNavigateToAppSettings() },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(48.dp)
-                    ) {
-                        Text("Manage Apps")
-                    }
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Button(
-                        onClick = { onRunOnboarding() },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(48.dp)
-                    ) {
-                        Text("Run Onboarding")
-                    }
-                    Spacer(modifier = Modifier.height(16.dp))
-                }
-
-                item {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+                .padding(horizontal = 16.dp)
+                .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Spacer(modifier = Modifier.height(8.dp))
+            
+            // AI Provider Section
+            Column {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     Text(
-                        text = "LLM Configurations",
-                        style = MaterialTheme.typography.headlineMedium
+                        text = "AI PROVIDER",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
                     )
-                    Spacer(modifier = Modifier.height(8.dp))
+                    if (uiState.selectedConfig != null) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(8.dp)
+                                    .background(Color(0xFF4CAF50), CircleShape)
+                            )
+                            Text(
+                                text = "Active",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = Color(0xFF4CAF50)
+                            )
+                        }
+                    }
                 }
-
-                items(uiState.configs.size) { index ->
-                    val config = uiState.configs[index]
-                    LlmConfigCard(
-                        config = config,
-                        isDefault = config.isDefault,
-                        onDelete = { onDeleteConfig(config) },
-                        onTest = { onTestConnection(config) },
-                        onSetDefault = { onSetDefault(config) },
-                        isTestLoading = uiState.testConnectionLoading,
-                        testResult = uiState.testConnectionResult,
-                        onClearTestResult = { onClearTestResult() }
-                    )
-                }
-
-                item {
-                    if (uiState.configs.isEmpty()) {
+                
+                Spacer(modifier = Modifier.height(12.dp))
+                
+                // Provider Cards
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    providers.forEach { provider ->
+                        val isSelected = provider == selectedProvider
+                        
+                        // Provider-specific styling
+                        val (primaryColor, logoText) = when (provider) {
+                            "OPENAI" -> Pair(Color(0xFF10A37F), "O") // OpenAI green
+                            "ANTHROPIC" -> Pair(Color(0xFFCC785C), "A") // Anthropic coral/orange
+                            "GEMINI" -> Pair(Color(0xFF4285F4), "G") // Google blue
+                            "OPENROUTER" -> Pair(Color(0xFFFF6B35), "R") // OpenRouter orange
+                            else -> Pair(MaterialTheme.colorScheme.primary, "?")
+                        }
+                        
                         Card(
                             modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 16.dp)
+                                .width(110.dp)
+                                .height(110.dp)
+                                .clickable { 
+                                    selectedProvider = provider
+                                    isCustomModel = false
+                                },
+                            shape = RoundedCornerShape(16.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor = if (isSelected) 
+                                    primaryColor.copy(alpha = 0.15f)
+                                else 
+                                    MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+                            ),
+                            border = if (isSelected) 
+                                androidx.compose.foundation.BorderStroke(
+                                    2.dp, 
+                                    primaryColor
+                                )
+                            else null
                         ) {
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(24.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally
+                            Box(
+                                modifier = Modifier.fillMaxSize(),
+                                contentAlignment = Alignment.Center
                             ) {
-                                Text(
-                                    text = "No LLM configurations",
-                                    style = MaterialTheme.typography.bodyLarge
-                                )
-                                Text(
-                                    text = "Tap + to add one",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.Center
+                                ) {
+                                    Spacer(modifier = Modifier.weight(1f))
+                                    
+                                    // Logo image (use vector drawables placed in res/drawable)
+                                    Box(
+                                        modifier = Modifier
+                                            .size(44.dp)
+                                            .background(
+                                                if (isSelected) primaryColor.copy(alpha = 0.2f)
+                                                else MaterialTheme.colorScheme.surface.copy(alpha = 0.5f),
+                                                RoundedCornerShape(12.dp)
+                                            ),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        val drawableId = when (provider) {
+                                            "OPENAI" -> R.drawable.openai
+                                            "ANTHROPIC" -> R.drawable.anthropic
+                                            "GEMINI" -> R.drawable.gemini
+                                            "OPENROUTER" -> R.drawable.openrouter
+                                            else -> R.drawable.ic_launcher_foreground
+                                        }
+                                        Image(
+                                            painter = painterResource(id = drawableId),
+                                            contentDescription = "$provider logo",
+                                            modifier = Modifier.size(28.dp)
+                                        )
+                                    }
+                                    
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    Text(
+                                        text = when (provider) {
+                                            "OPENAI" -> "OpenAI"
+                                            "ANTHROPIC" -> "Anthropic"
+                                            "GEMINI" -> "Gemini"
+                                            "OPENROUTER" -> "OpenRouter"
+                                            else -> provider
+                                        },
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                        color = if (isSelected) 
+                                            primaryColor 
+                                        else 
+                                            MaterialTheme.colorScheme.onSurface
+                                    )
+                                    Spacer(modifier = Modifier.weight(1f))
+                                }
                             }
                         }
                     }
                 }
             }
-        }
-
-        if (uiState.error != null) {
-            LaunchedEffect(uiState.error) {
-                snackbarHostState.showSnackbar(uiState.error!!)
+            
+            // Model Selection
+            Column {
+                Text(
+                    text = "Model Version",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                
+                Spacer(modifier = Modifier.height(8.dp))
+                
+                Box(modifier = Modifier.fillMaxWidth()) {
+                    OutlinedTextField(
+                        value = selectedModel,
+                        onValueChange = {},
+                        modifier = Modifier.fillMaxWidth(),
+                        readOnly = true,
+                        trailingIcon = {
+                            IconButton(onClick = { expandedModel = true }) {
+                                Icon(
+                                    imageVector = Icons.Default.KeyboardArrowDown,
+                                    contentDescription = "Select model"
+                                )
+                            }
+                        },
+                        shape = RoundedCornerShape(12.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                            focusedBorderColor = Color.Transparent,
+                            unfocusedBorderColor = Color.Transparent
+                        )
+                    )
+                    
+                    // Invisible clickable overlay
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(56.dp)
+                            .clickable { expandedModel = true }
+                    )
+                    
+                    DropdownMenu(
+                        expanded = expandedModel,
+                        onDismissRequest = { expandedModel = false },
+                        modifier = Modifier.fillMaxWidth(0.9f)
+                    ) {
+                        modelsByProvider[selectedProvider]?.forEach { model ->
+                            DropdownMenuItem(
+                                text = {
+                                    Text(
+                                        text = model,
+                                        fontWeight = if (model == selectedModel && !isCustomModel) FontWeight.Bold else FontWeight.Normal
+                                    )
+                                },
+                                onClick = {
+                                    selectedModel = model
+                                    isCustomModel = false
+                                    expandedModel = false
+                                }
+                            )
+                        }
+                        // Custom option
+                        DropdownMenuItem(
+                            text = {
+                                Text(
+                                    text = "Custom Model...",
+                                    fontWeight = if (isCustomModel) FontWeight.Bold else FontWeight.Normal,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            },
+                            onClick = {
+                                isCustomModel = true
+                                expandedModel = false
+                            }
+                        )
+                    }
+                }
+                
+                // Custom Model Input
+                AnimatedVisibility(
+                    visible = isCustomModel,
+                    enter = expandVertically() + fadeIn(),
+                    exit = shrinkVertically() + fadeOut()
+                ) {
+                    Column {
+                        Spacer(modifier = Modifier.height(12.dp))
+                        OutlinedTextField(
+                            value = customModelName,
+                            onValueChange = { customModelName = it },
+                            modifier = Modifier.fillMaxWidth(),
+                            placeholder = { Text("Enter custom model name (e.g., gpt-4-turbo-preview)") },
+                            label = { Text("Custom Model") },
+                            singleLine = true,
+                            shape = RoundedCornerShape(12.dp),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                                focusedBorderColor = MaterialTheme.colorScheme.primary,
+                                unfocusedBorderColor = Color.Transparent
+                            )
+                        )
+                    }
+                }
             }
-        }
-    }
 
-    if (showAddDialog) {
-        AddConfigDialog(
-            providers = uiState.providers,
-            onDismiss = { showAddDialog = false },
-            onSave = { config ->
-                onSaveConfig(config)
-                showAddDialog = false
+            // Authentication Section
+            Column {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "AUTHENTICATION",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                    )
+                    Icon(
+                        imageVector = Icons.Default.Lock,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                    )
+                }
+                
+                Spacer(modifier = Modifier.height(12.dp))
+                
+                Text(
+                    text = "API Key",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                
+                Spacer(modifier = Modifier.height(8.dp))
+                
+                OutlinedTextField(
+                    value = apiKey,
+                    onValueChange = { apiKey = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    placeholder = { Text("Enter your API key") },
+                    visualTransformation = if (showApiKey) VisualTransformation.None else PasswordVisualTransformation(),
+                    trailingIcon = {
+                        Row {
+                            IconButton(onClick = { showApiKey = !showApiKey }) {
+                                Icon(
+                                    imageVector = if (showApiKey) Icons.Default.Warning else Icons.Default.Lock,
+                                    contentDescription = if (showApiKey) "Hide" else "Show"
+                                )
+                            }
+                            IconButton(
+                                onClick = {
+                                    clipboardManager.getText()?.text?.let { text ->
+                                        apiKey = text
+                                    }
+                                }
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.ContentPaste,
+                                    contentDescription = "Paste"
+                                )
+                            }
+                        }
+                    },
+                    shape = RoundedCornerShape(12.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                        focusedBorderColor = Color.Transparent,
+                        unfocusedBorderColor = Color.Transparent
+                    ),
+                    singleLine = true
+                )
+                
+                Spacer(modifier = Modifier.height(8.dp))
+                
+                Text(
+                    text = "We prioritize privacy. Keys are encrypted and never leave your device except to contact the provider.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                )
             }
-        )
-    }
-}
-
-@Composable
-private fun LlmConfigCard(
-    config: LlmConfigEntity,
-    isDefault: Boolean,
-    onDelete: () -> Unit,
-    onTest: () -> Unit,
-    onSetDefault: () -> Unit,
-    isTestLoading: Boolean = false,
-    testResult: String? = null,
-    onClearTestResult: () -> Unit = {}
-) {
-    var showTestResult by remember { mutableStateOf(false) }
-    
-    if (testResult != null && showTestResult) {
-        androidx.compose.material3.AlertDialog(
-            onDismissRequest = {
-                showTestResult = false
-                onClearTestResult()
-            },
-            title = { Text("Connection Test Result") },
-            text = { Text(testResult) },
-            confirmButton = {
+            
+            // Additional Settings (Collapsible)
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f)
+                )
+            ) {
+                Column(
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    // Header
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { showAdvancedSettings = !showAdvancedSettings }
+                            .padding(16.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Additional Settings",
+                            style = MaterialTheme.typography.bodyLarge,
+                            fontWeight = FontWeight.Medium
+                        )
+                        Icon(
+                            imageVector = if (showAdvancedSettings) 
+                                Icons.Default.KeyboardArrowUp 
+                            else 
+                                Icons.Default.KeyboardArrowDown,
+                            contentDescription = if (showAdvancedSettings) "Collapse" else "Expand"
+                        )
+                    }
+                    
+                    // Expandable content
+                    AnimatedVisibility(
+                        visible = showAdvancedSettings,
+                        enter = expandVertically() + fadeIn(),
+                        exit = shrinkVertically() + fadeOut()
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp)
+                                .padding(bottom = 16.dp),
+                            verticalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+                            // Temperature
+                            Column {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Text(
+                                        text = "Temperature",
+                                        style = MaterialTheme.typography.bodyMedium
+                                    )
+                                    Text(
+                                        text = "${String.format("%.1f", temperature)}",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                                
+                                Slider(
+                                    value = temperature,
+                                    onValueChange = { temperature = it },
+                                    valueRange = 0f..2f,
+                                    steps = 19
+                                )
+                                
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Text(
+                                        text = "Precise",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                    Text(
+                                        text = "Creative",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                            
+                            // Max Tokens
+                            Column {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Text(
+                                        text = "Max Tokens",
+                                        style = MaterialTheme.typography.bodyMedium
+                                    )
+                                    Text(
+                                        text = "$maxTokens",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                                
+                                Slider(
+                                    value = maxTokens.toFloat(),
+                                    onValueChange = { maxTokens = it.toInt() },
+                                    valueRange = 100f..4000f,
+                                    steps = 38
+                                )
+                                
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Text(
+                                        text = "100",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                    Text(
+                                        text = "4000",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            
+            // Test Connection Result
+            if (uiState.testConnectionResult != null) {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = if (uiState.testConnectionResult!!.startsWith("✓"))
+                            Color(0xFF4CAF50).copy(alpha = 0.1f)
+                        else
+                            Color(0xFFE57373).copy(alpha = 0.1f)
+                    )
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = if (uiState.testConnectionResult!!.startsWith("✓"))
+                                Icons.Default.Check
+                            else
+                                Icons.Default.Warning,
+                            contentDescription = null,
+                            tint = if (uiState.testConnectionResult!!.startsWith("✓"))
+                                Color(0xFF4CAF50)
+                            else
+                                Color(0xFFE57373)
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text(
+                            text = uiState.testConnectionResult!!,
+                            style = MaterialTheme.typography.bodyMedium,
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                }
+            }
+            
+            Spacer(modifier = Modifier.height(8.dp))
+            
+            // Action Buttons
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                // Test Button
                 Button(
                     onClick = {
-                        showTestResult = false
-                        onClearTestResult()
-                    }
-                ) {
-                    Text("OK")
-                }
-            }
-        )
-    }
-    
-    Card(modifier = Modifier.fillMaxWidth()) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = config.name,
-                        style = MaterialTheme.typography.titleMedium
-                    )
-                    Text(
-                        text = "${config.provider} - ${config.modelId}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-                if (isDefault) {
-                    Icon(
-                        imageVector = Icons.Filled.Check,
-                        contentDescription = "Default",
-                        tint = MaterialTheme.colorScheme.primary
-                    )
-                }
-            }
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                TextButton(
-                    onClick = {
-                        onTest()
-                        showTestResult = true
+                        val modelId = if (isCustomModel) customModelName else selectedModel
+                        val config = LlmConfigEntity(
+                            id = uiState.selectedConfig?.id ?: 0,
+                            name = "$selectedProvider Config",
+                            provider = selectedProvider,
+                            apiKey = apiKey,
+                            baseUrl = LlmClientFactory.getDefaultBaseUrl(selectedProvider),
+                            modelId = modelId,
+                            isDefault = uiState.selectedConfig?.isDefault ?: false,
+                            maxTokens = maxTokens,
+                            temperature = temperature
+                        )
+                        onTestConnection(config)
                     },
-                    enabled = !isTestLoading,
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.weight(1f),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                        contentColor = MaterialTheme.colorScheme.onSurface
+                    ),
+                    enabled = apiKey.isNotBlank() && !uiState.testConnectionLoading && (!isCustomModel || customModelName.isNotBlank())
                 ) {
-                    if (isTestLoading) {
+                    if (uiState.testConnectionLoading) {
                         CircularProgressIndicator(
                             modifier = Modifier.size(16.dp),
                             strokeWidth = 2.dp
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                     }
-                    Text(if (isTestLoading) "Testing..." else "Test")
+                    Text("Test Connection")
                 }
-                TextButton(
-                    onClick = onSetDefault,
-                    enabled = !isDefault,
-                    modifier = Modifier.weight(1f)
+
+                // Save Button
+                Button(
+                    onClick = {
+                        val modelId = if (isCustomModel) customModelName else selectedModel
+                        val config = LlmConfigEntity(
+                            id = uiState.selectedConfig?.id ?: 0,
+                            name = "$selectedProvider Config",
+                            provider = selectedProvider,
+                            apiKey = apiKey,
+                            baseUrl = LlmClientFactory.getDefaultBaseUrl(selectedProvider),
+                            modelId = modelId,
+                            isDefault = true,
+                            maxTokens = maxTokens,
+                            temperature = temperature
+                        )
+                        onSaveConfig(config)
+                        scope.launch {
+                            snackbarHostState.showSnackbar("Configuration saved successfully!")
+                        }
+                    },
+                    modifier = Modifier.weight(1f),
+                    enabled = apiKey.isNotBlank() && (!isCustomModel || customModelName.isNotBlank())
                 ) {
-                    Text("Set Default")
-                }
-                IconButton(onClick = onDelete, modifier = Modifier.weight(0.3f)) {
-                    Icon(
-                        imageVector = Icons.Filled.Delete,
-                        contentDescription = "Delete",
-                        tint = MaterialTheme.colorScheme.error
-                    )
+                    Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Save Configuration")
                 }
             }
-        }
-    }
-}
-
-@Composable
-private fun AddConfigDialog(
-    providers: List<String>,
-    onDismiss: () -> Unit,
-    onSave: (LlmConfigEntity) -> Unit
-) {
-    var name by remember { mutableStateOf("") }
-    var selectedProvider by remember { mutableStateOf(providers.firstOrNull() ?: "OPENAI") }
-    var apiKey by remember { mutableStateOf("") }
-    var baseUrl by remember { mutableStateOf("") }
-    var modelId by remember { mutableStateOf("") }
-    var expandedProvider by remember { mutableStateOf(false) }
-
-    androidx.compose.material3.AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Add LLM Configuration") },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                OutlinedTextField(
-                    value = name,
-                    onValueChange = { name = it },
-                    label = { Text("Name") },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true
+            
+            // Existing Configs List (if any)
+            if (uiState.configs.size > 1) {
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    text = "Saved Configurations",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
                 )
-
-                Box(
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    OutlinedTextField(
-                        value = selectedProvider,
-                        onValueChange = {},
-                        label = { Text("Provider") },
-                        modifier = Modifier.fillMaxWidth(),
-                        readOnly = true
-                    )
-                    // Invisible clickable overlay to open dropdown
-                    Box(
+                
+                uiState.configs.forEach { config ->
+                    Card(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(56.dp)
-                            .clickable(enabled = true) { expandedProvider = !expandedProvider }
-                    )
-                    DropdownMenu(
-                        expanded = expandedProvider,
-                        onDismissRequest = { expandedProvider = false },
-                        modifier = Modifier.fillMaxWidth()
+                            .padding(vertical = 4.dp),
+                        shape = RoundedCornerShape(12.dp)
                     ) {
-                        providers.forEach { provider ->
-                            DropdownMenuItem(
-                                text = { Text(provider) },
-                                onClick = {
-                                    selectedProvider = provider
-                                    expandedProvider = false
-                                    baseUrl = "" // Reset when provider changes
-                                    modelId = ""
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = config.provider,
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    fontWeight = FontWeight.Medium
+                                )
+                                Text(
+                                    text = config.modelId,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            
+                            Row {
+                                if (config.isDefault) {
+                                    Icon(
+                                        imageVector = Icons.Default.Check,
+                                        contentDescription = "Default",
+                                        tint = Color(0xFF4CAF50),
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
                                 }
-                            )
+                                TextButton(
+                                    onClick = { onDeleteConfig(config) }
+                                ) {
+                                    Text("Delete", color = MaterialTheme.colorScheme.error)
+                                }
+                            }
                         }
                     }
                 }
-
-                OutlinedTextField(
-                    value = apiKey,
-                    onValueChange = { apiKey = it },
-                    label = { Text("API Key") },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true,
-                    visualTransformation = PasswordVisualTransformation()
-                )
-
-                OutlinedTextField(
-                    value = baseUrl,
-                    onValueChange = { baseUrl = it },
-                    label = { Text("Base URL (optional)") },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true
-                )
-
-                OutlinedTextField(
-                    value = modelId,
-                    onValueChange = { modelId = it },
-                    label = { Text("Model ID") },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true
-                )
             }
-        },
-        confirmButton = {
-            Button(
-                onClick = {
-                    if (name.isNotBlank() && apiKey.isNotBlank() && modelId.isNotBlank()) {
-                        val config = LlmConfigEntity(
-                            name = name,
-                            provider = selectedProvider,
-                            apiKey = apiKey,
-                            baseUrl = baseUrl.ifBlank { 
-                                dev.rcht.jist.llm.LlmClientFactory.getDefaultBaseUrl(selectedProvider) 
-                            },
-                            modelId = modelId,
-                            isDefault = false,
-                            maxTokens = 1000,
-                            temperature = 0.7f
-                        )
-                        onSave(config)
-                    }
-                },
-                enabled = name.isNotBlank() && apiKey.isNotBlank() && modelId.isNotBlank()
-            ) {
-                Text("Save")
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Cancel")
-            }
+            
+            Spacer(modifier = Modifier.height(32.dp))
         }
-    )
-}
-
-@androidx.compose.ui.tooling.preview.Preview
-@Composable
-private fun LlmConfigScreenPreview() {
-    dev.rcht.jist.ui.theme.JistTheme {
-        LlmConfigScreen(
-            uiState = LlmConfigUiState(
-                configs = listOf(
-                    LlmConfigEntity(
-                        id = 1,
-                        name = "Gemini Pro",
-                        provider = "GEMINI",
-                        apiKey = "AIza••••••••",
-                        baseUrl = "https://generativelanguage.googleapis.com",
-                        modelId = "gemini-pro",
-                        isDefault = true
-                    ),
-                    LlmConfigEntity(
-                        id = 2,
-                        name = "GPT-4",
-                        provider = "OPENAI",
-                        apiKey = "sk-••••••••",
-                        baseUrl = "https://api.openai.com",
-                        modelId = "gpt-4",
-                        isDefault = false
-                    )
-                )
-            )
-        )
+    }
+    
+    if (uiState.error != null) {
+        LaunchedEffect(uiState.error) {
+            snackbarHostState.showSnackbar(uiState.error!!)
+        }
     }
 }
