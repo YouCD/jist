@@ -13,5 +13,6 @@ data class AppRuleEntity(
     val mode: String = "AUTO", // AUTO, MANUAL, DISABLED
     val batchWindowMinutes: Int = 15,
     val minMessagesForSummary: Int = 3,
-    val customPrompt: String? = null
+    val customPrompt: String? = null,
+    val userEnabled: Boolean = false // true if user manually toggled this app
 )

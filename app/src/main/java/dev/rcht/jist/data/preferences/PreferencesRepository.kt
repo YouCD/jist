@@ -29,6 +29,7 @@ class PreferencesRepository(private val context: Context) {
         val WRITING_STYLE = stringPreferencesKey("writing_style")
         val SUMMARY_TONE = stringPreferencesKey("summary_tone")
         val SUMMARY_LENGTH = stringPreferencesKey("summary_length")
+        val NOTIFICATIONS_ENABLED = booleanPreferencesKey("notifications_enabled")
     }
     
     val preferencesFlow: Flow<JistPreferences> = context.dataStore.data.map { preferences ->
@@ -45,7 +46,8 @@ class PreferencesRepository(private val context: Context) {
             summaryNotificationVibrate = preferences[PreferenceKeys.SUMMARY_NOTIFICATION_VIBRATE] ?: true,
             writingStyle = preferences[PreferenceKeys.WRITING_STYLE] ?: "CONCISE",
             summaryTone = preferences[PreferenceKeys.SUMMARY_TONE] ?: "PROFESSIONAL",
-            summaryLength = preferences[PreferenceKeys.SUMMARY_LENGTH] ?: "MEDIUM"
+            summaryLength = preferences[PreferenceKeys.SUMMARY_LENGTH] ?: "MEDIUM",
+            notificationsEnabled = preferences[PreferenceKeys.NOTIFICATIONS_ENABLED] ?: true
         )
     }
     
@@ -94,6 +96,12 @@ class PreferencesRepository(private val context: Context) {
     suspend fun setSummaryLength(length: String) {
         context.dataStore.edit { preferences ->
             preferences[PreferenceKeys.SUMMARY_LENGTH] = length
+        }
+    }
+
+    suspend fun setNotificationsEnabled(enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[PreferenceKeys.NOTIFICATIONS_ENABLED] = enabled
         }
     }
 }

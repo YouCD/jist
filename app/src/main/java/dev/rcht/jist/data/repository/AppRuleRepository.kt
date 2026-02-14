@@ -2,6 +2,7 @@ package dev.rcht.jist.data.repository
 
 import dev.rcht.jist.data.db.dao.AppRuleDao
 import dev.rcht.jist.data.db.entity.AppRuleEntity
+import kotlinx.coroutines.flow.Flow
 
 class AppRuleRepository(private val appRuleDao: AppRuleDao) {
     
@@ -27,6 +28,10 @@ class AppRuleRepository(private val appRuleDao: AppRuleDao) {
     
     suspend fun getAll(): List<AppRuleEntity> {
         return appRuleDao.getAll()
+    }
+
+    fun getAllFlow(): Flow<List<AppRuleEntity>> {
+        return appRuleDao.getAllFlow()
     }
     
     suspend fun delete(rule: AppRuleEntity) {

@@ -15,20 +15,35 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import dev.chrisbanes.haze.HazeState
+import dev.chrisbanes.haze.hazeEffect
+import dev.chrisbanes.haze.materials.ExperimentalHazeMaterialsApi
+import dev.chrisbanes.haze.materials.HazeMaterials
 import dev.rcht.jist.ui.theme.GlassBorder
 import dev.rcht.jist.ui.theme.GlassSurface
 
+@OptIn(ExperimentalHazeMaterialsApi::class)
 @Composable
 fun GlassCard(
     modifier: Modifier = Modifier,
     shape: RoundedCornerShape = RoundedCornerShape(24.dp),
+    hazeState: HazeState? = null,
     content: @Composable () -> Unit
 ) {
+    val cardModifier = if (hazeState != null) {
+        modifier.hazeEffect(
+            state = hazeState,
+            style = HazeMaterials.ultraThin()
+        )
+    } else {
+        modifier
+    }
+    
     Card(
-        modifier = modifier,
+        modifier = cardModifier,
         shape = shape,
         colors = CardDefaults.cardColors(
-            containerColor = GlassSurface,
+            containerColor = if (hazeState != null) Color.Transparent else GlassSurface,
             contentColor = Color.White
         ),
         border = BorderStroke(1.dp, GlassBorder)

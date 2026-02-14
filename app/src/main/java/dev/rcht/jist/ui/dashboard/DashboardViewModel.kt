@@ -1,5 +1,7 @@
 package dev.rcht.jist.ui.dashboard
 
+import android.content.Context
+import androidx.core.app.NotificationManagerCompat
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -27,6 +29,7 @@ data class DashboardUiState(
 )
 
 class DashboardViewModel(
+    private val context: Context,
     private val notificationRepository: NotificationRepository,
     private val summaryRepository: SummaryRepository,
     private val summaryEngine: dev.rcht.jist.engine.SummaryEngine,
@@ -48,6 +51,11 @@ class DashboardViewModel(
         Log.d(TAG, "Loading dashboard data...")
         viewModelScope.launch(Dispatchers.IO) {
             try {
+                // Check actual notification listener permission state
+                val pkg = context.packageName
+                val isListenerActive = NotificationManagerCompat.getEnabledListenerPackages(context).contains(pkg)
+                Log.d(TAG, "Notification listener permission: $isListenerActive")
+
                 // Get recent notifications (last 100)
                 val recentNotifications = notificationRepository.getRecent(limit = 100)
                 Log.d(TAG, "Got ${recentNotifications.size} recent notifications")
@@ -61,9 +69,6 @@ class DashboardViewModel(
                 val allNotifications = notificationRepository.getAllUnsummarized()
                 val unsummarizedCount = allNotifications.size
                 Log.d(TAG, "Total unsummarized: $unsummarizedCount")
-                allNotifications.forEachIndexed { index, notif ->
-                    Log.d(TAG, "  [$index] ${notif.appName} - ${notif.title}: ${notif.content.take(30)}...")
-                }
 
                 // Get all summaries
                 val allSummaries = summaryRepository.getAll()
@@ -78,11 +83,6 @@ class DashboardViewModel(
                     formatTimestamp(it.createdAt)
                 } ?: "Never"
                 Log.d(TAG, "Last summarized: $lastSummarizedTime")
-
-                // Assume listener is active if we have recent notifications (within 1 hour)
-                val oneHourAgoMs = System.currentTimeMillis() - (60 * 60 * 1000)
-                val isListenerActive = recentNotifications.any { it.timestamp >= oneHourAgoMs }
-                Log.d(TAG, "Listener active: $isListenerActive")
 
                 // Get recent summaries for activity feed
                 val recentSummaries = summaryRepository.getRecent(limit = 5)

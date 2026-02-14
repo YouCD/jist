@@ -37,8 +37,17 @@ import androidx.compose.material.icons.filled.Key
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.SdStorage
+import androidx.compose.material.icons.outlined.Apps
 import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -64,7 +73,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun OnboardingScreen(
     onOnboardingComplete: () -> Unit,
-    onOpenSettings: () -> Unit = {}
+    onOpenAppSettings: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val viewModel: OnboardingViewModel = viewModel(
@@ -79,8 +88,8 @@ fun OnboardingScreen(
     val scope = rememberCoroutineScope()
     val pkg = context.packageName
 
-    var step by remember { mutableStateOf(0) }
-    val totalSteps = 5
+    var step by rememberSaveable { mutableStateOf(0) }
+    val totalSteps = 6
 
     // Permissions State
     var notificationsEnabled by remember { mutableStateOf(NotificationManagerCompat.from(context).areNotificationsEnabled()) }
@@ -156,7 +165,7 @@ fun OnboardingScreen(
                     ),
                     enabled = when (step) {
                         1 -> listenerEnabled // Step 2 requires Notification Listener
-                        4 -> apiKey.isNotBlank() && selectedModel.isNotBlank() // Step 5 requires API Key & Model
+                        5 -> apiKey.isNotBlank() && selectedModel.isNotBlank() // Step 6 requires API Key & Model
                         else -> true
                     }
                 ) {
@@ -227,11 +236,14 @@ fun OnboardingScreen(
                                 }
                             }
                         )
-                        3 -> Step4WritingStyle(
+                        3 -> Step4ManageApps(
+                            onOpenAppSettings = onOpenAppSettings
+                        )
+                        4 -> Step5WritingStyle(
                             selectedStyle = uiState.writingStyle,
                             onSelectStyle = { viewModel.setWritingStyle(it) }
                         )
-                        4 -> Step5LlmConfiguration(
+                        5 -> Step6LlmConfiguration(
                             selectedProvider = selectedProvider,
                             onSelectProvider = { selectedProvider = it },
                             selectedModel = selectedModel,
@@ -486,7 +498,79 @@ fun Step3InstantSummaries(
 }
 
 @Composable
-fun Step4WritingStyle(
+fun Step4ManageApps(
+    onOpenAppSettings: () -> Unit
+) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Spacer(modifier = Modifier.height(20.dp))
+
+        Box(
+            modifier = Modifier
+                .size(120.dp)
+                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f), RoundedCornerShape(32.dp)),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = Icons.Outlined.Apps,
+                contentDescription = null,
+                modifier = Modifier.size(48.dp),
+                tint = MaterialTheme.colorScheme.primary
+            )
+        }
+
+        Spacer(modifier = Modifier.height(32.dp))
+
+        Text(
+            text = "Choose Your Apps",
+            style = MaterialTheme.typography.headlineMedium,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        Text(
+            text = "Select which apps you want Jist to monitor and summarize. You can always change this later in settings.",
+            style = MaterialTheme.typography.bodyLarge,
+            textAlign = TextAlign.Center,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+
+        Spacer(modifier = Modifier.height(32.dp))
+
+        Button(
+            onClick = onOpenAppSettings,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(56.dp),
+            shape = RoundedCornerShape(16.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary
+            )
+        ) {
+            Icon(Icons.Outlined.Apps, contentDescription = null, modifier = Modifier.size(24.dp))
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = "Manage Apps",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
+            )
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Text(
+            text = "Suggested apps like WhatsApp, Gmail, and Slack are already enabled by default.",
+            style = MaterialTheme.typography.bodySmall,
+            textAlign = TextAlign.Center,
+            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+        )
+    }
+}
+
+@Composable
+fun Step5WritingStyle(
     selectedStyle: String,
     onSelectStyle: (String) -> Unit
 ) {
@@ -537,7 +621,7 @@ fun Step4WritingStyle(
 }
 
 @Composable
-fun Step5LlmConfiguration(
+fun Step6LlmConfiguration(
     selectedProvider: String,
     onSelectProvider: (String) -> Unit,
     selectedModel: String,

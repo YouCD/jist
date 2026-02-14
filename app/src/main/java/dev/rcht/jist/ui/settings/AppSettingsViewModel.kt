@@ -32,8 +32,10 @@ class AppSettingsViewModel(
     private val _uiState = MutableStateFlow(AppSettingsUiState())
     val uiState: StateFlow<AppSettingsUiState> = _uiState
     
-    // Keep full list in memory for filtering
+    // Cache maintains original alphabetical order (insertion order)
     private var allAppsCache: List<AppRuleEntity> = emptyList()
+    // Display order maintains the sorted order for UI
+    private var displayOrderOtherApps: List<String> = emptyList()
 
     init {
         loadAppRules()
@@ -76,7 +78,12 @@ class AppSettingsViewModel(
                 }.sortedBy { it.appName }
 
                 allAppsCache = allApps
-                updateUiState(allApps)
+                
+                // Initialize display order based on initial sort (active first, then alphabetical)
+                val (suggested, others) = separateAndSortApps(allApps)
+                displayOrderOtherApps = others.map { it.packageName }
+                
+                updateUiState(allApps, suggested, others)
 
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(
@@ -87,70 +94,128 @@ class AppSettingsViewModel(
         }
     }
 
-    private fun updateUiState(apps: List<AppRuleEntity>) {
-        // 1. Filter by search query
-        val query = _uiState.value.searchQuery
-        val filteredApps = if (query.isBlank()) {
-            apps
-        } else {
-            apps.filter { 
-                it.appName.contains(query, ignoreCase = true) || 
-                it.packageName.contains(query, ignoreCase = true) 
-            }
-        }
+    private fun separateAndSortApps(apps: List<AppRuleEntity>): Pair<List<AppRuleEntity>, List<AppRuleEntity>> {
+        val suggested = apps.filter { isMessagingOrEmailApp(it.packageName) }
+        val others = apps
+            .filterNot { isMessagingOrEmailApp(it.packageName) }
+            .sortedWith(compareByDescending<AppRuleEntity> { it.enabled }.thenBy { it.appName })
+        return Pair(suggested, others)
+    }
 
-        // 2. Separate Suggested (Messaging) apps
-        val suggested = filteredApps.filter { isMessagingOrEmailApp(it.packageName) }
-        
-        // 3. Other apps
-        val others = filteredApps.filterNot { isMessagingOrEmailApp(it.packageName) }
-        
+    private fun updateUiState(
+        apps: List<AppRuleEntity>, 
+        suggested: List<AppRuleEntity>, 
+        others: List<AppRuleEntity>
+    ) {
         _uiState.value = _uiState.value.copy(
             suggestedApps = suggested,
             otherApps = others,
-            allAppsCount = allAppsCache.size,
+            allAppsCount = apps.size,
             isLoading = false,
             error = null
         )
     }
 
+    private fun updateUiStateFromCache() {
+        // 1. Filter by search query
+        val query = _uiState.value.searchQuery
+        val filteredApps = if (query.isBlank()) {
+            allAppsCache
+        } else {
+            allAppsCache.filter { 
+                it.appName.contains(query, ignoreCase = true) || 
+                it.packageName.contains(query, ignoreCase = true) 
+            }
+        }
+
+        // 2. Separate Suggested apps (these get re-filtered)
+        val suggested = filteredApps.filter { isMessagingOrEmailApp(it.packageName) }
+        
+        // 3. Other apps - maintain display order, not re-sort
+        val otherAppsMap = filteredApps.filterNot { isMessagingOrEmailApp(it.packageName) }
+            .associateBy { it.packageName }
+        
+        // Maintain display order using the cached order
+        val others = displayOrderOtherApps
+            .mapNotNull { packageName -> otherAppsMap[packageName] }
+        
+        _uiState.value = _uiState.value.copy(
+            suggestedApps = suggested,
+            otherApps = others,
+            allAppsCount = allAppsCache.size
+        )
+    }
+
     fun toggleAppEnabled(appRule: AppRuleEntity) {
         viewModelScope.launch(Dispatchers.IO) {
-            val updatedRule = appRule.copy(enabled = !appRule.enabled)
+            // Mark as user-enabled since they manually toggled it
+            val updatedRule = appRule.copy(
+                enabled = !appRule.enabled,
+                userEnabled = true
+            )
             
             // DB Update
             if (appRule.id == 0L) {
                 val newId = appRuleRepository.insert(updatedRule)
-                updateCache(updatedRule.copy(id = newId))
+                updateCacheAndUI(updatedRule.copy(id = newId))
             } else {
                 appRuleRepository.update(updatedRule)
-                updateCache(updatedRule)
+                updateCacheAndUI(updatedRule)
             }
         }
+    }
+    
+    private fun updateCacheAndUI(updatedApp: AppRuleEntity) {
+        // Update the cache maintaining original positions
+        allAppsCache = allAppsCache.map { 
+            if (it.packageName == updatedApp.packageName) updatedApp else it 
+        }
+        
+        // Update UI without re-sorting - maintain display order
+        updateUiStateFromCache()
     }
     
     fun toggleAll(enabled: Boolean) {
         viewModelScope.launch(Dispatchers.IO) {
             val updatedApps = allAppsCache.map { it.copy(enabled = enabled) }
             // Batch update in DB logic would go here, loop for now
-            updatedApps.forEach { 
-                if (it.id == 0L) appRuleRepository.insert(it) else appRuleRepository.update(it) 
+            updatedApps.forEach {
+                if (it.id == 0L) appRuleRepository.insert(it) else appRuleRepository.update(it)
             }
             allAppsCache = updatedApps
-            updateUiState(updatedApps)
+            
+            // For toggle all, we re-sort since it's a bulk operation
+            val (suggested, others) = separateAndSortApps(updatedApps)
+            displayOrderOtherApps = others.map { it.packageName }
+            updateUiState(updatedApps, suggested, others)
         }
     }
 
-    private fun updateCache(updatedApp: AppRuleEntity) {
-        allAppsCache = allAppsCache.map { 
-            if (it.packageName == updatedApp.packageName) updatedApp else it 
+    fun disableAllNonSuggested() {
+        viewModelScope.launch(Dispatchers.IO) {
+            val updatedApps = allAppsCache.map { app ->
+                if (isMessagingOrEmailApp(app.packageName)) {
+                    app // Keep suggested apps as they are
+                } else {
+                    app.copy(enabled = false)
+                }
+            }
+            // Batch update in DB
+            updatedApps.forEach {
+                if (it.id == 0L) appRuleRepository.insert(it) else appRuleRepository.update(it)
+            }
+            allAppsCache = updatedApps
+            
+            // For disable all, we re-sort since it's a bulk operation
+            val (suggested, others) = separateAndSortApps(updatedApps)
+            displayOrderOtherApps = others.map { it.packageName }
+            updateUiState(updatedApps, suggested, others)
         }
-        updateUiState(allAppsCache)
     }
 
     fun updateSearchQuery(query: String) {
         _uiState.value = _uiState.value.copy(searchQuery = query)
-        updateUiState(allAppsCache)
+        updateUiStateFromCache()
     }
 
     private fun isMessagingOrEmailApp(packageName: String): Boolean {

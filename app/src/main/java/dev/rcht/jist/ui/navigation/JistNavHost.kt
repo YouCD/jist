@@ -14,8 +14,10 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.navArgument
 import dev.rcht.jist.JistApplication
 import dev.rcht.jist.ui.dashboard.DashboardViewModel
 import dev.rcht.jist.ui.screens.AboutScreen
@@ -110,7 +112,7 @@ fun JistNavHost(
                         popUpTo(Screen.Onboarding.route) { inclusive = true }
                     }
                 },
-                onOpenSettings = { navController.navigate(Screen.Settings.route) }
+                onOpenAppSettings = { navController.navigate(Screen.AppSettings.createRoute(fromOnboarding = true)) }
             )
         }
         composable(Screen.Dashboard.route) {
@@ -119,6 +121,7 @@ fun JistNavHost(
                     override fun <T : ViewModel> create(modelClass: Class<T>): T {
                         @Suppress("UNCHECKED_CAST")
                         return DashboardViewModel(
+                            context,
                             jistApp.notificationRepository,
                             jistApp.summaryRepository,
                             jistApp.summaryEngine,
@@ -206,7 +209,8 @@ fun JistNavHost(
                         @Suppress("UNCHECKED_CAST")
                         return dev.rcht.jist.ui.settings.SettingsViewModel(
                             context,
-                            jistApp.preferencesRepository
+                            jistApp.preferencesRepository,
+                            jistApp.appRuleRepository
                         ) as T
                     }
                 }
@@ -240,13 +244,27 @@ fun JistNavHost(
                 onClearTestResult = { viewModel.clearTestResult() },
                 onSetDefault = { config -> viewModel.setDefaultConfig(config) },
                 onNavigateBack = { navController.popBackStack() },
-                onNavigateToAppSettings = { navController.navigate(Screen.AppSettings.route) },
+                onNavigateToAppSettings = { navController.navigate(Screen.AppSettings.createRoute(fromOnboarding = false)) },
                 onRunOnboarding = { navController.navigate(Screen.Onboarding.route) }
             )
         }
-        composable(Screen.AppSettings.route) {
+        composable(
+            route = Screen.AppSettings.route,
+            arguments = listOf(
+                navArgument("fromOnboarding") {
+                    type = NavType.BoolType
+                    defaultValue = false
+                }
+            )
+        ) {
             AppSettingsScreen(
-                onNavigateBack = { navController.popBackStack() }
+                onNavigateBack = { 
+                    navController.popBackStack()
+                },
+                onDone = {
+                    // Pop back to the previous screen (Onboarding or Settings)
+                    navController.popBackStack()
+                }
             )
         }
         composable(Screen.NotificationLog.route) {

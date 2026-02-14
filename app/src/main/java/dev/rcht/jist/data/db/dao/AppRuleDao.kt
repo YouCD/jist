@@ -6,6 +6,7 @@ import androidx.room.Insert
 import androidx.room.Query
 import androidx.room.Update
 import dev.rcht.jist.data.db.entity.AppRuleEntity
+import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface AppRuleDao {
@@ -24,6 +25,9 @@ interface AppRuleDao {
     
     @Query("SELECT * FROM app_rules ORDER BY appName ASC")
     suspend fun getAll(): List<AppRuleEntity>
+
+    @Query("SELECT * FROM app_rules ORDER BY appName ASC")
+    fun getAllFlow(): Flow<List<AppRuleEntity>>
     
     @Delete
     suspend fun delete(rule: AppRuleEntity)

@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -20,6 +21,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.draw.blur
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowForward
 import androidx.compose.material.icons.filled.Check
@@ -77,6 +79,9 @@ import dev.rcht.jist.ui.components.BatteryOptimizationBanner
 import dev.rcht.jist.util.BatteryOptimizationHelper
 import dev.rcht.jist.util.PermissionHelper
 import java.util.Calendar
+import dev.chrisbanes.haze.HazeState
+import dev.chrisbanes.haze.hazeSource
+import dev.chrisbanes.haze.rememberHazeState
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -90,6 +95,7 @@ fun DashboardScreen(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
+    val hazeState = rememberHazeState()
 
     GlassScaffold(
         modifier = modifier.fillMaxSize(),
@@ -112,15 +118,44 @@ fun DashboardScreen(
                 CircularProgressIndicator(color = JistCyan)
             }
         } else {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues)
-                    .padding(horizontal = 24.dp)
-                    .verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(24.dp)
-            ) {
-                // Header Section
+            Box(modifier = Modifier.fillMaxSize()) {
+                // Background layer with hazeSource
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .hazeSource(hazeState)
+                ) {
+                    // Blue blur oval in background
+                    Box(
+                        modifier = Modifier
+                            .width(0.dp)
+                            .height(0.dp)
+                            .offset(y = 700.dp)
+                            .align(Alignment.TopCenter)
+                            .background(
+                                brush = Brush.radialGradient(
+                                    colors = listOf(
+                                        Color(0xFF00E5FF).copy(alpha = 0.4f),
+                                        Color(0xFF00E5FF).copy(alpha = 0.2f),
+                                        Color.Transparent
+                                    )
+                                ),
+                                shape = RoundedCornerShape(0)
+                            )
+                            .blur(radius = 60.dp)
+                    )
+                }
+                
+                // Foreground layer with glass cards
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(paddingValues)
+                        .padding(horizontal = 24.dp)
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(24.dp)
+                ) {
+                    // Header Section
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -136,7 +171,7 @@ fun DashboardScreen(
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
                             buildAnnotatedString {
-                                append("Focus Mode ")
+                                append("Jist ")
                                 withStyle(style = SpanStyle(color = JistCyan)) {
                                     append(if (uiState.isNotificationListenerActive) "Active" else "Inactive")
                                 }
@@ -174,7 +209,8 @@ fun DashboardScreen(
                     GlassCard(
                         modifier = Modifier
                             .weight(1f)
-                            .height(160.dp)
+                            .height(160.dp),
+                        hazeState = hazeState
                     ) {
                         Column(
                             modifier = Modifier
@@ -229,7 +265,8 @@ fun DashboardScreen(
                     GlassCard(
                         modifier = Modifier
                             .weight(1f)
-                            .height(160.dp)
+                            .height(160.dp),
+                        hazeState = hazeState
                     ) {
                         Column(
                             modifier = Modifier
@@ -305,7 +342,8 @@ fun DashboardScreen(
                 GlassCard(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(80.dp)
+                        .height(80.dp),
+                    hazeState = hazeState
                 ) {
                     Row(
                         modifier = Modifier
@@ -373,7 +411,10 @@ fun DashboardScreen(
 
                 // Recent Activity List from real data
                 if (uiState.recentSummaries.isEmpty()) {
-                    GlassCard(modifier = Modifier.fillMaxWidth()) {
+                    GlassCard(
+                        modifier = Modifier.fillMaxWidth(),
+                        hazeState = hazeState
+                    ) {
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -399,12 +440,14 @@ fun DashboardScreen(
                             title = summary.contactOrGroup,
                             description = summary.summaryText,
                             time = formatRelativeTime(summary.createdAt),
-                            accentColor = getAppAccentColor(summary.appName)
+                            accentColor = getAppAccentColor(summary.appName),
+                            hazeState = hazeState
                         )
                     }
                 }
 
                 Spacer(modifier = Modifier.height(80.dp)) // Bottom padding for nav bar
+                }
             }
         }
     }
@@ -416,12 +459,14 @@ fun ActivityItem(
     title: String,
     description: String,
     time: String,
-    accentColor: Color
+    accentColor: Color,
+    hazeState: HazeState
 ) {
     val context = LocalContext.current
 
     GlassCard(
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier.fillMaxWidth(),
+        hazeState = hazeState
     ) {
         Row(
             modifier = Modifier.padding(16.dp),

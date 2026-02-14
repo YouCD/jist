@@ -17,6 +17,9 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -49,11 +52,25 @@ fun SettingsScreen(
         factory = object : ViewModelProvider.Factory {
             override fun <T : ViewModel> create(modelClass: Class<T>): T {
                 @Suppress("UNCHECKED_CAST")
-                return SettingsViewModel(context, app.preferencesRepository) as T
+                return SettingsViewModel(context, app.preferencesRepository, app.appRuleRepository) as T
             }
         }
     )
     val uiState by viewModel.uiState.collectAsState()
+
+    // Refresh notification permission state when returning to this screen
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                viewModel.refreshNotificationPermission()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
 
     GlassScaffold(
         topBar = {
@@ -136,10 +153,14 @@ fun SettingsScreen(
                         icon = Icons.Outlined.Notifications,
                         title = "Push Notifications",
                         checked = uiState.notificationsEnabled,
-                        onCheckedChange = { 
-                            viewModel.toggleNotifications(it)
-                            val intent = Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply { putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName) }
-                            context.startActivity(intent)
+                        onCheckedChange = { enabled ->
+                            viewModel.toggleNotifications(enabled) {
+                                // This callback is only invoked when system permission is required
+                                val intent = Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
+                                    putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+                                }
+                                context.startActivity(intent)
+                            }
                         }
                     )
                     Divider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha=0.2f))

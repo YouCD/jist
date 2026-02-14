@@ -42,7 +42,8 @@ import kotlinx.coroutines.withContext
 @Composable
 fun AppSettingsScreen(
     modifier: Modifier = Modifier,
-    onNavigateBack: () -> Unit = {}
+    onNavigateBack: () -> Unit = {},
+    onDone: (() -> Unit)? = null
 ) {
     val context = LocalContext.current
     val app = context.applicationContext as JistApplication
@@ -76,7 +77,7 @@ fun AppSettingsScreen(
                 },
                 actions = {
                     TextButton(onClick = { 
-                        onNavigateBack()
+                        onDone?.invoke() ?: onNavigateBack()
                     }) {
                         Text("Done", fontWeight = FontWeight.Bold)
                     }
@@ -181,12 +182,22 @@ fun AppSettingsScreen(
                     // All Other Apps (No grouping)
                     if (uiState.otherApps.isNotEmpty()) {
                         item {
-                             Text(
-                                text = "ALL APPS",
-                                style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha=0.7f),
-                                modifier = Modifier.padding(vertical = 8.dp)
-                            )
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 8.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "ALL APPS",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha=0.7f)
+                                )
+                                TextButton(onClick = { viewModel.disableAllNonSuggested() }) {
+                                    Text("Disable All", fontSize = 12.sp)
+                                }
+                            }
                         }
                         
                         item {

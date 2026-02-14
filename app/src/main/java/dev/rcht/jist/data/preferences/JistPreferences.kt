@@ -16,5 +16,6 @@ data class JistPreferences(
     val summaryNotificationVibrate: Boolean = true,
     val writingStyle: String = "CONCISE", // CONCISE, BULLET_POINTS, DETAILED
     val summaryTone: String = "PROFESSIONAL", // PROFESSIONAL, CASUAL, WITTY, URGENT
-    val summaryLength: String = "MEDIUM" // SHORT, MEDIUM, LONG
+    val summaryLength: String = "MEDIUM", // SHORT, MEDIUM, LONG
+    val notificationsEnabled: Boolean = true // User preference for notifications (local state)
 )
