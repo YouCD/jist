@@ -136,6 +136,7 @@ fun JistNavHost(
                     uiState = uiState,
                     onSummarizeNow = { viewModel.summarizeNow() },
                     onSettingsClick = { navController.navigate(Screen.Settings.route) },
+                    onViewAllClick = { navController.navigate(Screen.Summaries.route) },
                     hasNotificationListenerPermission = hasNotificationListenerPermission.value,
                     isBatteryOptimizationDisabled = isBatteryOptimizationDisabled.value
                 )

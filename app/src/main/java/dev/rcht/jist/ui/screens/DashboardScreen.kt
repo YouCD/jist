@@ -1,6 +1,8 @@
 package dev.rcht.jist.ui.screens
 
 import android.content.Context
+import android.graphics.drawable.Drawable
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -52,15 +54,19 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.graphics.drawable.toBitmap
+import dev.rcht.jist.data.db.entity.SummaryEntity
 import dev.rcht.jist.ui.components.GlassCard
 import dev.rcht.jist.ui.components.GlassScaffold
 import dev.rcht.jist.ui.dashboard.DashboardUiState
@@ -70,6 +76,7 @@ import dev.rcht.jist.ui.components.PermissionBanner
 import dev.rcht.jist.ui.components.BatteryOptimizationBanner
 import dev.rcht.jist.util.BatteryOptimizationHelper
 import dev.rcht.jist.util.PermissionHelper
+import java.util.Calendar
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -77,6 +84,7 @@ fun DashboardScreen(
     uiState: DashboardUiState = DashboardUiState(),
     onSummarizeNow: () -> Unit = {},
     onSettingsClick: () -> Unit = {},
+    onViewAllClick: () -> Unit = {},
     hasNotificationListenerPermission: Boolean = false,
     isBatteryOptimizationDisabled: Boolean = false,
     modifier: Modifier = Modifier
@@ -88,15 +96,6 @@ fun DashboardScreen(
         topBar = {
             TopAppBar(
                 title = { },
-                actions = {
-                    IconButton(onClick = onSettingsClick) {
-                        Icon(
-                            imageVector = Icons.Filled.Settings,
-                            contentDescription = "Settings",
-                            tint = Color.White.copy(alpha = 0.8f)
-                        )
-                    }
-                },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = Color.Transparent
                 )
@@ -122,25 +121,38 @@ fun DashboardScreen(
                 verticalArrangement = Arrangement.spacedBy(24.dp)
             ) {
                 // Header Section
-                Column {
-                    Text(
-                        text = "GOOD EVENING",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = Color.White.copy(alpha = 0.6f),
-                        letterSpacing = 1.sp
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        buildAnnotatedString {
-                            append("Jist ")
-                            withStyle(style = SpanStyle(color = JistCyan)) {
-                                append(if (uiState.isNotificationListenerActive) "Active" else "Inactive")
-                            }
-                        },
-                        style = MaterialTheme.typography.headlineMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White
-                    )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.Top
+                ) {
+                    Column {
+                        Text(
+                            text = getGreeting(),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = Color.White.copy(alpha = 0.6f),
+                            letterSpacing = 1.sp
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            buildAnnotatedString {
+                                append("Focus Mode ")
+                                withStyle(style = SpanStyle(color = JistCyan)) {
+                                    append(if (uiState.isNotificationListenerActive) "Active" else "Inactive")
+                                }
+                            },
+                            style = MaterialTheme.typography.headlineMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
+                        )
+                    }
+                    IconButton(onClick = onSettingsClick) {
+                        Icon(
+                            imageVector = Icons.Filled.Settings,
+                            contentDescription = "Settings",
+                            tint = Color.White.copy(alpha = 0.8f)
+                        )
+                    }
                 }
 
                 // Permission banner if listener not enabled
@@ -201,7 +213,11 @@ fun DashboardScreen(
                             }
 
                             LinearProgressIndicator(
-                                progress = { 0.7f }, // Placeholder progress
+                                progress = {
+                                    if (uiState.totalNotificationsCount > 0) {
+                                        (uiState.totalNotificationsCount.coerceAtMost(200) / 200f)
+                                    } else 0f
+                                },
                                 modifier = Modifier.fillMaxWidth(),
                                 color = JistCyan,
                                 trackColor = JistCyan.copy(alpha = 0.2f),
@@ -250,29 +266,22 @@ fun DashboardScreen(
                                     color = Color.White
                                 )
                             }
-                            // Battery optimization banner if not disabled
-                            if (!isBatteryOptimizationDisabled) {
-                                BatteryOptimizationBanner(
-                                    onEnable = {
-                                        BatteryOptimizationHelper.requestDisableBatteryOptimization(context)
-                                    },
-                                    onDismiss = {
-                                        // In a real app we might want to remember this dismissal
-                                    }
-                                )
-                            }
-                            // Fake dashed progress
+                            // Dashed progress based on real ratio
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.spacedBy(4.dp)
                             ) {
-                                repeat(3) {
+                                val ratio = if (uiState.totalNotificationsCount > 0) {
+                                    (uiState.summariesTodayCount.toFloat() / uiState.totalNotificationsCount.coerceAtLeast(1)).coerceIn(0f, 1f)
+                                } else 0f
+                                val filledSegments = (ratio * 3).toInt().coerceIn(0, 3)
+                                repeat(3) { index ->
                                     Box(
                                         modifier = Modifier
                                             .weight(1f)
                                             .height(4.dp)
                                             .background(
-                                                color = if(it < 2) JistPurple.copy(alpha = 0.5f) else JistPurple,
+                                                color = if (index <= filledSegments) JistPurple else JistPurple.copy(alpha = 0.2f),
                                                 shape = RoundedCornerShape(2.dp)
                                             )
                                     )
@@ -280,6 +289,16 @@ fun DashboardScreen(
                             }
                         }
                     }
+                }
+
+                // Battery optimization banner if not disabled
+                if (!isBatteryOptimizationDisabled) {
+                    BatteryOptimizationBanner(
+                        onEnable = {
+                            BatteryOptimizationHelper.requestDisableBatteryOptimization(context)
+                        },
+                        onDismiss = {}
+                    )
                 }
 
                 // Time Saved Card
@@ -317,7 +336,7 @@ fun DashboardScreen(
                                     color = Color.White.copy(alpha = 0.6f)
                                 )
                                 Text(
-                                    text = "~42 minutes", // Placeholder logic
+                                    text = "~${uiState.timeSavedMinutes} minutes",
                                     style = MaterialTheme.typography.titleMedium,
                                     fontWeight = FontWeight.Bold,
                                     color = Color.White
@@ -347,28 +366,43 @@ fun DashboardScreen(
                     Text(
                         text = "View All →",
                         style = MaterialTheme.typography.labelMedium,
-                        color = JistCyan
+                        color = JistCyan,
+                        modifier = Modifier.clickable { onViewAllClick() }
                     )
                 }
 
-                // Recent Activity List (Mock Items for now matching the design)
-                ActivityItem(
-                    appName = "Slack",
-                    title = "#Design-Team",
-                    description = "Sarah updated the Figma file and requested a review of the dashboard components by 3 PM.",
-                    time = "2m ago",
-                    accentColor = JistCyan
-                )
-                
-                ActivityItem(
-                    appName = "Gmail",
-                    title = "Gmail • Newsletter",
-                    description = "\"Weekly Tech Digest\" discusses new AI regulations and 5 productivity tools for developers.",
-                    time = "15m ago",
-                    accentColor = Color(0xFFFF5252) // Red for Gmail
-                )
-
-
+                // Recent Activity List from real data
+                if (uiState.recentSummaries.isEmpty()) {
+                    GlassCard(modifier = Modifier.fillMaxWidth()) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(24.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text(
+                                text = "No summaries yet",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = Color.White.copy(alpha = 0.6f)
+                            )
+                            Text(
+                                text = "Tap the button below to summarize",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = Color.White.copy(alpha = 0.4f)
+                            )
+                        }
+                    }
+                } else {
+                    uiState.recentSummaries.forEach { summary ->
+                        ActivityItem(
+                            packageName = summary.packageName,
+                            title = summary.contactOrGroup,
+                            description = summary.summaryText,
+                            time = formatRelativeTime(summary.createdAt),
+                            accentColor = getAppAccentColor(summary.appName)
+                        )
+                    }
+                }
 
                 Spacer(modifier = Modifier.height(80.dp)) // Bottom padding for nav bar
             }
@@ -378,37 +412,70 @@ fun DashboardScreen(
 
 @Composable
 fun ActivityItem(
-    appName: String,
+    packageName: String = "",
     title: String,
     description: String,
     time: String,
     accentColor: Color
 ) {
+    val context = LocalContext.current
+
     GlassCard(
         modifier = Modifier.fillMaxWidth()
     ) {
-        Row(modifier = Modifier.padding(16.dp)) {
-            // Accent Line
-            Box(
-                modifier = Modifier
-                    .width(4.dp)
-                    .height(60.dp)
-                    .clip(RoundedCornerShape(2.dp))
-                    .background(accentColor)
-            )
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.Top
+        ) {
+            // App Icon
+            val appIcon: Drawable? = remember(packageName) {
+                try {
+                    context.packageManager.getApplicationIcon(packageName)
+                } catch (e: Exception) {
+                    null
+                }
+            }
+            if (appIcon != null) {
+                Image(
+                    bitmap = appIcon.toBitmap(48, 48).asImageBitmap(),
+                    contentDescription = title,
+                    modifier = Modifier
+                        .size(36.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                )
+            } else {
+                // Fallback colored circle with first letter
+                Box(
+                    modifier = Modifier
+                        .size(36.dp)
+                        .background(accentColor.copy(alpha = 0.3f), RoundedCornerShape(8.dp)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = title.take(1).uppercase(),
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = accentColor
+                    )
+                }
+            }
             
-            Spacer(modifier = Modifier.width(16.dp))
+            Spacer(modifier = Modifier.width(12.dp))
             
-            Column {
+            Column(modifier = Modifier.weight(1f)) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
                         text = title,
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.Bold,
-                        color = Color.White
+                        color = Color.White,
+                        modifier = Modifier.weight(1f),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                     Text(
                         text = time,
@@ -417,16 +484,59 @@ fun ActivityItem(
                     )
                 }
                 
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(6.dp))
                 
                 Text(
                     text = description,
                     style = MaterialTheme.typography.bodySmall,
                     color = Color.White.copy(alpha = 0.8f),
-                    lineHeight = 20.sp
+                    lineHeight = 20.sp,
+                    maxLines = 3,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
         }
+    }
+}
+
+// Helper: Dynamic greeting based on time of day
+private fun getGreeting(): String {
+    val hour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
+    return when (hour) {
+        in 5..11 -> "GOOD MORNING"
+        in 12..16 -> "GOOD AFTERNOON"
+        in 17..20 -> "GOOD EVENING"
+        else -> "GOOD NIGHT"
+    }
+}
+
+// Helper: Format timestamp as relative time
+private fun formatRelativeTime(timeMs: Long): String {
+    val now = System.currentTimeMillis()
+    val diffMs = now - timeMs
+    return when {
+        diffMs < 60_000 -> "Just now"
+        diffMs < 3_600_000 -> "${diffMs / 60_000}m ago"
+        diffMs < 86_400_000 -> "${diffMs / 3_600_000}h ago"
+        diffMs < 604_800_000 -> "${diffMs / 86_400_000}d ago"
+        else -> java.text.SimpleDateFormat("MMM dd", java.util.Locale.getDefault())
+            .format(java.util.Date(timeMs))
+    }
+}
+
+// Helper: Accent color per app name
+private fun getAppAccentColor(appName: String): Color {
+    return when (appName.lowercase()) {
+        "whatsapp" -> Color(0xFF25D366)
+        "telegram" -> Color(0xFF0088CC)
+        "slack" -> Color(0xFF4A154B)
+        "gmail" -> Color(0xFFFF5252)
+        "instagram" -> Color(0xFFE1306C)
+        "twitter", "x" -> Color(0xFF1DA1F2)
+        "discord" -> Color(0xFF5865F2)
+        "messenger" -> Color(0xFF006AFF)
+        "signal" -> Color(0xFF3A76F0)
+        else -> Color(0xFF6C63FF) // Default purple
     }
 }
 
@@ -440,9 +550,28 @@ private fun DashboardScreenPreview() {
                 isNotificationListenerActive = true,
                 notificationsTodayCount = 128,
                 summariesTodayCount = 45,
-                totalNotificationsCount = 12450,
+                totalNotificationsCount = 128,
                 unsummarizedCount = 12,
-                lastSummarizedTime = "2 hours ago"
+                lastSummarizedTime = "2 hours ago",
+                timeSavedMinutes = 42,
+                recentSummaries = listOf(
+                    SummaryEntity(
+                        id = 1, packageName = "com.slack",
+                        conversationKey = "design_team", appName = "Slack",
+                        contactOrGroup = "#Design-Team",
+                        summaryText = "Sarah updated the Figma file and requested a review of the dashboard components by 3 PM.",
+                        messageCount = 5, modelUsed = "gemini-pro",
+                        createdAt = System.currentTimeMillis() - 120_000
+                    ),
+                    SummaryEntity(
+                        id = 2, packageName = "com.google.android.gm",
+                        conversationKey = "newsletter", appName = "Gmail",
+                        contactOrGroup = "Gmail • Newsletter",
+                        summaryText = "\"Weekly Tech Digest\" discusses new AI regulations and 5 productivity tools for developers.",
+                        messageCount = 1, modelUsed = "gemini-pro",
+                        createdAt = System.currentTimeMillis() - 900_000
+                    )
+                )
             ),
             hasNotificationListenerPermission = true,
             isBatteryOptimizationDisabled = true

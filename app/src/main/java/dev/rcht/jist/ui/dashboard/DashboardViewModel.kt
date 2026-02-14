@@ -4,6 +4,7 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dev.rcht.jist.data.repository.NotificationRepository
+import dev.rcht.jist.data.db.entity.SummaryEntity
 import dev.rcht.jist.data.repository.SummaryRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -20,7 +21,9 @@ data class DashboardUiState(
     val isNotificationListenerActive: Boolean = false,
     val isLoading: Boolean = true,
     val isSummarizing: Boolean = false,
-    val summarizeError: String? = null
+    val summarizeError: String? = null,
+    val recentSummaries: List<SummaryEntity> = emptyList(),
+    val timeSavedMinutes: Int = 0
 )
 
 class DashboardViewModel(
@@ -81,6 +84,14 @@ class DashboardViewModel(
                 val isListenerActive = recentNotifications.any { it.timestamp >= oneHourAgoMs }
                 Log.d(TAG, "Listener active: $isListenerActive")
 
+                // Get recent summaries for activity feed
+                val recentSummaries = summaryRepository.getRecent(limit = 5)
+                Log.d(TAG, "Got ${recentSummaries.size} recent summaries for feed")
+
+                // Calculate time saved: ~3 min per summary, ~0.3 min per notification
+                val timeSavedMinutes = (summariesTodayCount * 3 + (notificationsTodayCount * 0.3)).toInt()
+                Log.d(TAG, "Time saved today: ~$timeSavedMinutes minutes")
+
                 _uiState.value = DashboardUiState(
                     notificationsTodayCount = notificationsTodayCount,
                     totalNotificationsCount = recentNotifications.size,
@@ -88,7 +99,9 @@ class DashboardViewModel(
                     summariesTodayCount = summariesTodayCount,
                     lastSummarizedTime = lastSummarizedTime,
                     isNotificationListenerActive = isListenerActive,
-                    isLoading = false
+                    isLoading = false,
+                    recentSummaries = recentSummaries,
+                    timeSavedMinutes = timeSavedMinutes
                 )
                 Log.d(TAG, "Dashboard data loaded successfully")
             } catch (e: Exception) {

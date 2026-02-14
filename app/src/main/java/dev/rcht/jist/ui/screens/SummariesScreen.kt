@@ -122,6 +122,9 @@ fun SummariesScreen(
                                     .clickable { onSummaryClick(summary.id) }
                             )
                         }
+                        item {
+                            Spacer(modifier = Modifier.height(100.dp))
+                        }
                     }
                 }
             }

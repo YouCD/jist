@@ -1,6 +1,8 @@
 package dev.rcht.jist.ui
 
 import android.app.Application
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Dashboard
@@ -11,23 +13,23 @@ import androidx.compose.material.icons.outlined.Dashboard
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.Summarize
-import androidx.compose.material3.Icon
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
+// removed duplicate import
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.foundation.background
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import dev.rcht.jist.ui.components.GlassBottomNavigation
 import dev.rcht.jist.ui.navigation.JistNavHost
 import dev.rcht.jist.ui.navigation.Screen
+import dev.rcht.jist.ui.theme.JistCyan
+import dev.rcht.jist.ui.theme.JistPurple
 
 data class BottomNavItem(
     val label: String,
@@ -55,57 +57,27 @@ fun JistApp() {
     val showBottomBar = currentRoute in mainTabRoutes
 
     Scaffold(
-        containerColor = Color.Black,
-        bottomBar = {
+        containerColor = Color.Black
+    ) { paddingValues ->
+        Box(modifier = Modifier.fillMaxSize()) {
+            JistNavHost(
+                navController = navController,
+                application = application,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(bottom = 0.dp) // Allow content to go behind nav bar
+            )
+            
             if (showBottomBar) {
-                NavigationBar(
-                    containerColor = Color.Transparent,
-                    contentColor = Color.White,
-                    modifier = Modifier.background(
-                         androidx.compose.ui.graphics.Brush.verticalGradient(
-                             colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.8f))
-                         )
-                    )
-                ) {
-                    bottomNavItems.forEach { item ->
-                        val selected = currentRoute == item.route
-                        NavigationBarItem(
-                            selected = selected,
-                            onClick = {
-                                if (!selected) {
-                                    navController.navigate(item.route) {
-                                        launchSingleTop = true
-                                        popUpTo(Screen.Dashboard.route) {
-                                            saveState = true
-                                        }
-                                        restoreState = true
-                                    }
-                                }
-                            },
-                            icon = {
-                                Icon(
-                                    imageVector = if (selected) item.selectedIcon else item.unselectedIcon,
-                                    contentDescription = item.label
-                                )
-                            },
-                            label = { Text(item.label) },
-                            colors = androidx.compose.material3.NavigationBarItemDefaults.colors(
-                                selectedIconColor = dev.rcht.jist.ui.theme.JistCyan,
-                                selectedTextColor = dev.rcht.jist.ui.theme.JistCyan,
-                                unselectedIconColor = Color.LightGray,
-                                unselectedTextColor = Color.LightGray,
-                                indicatorColor = dev.rcht.jist.ui.theme.JistCyan.copy(alpha = 0.15f)
-                            )
-                        )
-                    }
-                }
+                GlassBottomNavigation(
+                    navController = navController,
+                    items = bottomNavItems,
+                    currentRoute = currentRoute,
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .padding(bottom = 16.dp)
+                )
             }
         }
-    ) { paddingValues ->
-        JistNavHost(
-            navController = navController,
-            application = application,
-            modifier = Modifier.padding(bottom = paddingValues.calculateBottomPadding())
-        )
     }
 }
