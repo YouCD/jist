@@ -1,5 +1,6 @@
 package dev.rcht.jist.worker
 
+import android.appwidget.AppWidgetManager
 import android.content.Context
 import android.util.Log
 import androidx.work.CoroutineWorker
@@ -47,6 +48,13 @@ class SummaryWorker(context: Context, params: WorkerParameters) :
             // Post grouped notifications for all summaries
             if (summaries.isNotEmpty()) {
                 notificationManager.postGroupedSummaryNotifications(summaries)
+            }
+
+            // Refresh widget
+            try {
+                dev.rcht.jist.widget.SummaryWidgetProvider.refreshWidget(applicationContext)
+            } catch (e: Exception) {
+                Log.w(TAG, "Failed to refresh widget", e)
             }
 
             Log.d(TAG, "Periodic summarization work completed successfully")

@@ -46,7 +46,8 @@ abstract class JistDatabase : RoomDatabase() {
                     JistDatabase::class.java,
                     "jist.db"
                 )
-                    .fallbackToDestructiveMigration() // For dev: recreate DB if schema changes
+                    .fallbackToDestructiveMigration()
+                    .allowMainThreadQueries()
                     .build()
             }
             return instance!!

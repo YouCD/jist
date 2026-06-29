@@ -17,7 +17,11 @@ import androidx.compose.material.icons.outlined.Summarize
 // removed duplicate import
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -53,10 +57,25 @@ fun bottomNavItems(): List<BottomNavItem> = listOf(
 val mainTabRoutes = setOf(Screen.Dashboard.route, Screen.Summaries.route, Screen.NotificationLog.route)
 
 @Composable
-fun JistApp() {
+fun JistApp(deepLinkSummaryId: String? = null) {
     val navController = rememberNavController()
     val context = LocalContext.current
     val application = context.applicationContext as Application
+    androidx.compose.runtime.LaunchedEffect(deepLinkSummaryId) {
+        if (deepLinkSummaryId != null) {
+            val parts = deepLinkSummaryId.split(":")
+            val id = parts.getOrNull(0) ?: return@LaunchedEffect
+            if (id.isBlank()) return@LaunchedEffect
+            try {
+                kotlinx.coroutines.delay(500)
+                navController.navigate("summary_detail/$id") {
+                    launchSingleTop = true
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("JistApp", "Navigation failed", e)
+            }
+        }
+    }
 
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
