@@ -54,6 +54,6 @@ class NotificationRepository(private val notificationDao: NotificationDao) {
     }
     
     suspend fun getByConversationKey(key: String): List<NotificationEntity> {
-        return notificationDao.getUnsummarizedForKey(key)
+        return notificationDao.getByConversationKey(key)
     }
 }

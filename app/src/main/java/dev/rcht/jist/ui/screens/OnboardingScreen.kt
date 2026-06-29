@@ -66,6 +66,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import dev.rcht.jist.R
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -184,13 +185,13 @@ fun OnboardingScreen(
                     maxTokens = 10,
                     temperature = 0.7f,
                     apiKey = apiKey,
-                    baseUrl = config.baseUrl
+                    baseUrl = LlmClientFactory.getDefaultBaseUrl(selectedProvider)
                 )
 
                 val result = llmClient.complete(testMessages, requestConfig)
                 testConnectionLoading = false
                 testConnectionResult = when (result) {
-                    is LlmResult.Success -> "✓ Connection successful!"
+                    is LlmResult.Success -> context.getString(R.string.onboarding_connection_success)
                     is LlmResult.Error -> "✗ Connection failed: ${result.error.message}"
                 }
             } catch (e: Exception) {
@@ -243,13 +244,13 @@ fun OnboardingScreen(
                         contentColor = MaterialTheme.colorScheme.onPrimary
                     ),
                     enabled = when (step) {
-                        1 -> listenerEnabled // Step 2 requires Notification Listener
-                        4 -> apiKey.isNotBlank() && selectedModel.isNotBlank() // Step 5 requires API Key & Model
+                        1 -> listenerEnabled
+                        4 -> apiKey.isNotBlank() && selectedModel.isNotBlank()
                         else -> true
                     }
                 ) {
                     Text(
-                        text = if (step == totalSteps - 1) "Save Configuration" else "Next Step",
+                        text = if (step == totalSteps - 1) stringResource(R.string.llm_save_config) else stringResource(R.string.onboarding_next_step),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold
                     )
@@ -381,7 +382,7 @@ fun Step1GetStarted(
             // Central Element Image
             Image(
                 painter = painterResource(id = R.drawable.central_element),
-                contentDescription = "Jist App Icon",
+                contentDescription = stringResource(R.string.app_name),
                 modifier = Modifier
                     .size(220.dp)
                     .offset(y = (-10).dp),
@@ -392,7 +393,7 @@ fun Step1GetStarted(
         Spacer(modifier = Modifier.height(24.dp))
         
         Text(
-            text = "Get Started",
+            text = stringResource(R.string.onboarding_get_started),
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onSurface
@@ -401,7 +402,7 @@ fun Step1GetStarted(
         Spacer(modifier = Modifier.height(12.dp))
         
         Text(
-            text = "Jist works its magic by analyzing your notifications to summarize exactly what matters most to you.",
+            text = stringResource(R.string.onboarding_magic),
             style = MaterialTheme.typography.bodyLarge,
             textAlign = TextAlign.Center,
             color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -410,8 +411,8 @@ fun Step1GetStarted(
         Spacer(modifier = Modifier.height(32.dp))
         
         PermissionToggleCard(
-            title = "Notifications",
-            description = "For real-time summaries",
+            title = stringResource(R.string.onboarding_notifications),
+            description = stringResource(R.string.onboarding_realtime),
             icon = Icons.Default.Notifications,
             isChecked = notificationsEnabled,
             onCheckedChange = onToggleNotifications
@@ -428,7 +429,7 @@ fun Step1GetStarted(
             )
             Spacer(modifier = Modifier.width(8.dp))
             Text(
-                text = "Your data is processed locally and stays private.",
+                text = stringResource(R.string.onboarding_privacy),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -469,7 +470,7 @@ fun Step2EnableAccess(
             // Notification Access Image
             Image(
                 painter = painterResource(id = R.drawable.notificationaccess),
-                contentDescription = "Notification Access",
+                contentDescription = stringResource(R.string.onboarding_notification_access),
                 modifier = Modifier
                     .size(220.dp)
                     .offset(y = (-10).dp),
@@ -480,7 +481,7 @@ fun Step2EnableAccess(
         Spacer(modifier = Modifier.height(24.dp))
         
         Text(
-            text = "Enable Notification Access",
+            text = stringResource(R.string.onboarding_enable_access),
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Bold,
             textAlign = TextAlign.Center
@@ -489,7 +490,7 @@ fun Step2EnableAccess(
         Spacer(modifier = Modifier.height(12.dp))
         
         Text(
-            text = "Allow Jist to read incoming notification so our AI can summarize them instantly.",
+            text = stringResource(R.string.onboarding_notifications_desc),
             style = MaterialTheme.typography.bodyLarge,
             textAlign = TextAlign.Center,
             color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -517,9 +518,9 @@ fun Step2EnableAccess(
                 )
                 Spacer(modifier = Modifier.width(12.dp))
                 Column(modifier = Modifier.weight(1f)) {
-                    Text("Notification Access", style = MaterialTheme.typography.labelLarge)
+                    Text(stringResource(R.string.onboarding_notification_access), style = MaterialTheme.typography.labelLarge)
                     Text(
-                        if (listenerEnabled) "Enabled" else "Disabled",
+                        if (listenerEnabled) stringResource(R.string.active) else stringResource(R.string.disabled),
                         style = MaterialTheme.typography.labelSmall,
                         color = if (listenerEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -537,7 +538,7 @@ fun Step2EnableAccess(
                 shape = RoundedCornerShape(16.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
             ) {
-                Text("Open Settings", color = MaterialTheme.colorScheme.onPrimary, fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.onboarding_open_settings), color = MaterialTheme.colorScheme.onPrimary, fontWeight = FontWeight.Bold)
             }
         } else {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -549,7 +550,7 @@ fun Step2EnableAccess(
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = "Access Enabled",
+                    text = stringResource(R.string.onboarding_access_enabled),
                     color = MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.Bold
                 )
@@ -593,7 +594,7 @@ fun Step3InstantSummaries(
             // AI Summary Image
             Image(
                 painter = painterResource(id = R.drawable.aisummary),
-                contentDescription = "AI Summary",
+                contentDescription = stringResource(R.string.onboarding_instant_summaries),
                 modifier = Modifier
                     .size(300.dp)
                     .offset(y = (-10).dp),
@@ -604,7 +605,7 @@ fun Step3InstantSummaries(
         Spacer(modifier = Modifier.height(24.dp))
         
         Text(
-            text = "Instant AI Summaries",
+            text = stringResource(R.string.onboarding_instant_summaries),
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Bold,
             textAlign = TextAlign.Center
@@ -613,7 +614,7 @@ fun Step3InstantSummaries(
         Spacer(modifier = Modifier.height(12.dp))
         
         Text(
-            text = "Jist needs background access to summarize notifications as they arrive — so you see summaries instantly, not just when you open the app.",
+            text = stringResource(R.string.onboarding_battery_desc),
             style = MaterialTheme.typography.bodyLarge,
             textAlign = TextAlign.Center,
             color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -637,9 +638,9 @@ fun Step3InstantSummaries(
                     }
                     Spacer(modifier = Modifier.width(16.dp))
                     Column(modifier = Modifier.weight(1f)) {
-                        Text("Battery Settings", style = MaterialTheme.typography.labelLarge)
+                        Text(stringResource(R.string.onboarding_battery_settings), style = MaterialTheme.typography.labelLarge)
                         Text(
-                            if (batteryIgnored) "Unrestricted access granted" else "Needs your attention",
+                            if (batteryIgnored) stringResource(R.string.onboarding_unrestricted_access) else stringResource(R.string.onboarding_needs_attention),
                             style = MaterialTheme.typography.bodySmall, 
                             color = if (batteryIgnored) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
                         )
@@ -667,7 +668,7 @@ fun Step3InstantSummaries(
                     Spacer(modifier = Modifier.height(8.dp))
                     
                     Text(
-                        text = "1. Find \"Jist\" in the list\n2. Tap on it\n3. Select \"Unrestricted\" or \"Don't optimize\" (may be called \"Allow background activity\" on some phones)\n4. Confirm",
+                        text = stringResource(R.string.onboarding_battery_step1) + "\n" + stringResource(R.string.onboarding_battery_step2) + "\n" + stringResource(R.string.onboarding_battery_step3) + "\n" + stringResource(R.string.onboarding_battery_step4),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -684,13 +685,13 @@ fun Step3InstantSummaries(
                 shape = RoundedCornerShape(16.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
             ) {
-                Text("Open Battery Settings", color = MaterialTheme.colorScheme.onPrimary, fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.onboarding_open_battery), color = MaterialTheme.colorScheme.onPrimary, fontWeight = FontWeight.Bold)
             }
             
             Spacer(modifier = Modifier.height(12.dp))
             
             Text(
-                text = "This ensures Jist works even when your phone is idle",
+                text = stringResource(R.string.onboarding_battery_note),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center
@@ -699,7 +700,7 @@ fun Step3InstantSummaries(
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center, modifier = Modifier.fillMaxWidth()) {
                 Icon(Icons.Default.NotificationsActive, null, tint = MaterialTheme.colorScheme.primary)
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("Background Access Enabled", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.onboarding_background_enabled), color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
             }
         }
     }
@@ -729,7 +730,7 @@ fun Step4ManageApps(
         Spacer(modifier = Modifier.height(32.dp))
 
         Text(
-            text = "Choose Your Apps",
+            text = stringResource(R.string.onboarding_choose_apps),
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onSurface
@@ -738,7 +739,7 @@ fun Step4ManageApps(
         Spacer(modifier = Modifier.height(12.dp))
 
         Text(
-            text = "Select which apps you want Jist to monitor and summarize. You can always change this later in settings.",
+            text = stringResource(R.string.onboarding_apps_description),
             style = MaterialTheme.typography.bodyLarge,
             textAlign = TextAlign.Center,
             color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -760,7 +761,7 @@ fun Step4ManageApps(
             Icon(Icons.Outlined.Apps, contentDescription = null, modifier = Modifier.size(24.dp))
             Spacer(modifier = Modifier.width(8.dp))
             Text(
-                text = "Manage Apps",
+                text = stringResource(R.string.onboarding_manage_apps),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold
             )
@@ -769,7 +770,7 @@ fun Step4ManageApps(
         Spacer(modifier = Modifier.height(16.dp))
 
         Text(
-            text = "Suggested apps like WhatsApp, Gmail, and Slack are already enabled by default.",
+            text = stringResource(R.string.onboarding_apps_suggested),
             style = MaterialTheme.typography.bodySmall,
             textAlign = TextAlign.Center,
             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
@@ -812,16 +813,18 @@ fun Step6LlmConfiguration(
         else -> openAiModels
     }
     
-    var isCustomModel by remember { mutableStateOf(false) }
-    var customModelName by remember { mutableStateOf("") }
     var expanded by remember { mutableStateOf(false) }
     var showApiKey by remember { mutableStateOf(false) }
     var showAdvancedSettings by remember { mutableStateOf(false) }
+    var isCustomModel by remember { mutableStateOf(false) }
+    var customModelName by remember { mutableStateOf("") }
 
     LaunchedEffect(selectedProvider) {
-        onSelectModel(currentModels.first())
         isCustomModel = false
         customModelName = ""
+        if (currentModels.isNotEmpty()) {
+            onSelectModel(currentModels.first())
+        }
     }
 
     Column(
@@ -832,7 +835,7 @@ fun Step6LlmConfiguration(
         Spacer(modifier = Modifier.height(16.dp))
         
         Text(
-            text = "Configure AI",
+            text = stringResource(R.string.onboarding_configure_ai),
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Bold,
             textAlign = TextAlign.Center
@@ -841,7 +844,7 @@ fun Step6LlmConfiguration(
         Spacer(modifier = Modifier.height(8.dp))
         
         Text(
-            text = "Choose your AI provider and model",
+            text = stringResource(R.string.onboarding_ai_subtitle),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center
@@ -851,7 +854,7 @@ fun Step6LlmConfiguration(
         
         // Provider Cards - Similar to settings screen
         Text(
-            text = "AI PROVIDER",
+            text = stringResource(R.string.llm_ai_provider),
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
             modifier = Modifier.fillMaxWidth()
@@ -884,7 +887,6 @@ fun Step6LlmConfiguration(
                         .height(110.dp)
                         .clickable { 
                             onSelectProvider(provider)
-                            isCustomModel = false
                         },
                     shape = RoundedCornerShape(16.dp),
                     colors = CardDefaults.cardColors(
@@ -949,10 +951,10 @@ fun Step6LlmConfiguration(
                             Spacer(modifier = Modifier.height(8.dp))
                             Text(
                                 text = when (provider) {
-                                    "OPENAI" -> "OpenAI"
-                                    "ANTHROPIC" -> "Anthropic"
-                                    "GEMINI" -> "Gemini"
-                                    "OPENROUTER" -> "OpenRouter"
+                                    "OPENAI" -> stringResource(R.string.llm_provider_openai)
+                                    "ANTHROPIC" -> stringResource(R.string.llm_provider_anthropic)
+                                    "GEMINI" -> stringResource(R.string.llm_provider_gemini)
+                                    "OPENROUTER" -> stringResource(R.string.llm_provider_openrouter)
                                     else -> provider
                                 },
                                 style = MaterialTheme.typography.bodyMedium,
@@ -970,7 +972,7 @@ fun Step6LlmConfiguration(
         
         // Model Selection
         Text(
-            text = "Model Version",
+            text = stringResource(R.string.llm_model_version),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.fillMaxWidth()
@@ -980,13 +982,13 @@ fun Step6LlmConfiguration(
         
         Box(modifier = Modifier.fillMaxWidth()) {
             OutlinedTextField(
-                value = if (isCustomModel) customModelName else selectedModel,
+                value = selectedModel,
                 onValueChange = {},
                 modifier = Modifier.fillMaxWidth(),
                 readOnly = true,
                 trailingIcon = {
                     IconButton(onClick = { expanded = true }) {
-                        Icon(Icons.Default.KeyboardArrowDown, "Select model")
+                        Icon(Icons.Default.KeyboardArrowDown, stringResource(R.string.llm_select_model))
                     }
                 },
                 shape = RoundedCornerShape(12.dp),
@@ -1015,51 +1017,18 @@ fun Step6LlmConfiguration(
                         text = {
                             Text(
                                 text = model,
-                                fontWeight = if (model == selectedModel && !isCustomModel) FontWeight.Bold else FontWeight.Normal
+                                fontWeight = if (model == selectedModel) FontWeight.Bold else FontWeight.Normal
                             )
                         },
                         onClick = {
                             onSelectModel(model)
-                            isCustomModel = false
                             expanded = false
                         }
                     )
                 }
-                DropdownMenuItem(
-                    text = {
-                        Text(
-                            text = "Custom Model...",
-                            fontWeight = if (isCustomModel) FontWeight.Bold else FontWeight.Normal,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                    },
-                    onClick = {
-                        isCustomModel = true
-                        expanded = false
-                    }
-                )
             }
         }
-        
-        if (isCustomModel) {
-            Spacer(modifier = Modifier.height(12.dp))
-            OutlinedTextField(
-                value = customModelName,
-                onValueChange = { customModelName = it },
-                modifier = Modifier.fillMaxWidth(),
-                placeholder = { Text("Enter custom model name") },
-                label = { Text("Custom Model") },
-                singleLine = true,
-                shape = RoundedCornerShape(12.dp),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
-                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
-                    focusedBorderColor = MaterialTheme.colorScheme.primary,
-                    unfocusedBorderColor = Color.Transparent
-                )
-            )
-        }
-        
+
         Spacer(modifier = Modifier.height(24.dp))
         
         // Authentication
@@ -1069,7 +1038,7 @@ fun Step6LlmConfiguration(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "AUTHENTICATION",
+                text = stringResource(R.string.llm_authentication),
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
             )
@@ -1087,14 +1056,14 @@ fun Step6LlmConfiguration(
             value = apiKey,
             onValueChange = onApiKeyChange,
             modifier = Modifier.fillMaxWidth(),
-            placeholder = { Text("Enter your API key") },
+            placeholder = { Text(stringResource(R.string.llm_api_key_hint)) },
             visualTransformation = if (showApiKey) VisualTransformation.None else PasswordVisualTransformation(),
             trailingIcon = {
                 Row {
                     IconButton(onClick = { showApiKey = !showApiKey }) {
                         Icon(
                             imageVector = if (showApiKey) Icons.Default.Lock else Icons.Default.Lock,
-                            contentDescription = if (showApiKey) "Hide" else "Show"
+                            contentDescription = if (showApiKey) stringResource(R.string.llm_hide) else stringResource(R.string.llm_show)
                         )
                     }
                 }
@@ -1112,7 +1081,7 @@ fun Step6LlmConfiguration(
         Spacer(modifier = Modifier.height(8.dp))
         
         Text(
-            text = "We prioritize privacy. Keys are encrypted.",
+            text = stringResource(R.string.llm_api_key_privacy),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
         )
@@ -1140,7 +1109,7 @@ fun Step6LlmConfiguration(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "Additional Settings",
+                        text = stringResource(R.string.llm_additional_settings),
                         style = MaterialTheme.typography.bodyLarge,
                         fontWeight = FontWeight.Medium
                     )
@@ -1149,7 +1118,7 @@ fun Step6LlmConfiguration(
                             Icons.Default.KeyboardArrowUp 
                         else 
                             Icons.Default.KeyboardArrowDown,
-                        contentDescription = if (showAdvancedSettings) "Collapse" else "Expand"
+                        contentDescription = if (showAdvancedSettings) stringResource(R.string.llm_collapse) else stringResource(R.string.llm_expand)
                     )
                 }
                 
@@ -1173,7 +1142,7 @@ fun Step6LlmConfiguration(
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
                                 Text(
-                                    text = "Temperature",
+                                    text = stringResource(R.string.llm_temperature),
                                     style = MaterialTheme.typography.bodyMedium
                                 )
                                 Text(
@@ -1195,12 +1164,12 @@ fun Step6LlmConfiguration(
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
                                 Text(
-                                    text = "Precise",
+                                    text = stringResource(R.string.llm_precise),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                                 Text(
-                                    text = "Creative",
+                                    text = stringResource(R.string.llm_creative),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -1214,7 +1183,7 @@ fun Step6LlmConfiguration(
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
                                 Text(
-                                    text = "Max Tokens",
+                                    text = stringResource(R.string.llm_max_tokens),
                                     style = MaterialTheme.typography.bodyMedium
                                 )
                                 Text(
@@ -1236,12 +1205,12 @@ fun Step6LlmConfiguration(
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
                                 Text(
-                                    text = "100",
+                                    text = stringResource(R.string.onboarding_100),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                                 Text(
-                                    text = "4000",
+                                    text = stringResource(R.string.onboarding_4000),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -1276,7 +1245,7 @@ fun Step6LlmConfiguration(
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                 }
-                Text("Test Connection")
+                Text(stringResource(R.string.llm_test_connection))
             }
 
             // Save Button
@@ -1287,7 +1256,7 @@ fun Step6LlmConfiguration(
             ) {
                 Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("Save")
+                Text(stringResource(R.string.save))
             }
         }
         

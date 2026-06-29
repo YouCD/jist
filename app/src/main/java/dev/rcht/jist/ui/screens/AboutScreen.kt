@@ -1,5 +1,6 @@
 package dev.rcht.jist.ui.screens
 
+import dev.rcht.jist.R
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -10,6 +11,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.material3.CenterAlignedTopAppBar
@@ -32,12 +34,12 @@ fun AboutScreen(
         modifier = modifier.fillMaxSize(),
         topBar = {
             CenterAlignedTopAppBar(
-                title = { Text("About", fontWeight = FontWeight.SemiBold) },
+                title = { Text(stringResource(R.string.about_title), fontWeight = FontWeight.SemiBold) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back"
+                            contentDescription = stringResource(R.string.nav_back)
                         )
                     }
                 },
@@ -56,17 +58,17 @@ fun AboutScreen(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
-                text = "About Jist",
+                text = stringResource(R.string.about_jist),
                 style = MaterialTheme.typography.displayMedium,
                 textAlign = TextAlign.Center
             )
             Text(
-                text = "AI Notification Summarizer",
+                text = stringResource(R.string.about_tagline),
                 style = MaterialTheme.typography.bodyLarge,
                 modifier = Modifier.padding(top = 16.dp)
             )
             Text(
-                text = "Version 1.0",
+                text = stringResource(R.string.about_version),
                 style = MaterialTheme.typography.bodyMedium,
                 modifier = Modifier.padding(top = 8.dp)
             )

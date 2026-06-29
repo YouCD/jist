@@ -117,10 +117,7 @@ fun GlassBottomNavigation(
                         if (!selected) {
                             navController.navigate(item.route) {
                                 launchSingleTop = true
-                                popUpTo(Screen.Dashboard.route) {
-                                    saveState = true
-                                }
-                                restoreState = true
+                                popUpTo(Screen.Dashboard.route) { inclusive = false }
                             }
                         }
                     }
@@ -199,7 +196,7 @@ private fun GlassBottomNavigationPreview() {
             val hazeState = remember { HazeState() }
             GlassBottomNavigation(
                 navController = navController,
-                items = dev.rcht.jist.ui.bottomNavItems,
+                items = dev.rcht.jist.ui.bottomNavItems(),
                 currentRoute = "dashboard",
                 hazeState = hazeState
             )

@@ -3,7 +3,7 @@ package dev.rcht.jist.ui.settings
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import android.content.Context
-import android.content.pm.ApplicationInfo
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.util.Log
 import dev.rcht.jist.data.db.entity.AppRuleEntity
@@ -46,32 +46,24 @@ class AppSettingsViewModel(
             _uiState.value = _uiState.value.copy(isLoading = true)
             try {
                 val packageManager = context.packageManager
-                val installedApps = packageManager.getInstalledApplications(PackageManager.GET_META_DATA)
-                
+                val mainIntent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
+                val launcherApps = packageManager.queryIntentActivities(mainIntent, 0)
+                    .distinctBy { it.activityInfo.packageName }
+
                 // Get existing rules from database
                 val existingRules = appRuleRepository.getAll().associateBy { it.packageName }
 
                 // Build app list
-                val allApps = installedApps.mapNotNull { appInfo ->
+                val allApps = launcherApps.mapNotNull { resolveInfo ->
                     try {
-                        val packageName = appInfo.packageName
-                        val appLabel = try {
-                            packageManager.getApplicationLabel(appInfo).toString()
-                        } catch (e: Exception) {
-                            packageName
-                        }
-                        
-                        // Skip system components (simple heuristic)
-                        val isSystemComponent = appLabel == packageName && packageName.count { it == '.' } >= 3
-                        
-                        if (isSystemComponent) null else {
-                            val isMessaging = isMessagingOrEmailApp(packageName)
-                            existingRules[packageName] ?: AppRuleEntity(
-                                packageName = packageName,
-                                appName = appLabel,
-                                enabled = isMessaging
-                            )
-                        }
+                        val packageName = resolveInfo.activityInfo.packageName
+                        val appLabel = resolveInfo.loadLabel(packageManager).toString()
+                        val isMessaging = isMessagingOrEmailApp(packageName)
+                        existingRules[packageName] ?: AppRuleEntity(
+                            packageName = packageName,
+                            appName = appLabel,
+                            enabled = isMessaging
+                        )
                     } catch (e: Exception) {
                         null
                     }
@@ -210,6 +202,19 @@ class AppSettingsViewModel(
             val (suggested, others) = separateAndSortApps(updatedApps)
             displayOrderOtherApps = others.map { it.packageName }
             updateUiState(updatedApps, suggested, others)
+        }
+    }
+
+    fun updateCustomPrompt(appRule: AppRuleEntity, customPrompt: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val updatedRule = appRule.copy(customPrompt = customPrompt.ifBlank { null })
+            if (updatedRule.id == 0L) {
+                val newId = appRuleRepository.insert(updatedRule)
+                updateCacheAndUI(updatedRule.copy(id = newId))
+            } else {
+                appRuleRepository.update(updatedRule)
+                updateCacheAndUI(updatedRule)
+            }
         }
     }
 

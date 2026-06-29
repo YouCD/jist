@@ -1,5 +1,6 @@
 package dev.rcht.jist.ui.screens
 
+import dev.rcht.jist.R
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -26,13 +27,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import dev.rcht.jist.data.db.entity.NotificationEntity
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SummaryDetailScreen(
-    summaryText: String = "Sample summary",
+    summaryText: String = stringResource(R.string.summary_label),
     appName: String = "WhatsApp",
     contactOrGroup: String = "Team Chat",
     messageCount: Int = 5,
@@ -49,10 +51,10 @@ fun SummaryDetailScreen(
     GlassScaffold(
         topBar = {
             CenterAlignedTopAppBar(
-                title = { Text("Summary Details") },
+                title = { Text(stringResource(R.string.summary_detail_title)) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.Filled.ArrowBack, contentDescription = stringResource(R.string.nav_back))
                     }
                 },
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
@@ -112,7 +114,7 @@ fun SummaryDetailScreen(
                 // Summary section
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(
-                        text = "Summary",
+                        text = stringResource(R.string.summary_label),
                         style = MaterialTheme.typography.titleMedium
                     )
                     Card {
@@ -154,7 +156,7 @@ fun SummaryDetailScreen(
                         onClick = onReSummarize,
                         modifier = Modifier.weight(1f)
                     ) {
-                        Text("Re-summarize")
+                        Text(stringResource(R.string.summary_resummarize))
                     }
                 }
                 Spacer(modifier = Modifier.height(16.dp))

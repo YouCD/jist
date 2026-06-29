@@ -1,5 +1,6 @@
 package dev.rcht.jist.ui.summarydetail
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dev.rcht.jist.data.db.entity.NotificationEntity
@@ -57,34 +58,35 @@ class SummaryDetailViewModel(
     }
 
     fun reSummarize() {
-        val summary = _uiState.value.summary ?: return
+        Log.d(TAG, "reSummarize called")
+        val summary = _uiState.value.summary
+        if (summary == null) {
+            Log.w(TAG, "reSummarize: no summary in state")
+            return
+        }
+        Log.d(TAG, "reSummarize: conversationKey=${summary.conversationKey}")
         
         viewModelScope.launch(Dispatchers.IO) {
             _uiState.value = _uiState.value.copy(isReSummarizing = true)
             try {
-                val result = summaryEngine.summarizeConversation(summary.conversationKey)
-                val success = result::class.simpleName == "Success"
-                val errorMsg = if (!success) {
-                    // Extract error message using reflection fallback
-                    try {
-                        result::class.java.getDeclaredField("message").let { field ->
-                            field.isAccessible = true
-                            field.get(result) as? String
-                        }
-                    } catch (e: Exception) {
-                        "Failed to re-summarize"
+                val result = summaryEngine.summarizeConversation(summary.conversationKey, includeSummarized = true)
+                Log.d(TAG, "reSummarize result: $result")
+                when (result) {
+                    is dev.rcht.jist.engine.SummaryResult.Success -> {
+                        loadSummary(result.summaryId)
+                        _uiState.value = _uiState.value.copy(
+                            isReSummarizing = false,
+                            reSummarizeSuccess = true,
+                            error = null
+                        )
                     }
-                } else null
-                
-                _uiState.value = _uiState.value.copy(
-                    isReSummarizing = false,
-                    reSummarizeSuccess = success,
-                    error = errorMsg
-                )
-                
-                // Reload the summary if successful
-                if (success) {
-                    loadSummary(summary.id)
+                    is dev.rcht.jist.engine.SummaryResult.Error -> {
+                        _uiState.value = _uiState.value.copy(
+                            isReSummarizing = false,
+                            reSummarizeSuccess = false,
+                            error = result.message
+                        )
+                    }
                 }
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(
@@ -98,5 +100,9 @@ class SummaryDetailViewModel(
 
     fun clearReSummarizeStatus() {
         _uiState.value = _uiState.value.copy(reSummarizeSuccess = null)
+    }
+
+    companion object {
+        private const val TAG = "SummaryDetailVM"
     }
 }

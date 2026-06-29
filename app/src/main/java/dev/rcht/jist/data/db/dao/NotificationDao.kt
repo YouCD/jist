@@ -22,6 +22,9 @@ interface NotificationDao {
     @Query("SELECT * FROM notifications WHERE conversationKey = :key AND isSummarized = 0 ORDER BY timestamp ASC")
     suspend fun getUnsummarizedForKey(key: String): List<NotificationEntity>
 
+    @Query("SELECT * FROM notifications WHERE conversationKey = :key ORDER BY timestamp ASC")
+    suspend fun getByConversationKey(key: String): List<NotificationEntity>
+
     @Query("SELECT * FROM notifications WHERE isSummarized = 0 ORDER BY timestamp ASC")
     suspend fun getAllUnsummarized(): List<NotificationEntity>
     

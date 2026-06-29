@@ -139,7 +139,15 @@ fun JistNavHost(
                     uiState = uiState,
                     onSummarizeNow = { viewModel.summarizeNow() },
                     onSettingsClick = { navController.navigate(Screen.Settings.route) },
-                    onViewAllClick = { navController.navigate(Screen.Summaries.route) },
+                    onViewAllClick = {
+                        navController.navigate(Screen.Summaries.route) {
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    },
+                    onSummaryClick = { summaryId ->
+                        navController.navigate("summary_detail/$summaryId")
+                    },
                     hasNotificationListenerPermission = hasNotificationListenerPermission.value,
                     isBatteryOptimizationDisabled = isBatteryOptimizationDisabled.value
                 )
@@ -210,7 +218,8 @@ fun JistNavHost(
                         return dev.rcht.jist.ui.settings.SettingsViewModel(
                             context,
                             jistApp.preferencesRepository,
-                            jistApp.appRuleRepository
+                            jistApp.appRuleRepository,
+                            jistApp.llmConfigRepository
                         ) as T
                     }
                 }

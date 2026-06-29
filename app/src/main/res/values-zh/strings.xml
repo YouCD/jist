@@ -1,0 +1,199 @@
+<resources>
+    <string name="app_name">Jist</string>
+    <string name="navigation_drawer_open">打开导航抽屉</string>
+    <string name="navigation_drawer_close">关闭导航抽屉</string>
+    <string name="nav_header_title">Jist</string>
+    <string name="nav_header_subtitle">AI 通知摘要助手</string>
+    <string name="nav_header_desc">导航头部</string>
+    <string name="action_settings">设置</string>
+    <string name="menu_home">仪表盘</string>
+    <string name="menu_gallery">摘要</string>
+    <string name="menu_slideshow">设置</string>
+    <string name="notification_log">通知</string>
+    <string name="about">关于</string>
+    <string name="more">更多</string>
+
+    <!-- Navigation -->
+    <string name="nav_dashboard">仪表盘</string>
+    <string name="nav_summaries">摘要</string>
+    <string name="nav_alerts">提醒</string>
+    <string name="nav_back">返回</string>
+
+    <!-- Common -->
+    <string name="save">保存</string>
+    <string name="delete">删除</string>
+    <string name="search">搜索</string>
+    <string name="done">完成</string>
+    <string name="clear">清除</string>
+    <string name="default_label">默认</string>
+    <string name="active">已启用</string>
+    <string name="disabled">已禁用</string>
+    <string name="settings">设置</string>
+    <string name="coming_soon">即将推出</string>
+
+    <!-- Dashboard -->
+    <string name="dashboard_intercepted">已拦截</string>
+    <string name="dashboard_summarized">已摘要</string>
+    <string name="dashboard_notifications">条通知</string>
+    <string name="dashboard_digests">篇摘要</string>
+    <string name="dashboard_time_saved">今日节省时间</string>
+    <string name="dashboard_minutes">约 %d 分钟</string>
+    <string name="dashboard_recent_activity">最近活动</string>
+    <string name="dashboard_view_all">查看全部 →</string>
+    <string name="dashboard_no_summaries">暂无摘要</string>
+    <string name="dashboard_tap_to_summarize">点击下方按钮开始摘要</string>
+    <string name="dashboard_good_morning">早上好</string>
+    <string name="dashboard_good_afternoon">下午好</string>
+    <string name="dashboard_good_evening">晚上好</string>
+    <string name="dashboard_good_night">晚安</string>
+    <string name="dashboard_just_now">刚刚</string>
+    <string name="dashboard_min_ago">%d 分钟前</string>
+    <string name="dashboard_hour_ago">%d 小时前</string>
+    <string name="dashboard_day_ago">%d 天前</string>
+    <string name="dashboard_inactive">未启用</string>
+
+    <!-- LLM Config -->
+    <string name="llm_title">LLM 配置</string>
+    <string name="llm_ai_provider">AI 提供商</string>
+    <string name="llm_provider_openai">OpenAI</string>
+    <string name="llm_provider_anthropic">Anthropic</string>
+    <string name="llm_provider_gemini">Gemini</string>
+    <string name="llm_provider_openrouter">OpenRouter</string>
+    <string name="llm_model_version">模型版本</string>
+    <string name="llm_model">模型</string>
+    <string name="llm_custom_model">自定义模型</string>
+    <string name="llm_custom_model_option">自定义模型…</string>
+    <string name="llm_custom_model_hint">输入模型名称（如 gpt-4-turbo-preview）</string>
+    <string name="llm_authentication">身份验证</string>
+    <string name="llm_api_key">API 密钥</string>
+    <string name="llm_api_key_hint">输入你的 API 密钥</string>
+    <string name="llm_api_key_privacy">我们重视隐私。密钥经过加密，仅用于联系提供商，绝不会离开你的设备。</string>
+    <string name="llm_additional_settings">高级设置</string>
+    <string name="llm_temperature">温度</string>
+    <string name="llm_precise">精确</string>
+    <string name="llm_creative">创意</string>
+    <string name="llm_max_tokens">最大 Token 数</string>
+    <string name="llm_test_connection">测试连接</string>
+    <string name="llm_save_config">保存配置</string>
+    <string name="llm_saved_configs">已保存的配置</string>
+    <string name="llm_config_saved">配置保存成功！</string>
+    <string name="llm_show">显示</string>
+    <string name="llm_hide">隐藏</string>
+    <string name="llm_paste">粘贴</string>
+    <string name="llm_select_model">选择模型</string>
+    <string name="llm_expand">展开</string>
+    <string name="llm_collapse">收起</string>
+
+    <!-- Settings -->
+    <string name="settings_title">设置</string>
+    <string name="settings_intelligence">智能</string>
+    <string name="settings_behavior">行为</string>
+    <string name="settings_about_section">关于</string>
+    <string name="settings_llm_model">LLM 模型</string>
+    <string name="settings_summarization_style">摘要风格</string>
+    <string name="settings_push_notifications">推送通知</string>
+    <string name="settings_daily_digest">每日摘要</string>
+    <string name="settings_help_support">帮助与支持</string>
+    <string name="settings_privacy_policy">隐私政策</string>
+    <string name="settings_version">版本</string>
+    <string name="settings_jist_2026">Jist 2026</string>
+    <string name="settings_configured">已配置</string>
+    <string name="settings_content_sources">内容来源</string>
+    <string name="settings_apps_active">%d 个活跃</string>
+
+    <!-- App Settings -->
+    <string name="app_settings_title">已监控的应用</string>
+    <string name="app_settings_search">搜索应用…</string>
+    <string name="app_settings_select_all">全选</string>
+    <string name="app_settings_disable_all">全部禁用</string>
+    <string name="app_settings_suggested">推荐</string>
+    <string name="app_settings_all_apps">所有应用</string>
+    <string name="app_settings_apps_installed">已安装 %d 个应用</string>
+
+    <!-- Summaries -->
+    <string name="summaries_title">摘要</string>
+    <string name="summaries_search">搜索摘要</string>
+    <string name="summaries_empty">暂无摘要</string>
+    <string name="summaries_empty_desc">通知即将被摘要</string>
+    <string name="summaries_msg_count">%d 条消息</string>
+
+    <!-- Summary Detail -->
+    <string name="summary_detail_title">摘要详情</string>
+    <string name="summary_label">摘要</string>
+    <string name="summary_original_notifications">原始通知（%d）</string>
+    <string name="summary_resummarize">重新摘要</string>
+
+    <!-- Notification Log -->
+    <string name="notification_log_title">通知日志</string>
+
+    <!-- About -->
+    <string name="about_title">关于</string>
+    <string name="about_jist">关于 Jist</string>
+    <string name="about_tagline">AI 通知摘要助手</string>
+    <string name="about_version">版本 1.0</string>
+
+    <!-- Onboarding -->
+    <string name="onboarding_get_started">开始使用</string>
+    <string name="onboarding_enable_access">启用通知访问权限</string>
+    <string name="onboarding_instant_summaries">即时 AI 摘要</string>
+    <string name="onboarding_choose_apps">选择应用</string>
+    <string name="onboarding_configure_ai">配置 AI</string>
+    <string name="onboarding_ai_subtitle">选择你的 AI 提供商和模型</string>
+    <string name="onboarding_notifications">通知</string>
+    <string name="onboarding_notifications_desc">允许 Jist 读取收到的通知，以便 AI 即时为你生成摘要。</string>
+    <string name="onboarding_notification_access">通知访问权限</string>
+    <string name="onboarding_realtime">用于实时摘要</string>
+    <string name="onboarding_battery_settings">电池设置</string>
+    <string name="onboarding_battery_desc">Jist 需要在后台运行才能在你收到通知时即时生成摘要，而不仅仅是在你打开应用时。</string>
+    <string name="onboarding_battery_step1">1. 在列表中找到 "Jist"</string>
+    <string name="onboarding_battery_step2">2. 点击它</string>
+    <string name="onboarding_battery_step3">3. 选择"不限制"或"不要优化"（部分手机可能称为"允许后台活动"）</string>
+    <string name="onboarding_battery_step4">4. 确认</string>
+    <string name="onboarding_battery_note">这确保 Jist 在手机空闲时也能正常工作</string>
+    <string name="onboarding_background_enabled">后台访问已启用</string>
+    <string name="onboarding_unrestricted_access">已授予无限制访问权限</string>
+    <string name="onboarding_access_enabled">访问已启用</string>
+    <string name="onboarding_needs_attention">需要你的注意</string>
+    <string name="onboarding_apps_description">选择你想要 Jist 监控和摘要的应用。你之后可以在设置中更改。</string>
+    <string name="onboarding_apps_suggested">建议的应用（如 WhatsApp、Gmail、Slack）默认已启用。</string>
+    <string name="onboarding_privacy">你的数据在本地处理，不会泄露隐私。</string>
+    <string name="onboarding_magic">Jist 通过分析你的通知来摘要出对你最重要的内容。</string>
+    <string name="onboarding_next_step">下一步</string>
+    <string name="onboarding_open_settings">打开设置</string>
+    <string name="onboarding_open_battery">打开电池设置</string>
+    <string name="onboarding_manage_apps">管理应用</string>
+    <string name="onboarding_preview">预览</string>
+    <string name="onboarding_selected">已选择</string>
+    <string name="onboarding_save_config">保存配置</string>
+    <string name="onboarding_connection_success">✓ 连接成功！</string>
+    <string name="onboarding_100">100</string>
+    <string name="onboarding_4000">4000</string>
+
+    <!-- Permissions -->
+    <string name="perm_notification_required">需要通知访问权限</string>
+    <string name="perm_tap_to_enable">点击启用监听服务</string>
+    <string name="perm_battery_restricted">后台进程受限</string>
+    <string name="perm_tap_to_disable_battery">点击关闭电池优化</string>
+
+    <!-- Profile -->
+    <string name="profile_local_user">本地用户</string>
+    <string name="profile_local_email">local@jist.app</string>
+    <string name="profile_loading">加载中…</string>
+    <string name="profile_concise">简洁</string>
+    <string name="profile_default_time">08:00</string>
+    <string name="profile_default_version">1.0.0</string>
+    <string name="profile_unknown">未知</string>
+
+    <!-- Notification -->
+    <string name="notification_unknown_app">未知</string>
+    <string name="notification_default_app">通知</string>
+    <string name="notification_summary">摘要</string>
+    <string name="notification_summary_ready">摘要已就绪</string>
+    <string name="notification_from">来自 %s</string>
+    <string name="notification_new_messages">%s：%d 条新消息</string>
+    <string name="notification_summarize">摘要</string>
+    <string name="notification_chats_count">%s（%d 个会话）</string>
+    <string name="notification_conversations_summarized">已摘要 %d 个会话</string>
+    <string name="notification_summaries_ready">%d 篇摘要已就绪</string>
+    <string name="notification_ellipsis">…</string>
+</resources>

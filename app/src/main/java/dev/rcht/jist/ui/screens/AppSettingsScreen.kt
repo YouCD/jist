@@ -1,7 +1,13 @@
 package dev.rcht.jist.ui.screens
 
+import dev.rcht.jist.R
 import android.graphics.Bitmap
 import android.graphics.drawable.Drawable
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -12,6 +18,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -25,6 +33,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -66,12 +75,12 @@ fun AppSettingsScreen(
     GlassScaffold(
         topBar = {
             CenterAlignedTopAppBar(
-                title = { Text("Monitored Apps", fontWeight = FontWeight.SemiBold) },
+                title = { Text(stringResource(R.string.app_settings_title), fontWeight = FontWeight.SemiBold) },
                 navigationIcon = {
                      IconButton(onClick = onNavigateBack) {
                          Icon(
                              imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                             contentDescription = "Back"
+                              contentDescription = stringResource(R.string.nav_back)
                          )
                      }
                 },
@@ -79,7 +88,7 @@ fun AppSettingsScreen(
                     TextButton(onClick = { 
                         onDone?.invoke() ?: onNavigateBack()
                     }) {
-                        Text("Done", fontWeight = FontWeight.Bold)
+                        Text(stringResource(R.string.done), fontWeight = FontWeight.Bold)
                     }
                 },
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
@@ -107,12 +116,12 @@ fun AppSettingsScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(bottom = 16.dp),
-                    placeholder = { Text("Search apps...", color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha=0.5f)) },
+                    placeholder = { Text(stringResource(R.string.app_settings_search), color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha=0.5f)) },
                     leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant) },
                      trailingIcon = {
                         if (uiState.searchQuery.isNotEmpty()) {
                             IconButton(onClick = { viewModel.updateSearchQuery("") }) {
-                                Icon(Icons.Default.Clear, contentDescription = "Clear", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Icon(Icons.Default.Clear, contentDescription = stringResource(R.string.clear), tint = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                         }
                     },
@@ -139,7 +148,7 @@ fun AppSettingsScreen(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     TextButton(onClick = { viewModel.toggleAll(true) }) {
-                         Text("Select All", fontSize = 12.sp)
+                         Text(stringResource(R.string.app_settings_select_all), fontSize = 12.sp)
                     }
                 }
 
@@ -151,7 +160,7 @@ fun AppSettingsScreen(
                     if (uiState.suggestedApps.isNotEmpty()) {
                         item {
                             Text(
-                                text = "SUGGESTED",
+                                text = stringResource(R.string.app_settings_suggested),
                                 style = MaterialTheme.typography.labelMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha=0.7f),
                                 modifier = Modifier.padding(vertical = 8.dp)
@@ -167,7 +176,8 @@ fun AppSettingsScreen(
                                     uiState.suggestedApps.forEachIndexed { index, app ->
                                         AppItem(
                                             app = app,
-                                            onToggle = { viewModel.toggleAppEnabled(app) }
+                                            onToggle = { viewModel.toggleAppEnabled(app) },
+                                            onUpdateCustomPrompt = { viewModel.updateCustomPrompt(app, it) }
                                         )
                                         if (index < uiState.suggestedApps.size - 1) {
                                             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha=0.1f), modifier = Modifier.padding(horizontal = 16.dp))
@@ -190,12 +200,12 @@ fun AppSettingsScreen(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(
-                                    text = "ALL APPS",
+                                    text = stringResource(R.string.app_settings_all_apps),
                                     style = MaterialTheme.typography.labelMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha=0.7f)
                                 )
                                 TextButton(onClick = { viewModel.disableAllNonSuggested() }) {
-                                    Text("Disable All", fontSize = 12.sp)
+                                    Text(stringResource(R.string.app_settings_disable_all), fontSize = 12.sp)
                                 }
                             }
                         }
@@ -209,7 +219,8 @@ fun AppSettingsScreen(
                                     uiState.otherApps.forEachIndexed { index, app ->
                                         AppItem(
                                             app = app,
-                                            onToggle = { viewModel.toggleAppEnabled(app) }
+                                            onToggle = { viewModel.toggleAppEnabled(app) },
+                                            onUpdateCustomPrompt = { viewModel.updateCustomPrompt(app, it) }
                                         )
                                         if (index < uiState.otherApps.size - 1) {
                                             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha=0.1f), modifier = Modifier.padding(horizontal = 16.dp))
@@ -227,35 +238,111 @@ fun AppSettingsScreen(
 }
 
 @Composable
-fun AppItem(app: AppRuleEntity, onToggle: (Boolean) -> Unit) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        // Real App Icon
-        AppIcon(
-            packageName = app.packageName,
-            appName = app.appName, // fallback
-            modifier = Modifier.size(40.dp)
-        )
-        
-        Spacer(modifier = Modifier.width(16.dp))
-        
-        Column(modifier = Modifier.weight(1f)) {
-            Text(text = app.appName, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
-            Text(
-                text = if (app.enabled) "Active" else "Disabled", 
-                style = MaterialTheme.typography.bodySmall, 
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+fun AppItem(app: AppRuleEntity, onToggle: (Boolean) -> Unit, onUpdateCustomPrompt: (String) -> Unit = {}) {
+    var expanded by remember { mutableStateOf(false) }
+    var promptText by remember(app.id, app.customPrompt) { mutableStateOf(app.customPrompt ?: dev.rcht.jist.llm.getDefaultSystemPrompt()) }
+    val hasPrompt = app.customPrompt != null && app.customPrompt.isNotBlank()
+    val isDefault = promptText == dev.rcht.jist.llm.getDefaultSystemPrompt()
+
+    Column {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            AppIcon(
+                packageName = app.packageName,
+                appName = app.appName,
+                modifier = Modifier.size(40.dp)
+            )
+            
+            Spacer(modifier = Modifier.width(16.dp))
+            
+            Column(modifier = Modifier.weight(1f)) {
+                Text(text = app.appName, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
+                Text(
+                    text = if (app.enabled) stringResource(R.string.active) else stringResource(R.string.disabled), 
+                    style = MaterialTheme.typography.bodySmall, 
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            
+            if (app.enabled) {
+                IconButton(onClick = { expanded = !expanded }) {
+                    Icon(
+                        imageVector = if (expanded) Icons.Default.KeyboardArrowUp else Icons.Default.Edit,
+                        contentDescription = if (expanded) "Collapse" else "Custom prompt",
+                        tint = if (hasPrompt) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+            
+            Switch(
+                checked = app.enabled,
+                onCheckedChange = { enabled ->
+                    if (!enabled) expanded = false
+                    onToggle(enabled)
+                }
             )
         }
         
-        Switch(
-            checked = app.enabled,
-            onCheckedChange = onToggle
-        )
+        AnimatedVisibility(visible = expanded) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 16.dp, end = 16.dp, bottom = 12.dp)
+            ) {
+                Text(
+                    text = "Custom Prompt",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                    modifier = Modifier.padding(bottom = 4.dp)
+                )
+                if (isDefault) {
+                    Text(
+                        text = "Using default prompt — edit below to customize:",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                        modifier = Modifier.padding(bottom = 4.dp)
+                    )
+                }
+                OutlinedTextField(
+                    value = promptText,
+                    onValueChange = { promptText = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    label = { Text("Custom Prompt") },
+                    minLines = 2,
+                    maxLines = 8,
+                    shape = RoundedCornerShape(12.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                        focusedBorderColor = MaterialTheme.colorScheme.primary,
+                        unfocusedBorderColor = Color.Transparent
+                    )
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    if (!isDefault) {
+                        TextButton(onClick = {
+                            promptText = dev.rcht.jist.llm.getDefaultSystemPrompt()
+                        }) {
+                            Text("Reset to default", color = MaterialTheme.colorScheme.error)
+                        }
+                        Spacer(modifier = Modifier.width(8.dp))
+                    }
+                    Button(
+                        onClick = { onUpdateCustomPrompt(promptText) },
+                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp)
+                    ) {
+                        Text("Save")
+                    }
+                }
+            }
+        }
     }
 }
 

@@ -1,5 +1,6 @@
 package dev.rcht.jist.ui.screens
 
+import dev.rcht.jist.R
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -13,6 +14,7 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -25,7 +27,7 @@ fun NotificationLogScreen(modifier: Modifier = Modifier) {
         modifier = modifier.fillMaxSize(),
         topBar = {
             CenterAlignedTopAppBar(
-                title = { Text("Notification Log", fontWeight = FontWeight.SemiBold) },
+                title = { Text(stringResource(R.string.notification_log_title), fontWeight = FontWeight.SemiBold) },
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
                     containerColor = Color.Transparent
                 )
@@ -41,12 +43,12 @@ fun NotificationLogScreen(modifier: Modifier = Modifier) {
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
-                text = "Notification Log",
+                text = stringResource(R.string.notification_log_title),
                 style = MaterialTheme.typography.displayMedium,
                 textAlign = TextAlign.Center
             )
             Text(
-                text = "Coming Soon",
+                text = stringResource(R.string.coming_soon),
                 style = MaterialTheme.typography.bodyLarge,
                 modifier = Modifier.padding(top = 16.dp)
             )

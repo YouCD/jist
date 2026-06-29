@@ -1,5 +1,6 @@
 package dev.rcht.jist.ui.components
 
+import dev.rcht.jist.R
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -15,6 +16,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 
@@ -40,13 +42,13 @@ fun PermissionBanner(
             Spacer(modifier = Modifier.width(16.dp))
             Column {
                 Text(
-                    text = "Notification access required",
+                    text = stringResource(R.string.perm_notification_required),
                     color = Color.White,
                     fontWeight = FontWeight.Bold,
                     style = MaterialTheme.typography.bodyMedium
                 )
                 Text(
-                    text = "Tap to enable listener service",
+                    text = stringResource(R.string.perm_tap_to_enable),
                     color = Color.White.copy(alpha = 0.7f),
                     style = MaterialTheme.typography.bodySmall
                 )

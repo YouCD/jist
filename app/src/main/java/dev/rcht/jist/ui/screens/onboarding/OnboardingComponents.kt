@@ -1,5 +1,6 @@
 package dev.rcht.jist.ui.screens.onboarding
 
+import dev.rcht.jist.R
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -15,6 +16,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 
 @Composable
@@ -124,7 +126,7 @@ fun PermissionToggleCard(
 fun WritingStyleCard(
     title: String,
     description: String,
-    previewTitle: String = "PREVIEW",
+    previewTitle: String = "",
     previewText: String,
     icon: ImageVector,
     isSelected: Boolean,
@@ -184,7 +186,7 @@ fun WritingStyleCard(
                 if (isSelected) {
                     Icon(
                         imageVector = Icons.Default.Check,
-                        contentDescription = "Selected",
+                        contentDescription = stringResource(R.string.onboarding_selected),
                         tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier
                             .size(24.dp)
@@ -222,7 +224,7 @@ fun WritingStyleCard(
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = previewTitle,
+                        text = previewTitle.ifEmpty { stringResource(R.string.onboarding_preview) },
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
                     )

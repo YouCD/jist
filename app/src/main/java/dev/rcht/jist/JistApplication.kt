@@ -86,6 +86,7 @@ class JistApplication : Application() {
             summaryRepository,
             llmConfigRepository,
             appRuleRepository,
+            preferencesRepository,
             httpClient
         )
         

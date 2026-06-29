@@ -1,5 +1,6 @@
 package dev.rcht.jist.ui
 
+import dev.rcht.jist.R
 import android.app.Application
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -22,6 +23,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
@@ -41,13 +43,14 @@ data class BottomNavItem(
     val unselectedIcon: ImageVector
 )
 
-val bottomNavItems = listOf(
-    BottomNavItem("Dashboard", Screen.Dashboard.route, Icons.Filled.Dashboard, Icons.Outlined.Dashboard),
-    BottomNavItem("Summaries", Screen.Summaries.route, Icons.Filled.Summarize, Icons.Outlined.Summarize),
-    BottomNavItem("Alerts", Screen.NotificationLog.route, Icons.Filled.Notifications, Icons.Outlined.Notifications)
+@Composable
+fun bottomNavItems(): List<BottomNavItem> = listOf(
+    BottomNavItem(stringResource(R.string.nav_dashboard), Screen.Dashboard.route, Icons.Filled.Dashboard, Icons.Outlined.Dashboard),
+    BottomNavItem(stringResource(R.string.nav_summaries), Screen.Summaries.route, Icons.Filled.Summarize, Icons.Outlined.Summarize),
+    BottomNavItem(stringResource(R.string.nav_alerts), Screen.NotificationLog.route, Icons.Filled.Notifications, Icons.Outlined.Notifications)
 )
 
-val mainTabRoutes = bottomNavItems.map { it.route }.toSet()
+val mainTabRoutes = setOf(Screen.Dashboard.route, Screen.Summaries.route, Screen.NotificationLog.route)
 
 @Composable
 fun JistApp() {
@@ -77,7 +80,7 @@ fun JistApp() {
             if (showBottomBar) {
                 GlassBottomNavigation(
                     navController = navController,
-                    items = bottomNavItems,
+                    items = bottomNavItems(),
                     currentRoute = currentRoute,
                     hazeState = hazeState,
                     modifier = Modifier.align(Alignment.BottomCenter)

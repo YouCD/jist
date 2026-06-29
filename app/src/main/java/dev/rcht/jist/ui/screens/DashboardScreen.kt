@@ -1,5 +1,6 @@
 package dev.rcht.jist.ui.screens
 
+import dev.rcht.jist.R
 import android.content.Context
 import android.graphics.drawable.Drawable
 import androidx.compose.foundation.Image
@@ -60,6 +61,7 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalInspectionMode
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
@@ -91,6 +93,7 @@ fun DashboardScreen(
     onSummarizeNow: () -> Unit = {},
     onSettingsClick: () -> Unit = {},
     onViewAllClick: () -> Unit = {},
+    onSummaryClick: (Long) -> Unit = {},
     hasNotificationListenerPermission: Boolean = false,
     isBatteryOptimizationDisabled: Boolean = false,
     modifier: Modifier = Modifier
@@ -177,7 +180,7 @@ fun DashboardScreen(
                             buildAnnotatedString {
                                 append("Jist ")
                                 withStyle(style = SpanStyle(color = JistCyan)) {
-                                    append(if (uiState.isNotificationListenerActive) "Active" else "Inactive")
+                                    append(if (uiState.isNotificationListenerActive) stringResource(R.string.active) else stringResource(R.string.dashboard_inactive))
                                 }
                             },
                             style = MaterialTheme.typography.headlineMedium,
@@ -188,7 +191,7 @@ fun DashboardScreen(
                     IconButton(onClick = onSettingsClick) {
                         Icon(
                             imageVector = Icons.Filled.Settings,
-                            contentDescription = "Settings",
+                            contentDescription = stringResource(R.string.settings),
                             tint = Color.White.copy(alpha = 0.8f)
                         )
                     }
@@ -231,7 +234,7 @@ fun DashboardScreen(
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(
-                                    text = "INTERCEPTED",
+                                    text = stringResource(R.string.dashboard_intercepted),
                                     style = MaterialTheme.typography.labelSmall,
                                     color = JistCyan,
                                     fontWeight = FontWeight.Bold
@@ -245,7 +248,7 @@ fun DashboardScreen(
                                             append(uiState.totalNotificationsCount.toString())
                                         }
                                         withStyle(style = SpanStyle(fontSize = 12.sp, color = Color.White.copy(alpha = 0.6f))) {
-                                            append("\nnotifications")
+                                            append("\n${stringResource(R.string.dashboard_notifications)}")
                                         }
                                     },
                                     color = Color.White
@@ -287,7 +290,7 @@ fun DashboardScreen(
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(
-                                    text = "SUMMARIZED",
+                                    text = stringResource(R.string.dashboard_summarized),
                                     style = MaterialTheme.typography.labelSmall,
                                     color = JistPurple,
                                     fontWeight = FontWeight.Bold
@@ -301,7 +304,7 @@ fun DashboardScreen(
                                             append(uiState.summariesTodayCount.toString())
                                         }
                                         withStyle(style = SpanStyle(fontSize = 12.sp, color = Color.White.copy(alpha = 0.6f))) {
-                                            append("\ndigests")
+                                            append("\n${stringResource(R.string.dashboard_digests)}")
                                         }
                                     },
                                     color = Color.White
@@ -373,7 +376,7 @@ fun DashboardScreen(
                             Spacer(modifier = Modifier.width(16.dp))
                             Column {
                                 Text(
-                                    text = "Time saved today",
+                                    text = stringResource(R.string.dashboard_time_saved),
                                     style = MaterialTheme.typography.labelSmall,
                                     color = Color.White.copy(alpha = 0.6f)
                                 )
@@ -400,13 +403,13 @@ fun DashboardScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "Recent Activity",
+                        text = stringResource(R.string.dashboard_recent_activity),
                         style = MaterialTheme.typography.titleMedium,
                         color = Color.White,
                         fontWeight = FontWeight.SemiBold
                     )
                     Text(
-                        text = "View All →",
+                        text = stringResource(R.string.dashboard_view_all),
                         style = MaterialTheme.typography.labelMedium,
                         color = JistCyan,
                         modifier = Modifier.clickable { onViewAllClick() }
@@ -426,12 +429,12 @@ fun DashboardScreen(
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
                             Text(
-                                text = "No summaries yet",
+                                text = stringResource(R.string.dashboard_no_summaries),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = Color.White.copy(alpha = 0.6f)
                             )
                             Text(
-                                text = "Tap the button below to summarize",
+                                text = stringResource(R.string.dashboard_tap_to_summarize),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = Color.White.copy(alpha = 0.4f)
                             )
@@ -445,7 +448,8 @@ fun DashboardScreen(
                             description = summary.summaryText,
                             time = formatRelativeTime(summary.createdAt),
                             accentColor = getAppAccentColor(summary.appName),
-                            hazeState = hazeState
+                            hazeState = hazeState,
+                            onClick = { onSummaryClick(summary.id) }
                         )
                     }
                 }
@@ -464,12 +468,15 @@ fun ActivityItem(
     description: String,
     time: String,
     accentColor: Color,
-    hazeState: HazeState?
+    hazeState: HazeState?,
+    onClick: () -> Unit = {}
 ) {
     val context = LocalContext.current
 
     GlassCard(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
         hazeState = hazeState
     ) {
         Row(
@@ -549,22 +556,24 @@ fun ActivityItem(
 }
 
 // Helper: Dynamic greeting based on time of day
+@Composable
 private fun getGreeting(): String {
     val hour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
     return when (hour) {
-        in 5..11 -> "GOOD MORNING"
-        in 12..16 -> "GOOD AFTERNOON"
-        in 17..20 -> "GOOD EVENING"
-        else -> "GOOD NIGHT"
+        in 5..11 -> stringResource(R.string.dashboard_good_morning)
+        in 12..16 -> stringResource(R.string.dashboard_good_afternoon)
+        in 17..20 -> stringResource(R.string.dashboard_good_evening)
+        else -> stringResource(R.string.dashboard_good_night)
     }
 }
 
 // Helper: Format timestamp as relative time
+@Composable
 private fun formatRelativeTime(timeMs: Long): String {
     val now = System.currentTimeMillis()
     val diffMs = now - timeMs
     return when {
-        diffMs < 60_000 -> "Just now"
+        diffMs < 60_000 -> stringResource(R.string.dashboard_just_now)
         diffMs < 3_600_000 -> "${diffMs / 60_000}m ago"
         diffMs < 86_400_000 -> "${diffMs / 3_600_000}h ago"
         diffMs < 604_800_000 -> "${diffMs / 86_400_000}d ago"

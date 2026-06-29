@@ -84,6 +84,7 @@ import kotlinx.coroutines.launch
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.offset
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.graphics.Brush
 import dev.rcht.jist.R
@@ -139,15 +140,12 @@ fun LlmConfigScreen(
             apiKey = config.apiKey
             temperature = config.temperature
             maxTokens = config.maxTokens
-
-            // Check if the saved model is in the known list
             val availableModels = modelsByProvider[config.provider] ?: emptyList()
             if (config.modelId in availableModels) {
                 selectedModel = config.modelId
                 isCustomModel = false
                 customModelName = ""
             } else {
-                // It's a custom model
                 isCustomModel = true
                 customModelName = config.modelId
                 if (availableModels.isNotEmpty()) {
@@ -169,12 +167,12 @@ fun LlmConfigScreen(
         modifier = modifier.fillMaxSize(),
         topBar = {
             CenterAlignedTopAppBar(
-                title = { Text("LLM Configuration", fontWeight = FontWeight.SemiBold) },
+                title = { Text(stringResource(R.string.llm_title), fontWeight = FontWeight.SemiBold) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back"
+                            contentDescription = stringResource(R.string.nav_back)
                         )
                     }
                 },
@@ -203,7 +201,7 @@ fun LlmConfigScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "AI PROVIDER",
+                        text = stringResource(R.string.llm_ai_provider),
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
                     )
@@ -218,7 +216,7 @@ fun LlmConfigScreen(
                                     .background(Color(0xFF4CAF50), CircleShape)
                             )
                             Text(
-                                text = "Active",
+                                text = stringResource(R.string.active),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = Color(0xFF4CAF50)
                             )
@@ -240,10 +238,10 @@ fun LlmConfigScreen(
                         
                         // Provider-specific styling
                         val (primaryColor, logoText) = when (provider) {
-                            "OPENAI" -> Pair(Color(0xFF10A37F), "O") // OpenAI green
-                            "ANTHROPIC" -> Pair(Color(0xFFCC785C), "A") // Anthropic coral/orange
-                            "GEMINI" -> Pair(Color(0xFF4285F4), "G") // Google blue
-                            "OPENROUTER" -> Pair(Color(0xFFFF6B35), "R") // OpenRouter orange
+                            "OPENAI" -> Pair(Color(0xFF10A37F), "O")
+                            "ANTHROPIC" -> Pair(Color(0xFFCC785C), "A")
+                            "GEMINI" -> Pair(Color(0xFF4285F4), "G")
+                            "OPENROUTER" -> Pair(Color(0xFFFF6B35), "R")
                             else -> Pair(MaterialTheme.colorScheme.primary, "?")
                         }
                         
@@ -325,10 +323,10 @@ fun LlmConfigScreen(
                                     Spacer(modifier = Modifier.height(8.dp))
                                     Text(
                                         text = when (provider) {
-                                            "OPENAI" -> "OpenAI"
-                                            "ANTHROPIC" -> "Anthropic"
-                                            "GEMINI" -> "Gemini"
-                                            "OPENROUTER" -> "OpenRouter"
+                                            "OPENAI" -> stringResource(R.string.llm_provider_openai)
+                                            "ANTHROPIC" -> stringResource(R.string.llm_provider_anthropic)
+                                            "GEMINI" -> stringResource(R.string.llm_provider_gemini)
+                                            "OPENROUTER" -> stringResource(R.string.llm_provider_openrouter)
                                             else -> provider
                                         },
                                         style = MaterialTheme.typography.bodyMedium,
@@ -349,7 +347,7 @@ fun LlmConfigScreen(
             // Model Selection
             Column {
                 Text(
-                    text = "Model Version",
+                    text = stringResource(R.string.llm_model_version),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -358,7 +356,7 @@ fun LlmConfigScreen(
                 
                 Box(modifier = Modifier.fillMaxWidth()) {
                     OutlinedTextField(
-                        value = selectedModel,
+                        value = if (isCustomModel) customModelName else selectedModel,
                         onValueChange = {},
                         modifier = Modifier.fillMaxWidth(),
                         readOnly = true,
@@ -366,7 +364,7 @@ fun LlmConfigScreen(
                             IconButton(onClick = { expandedModel = true }) {
                                 Icon(
                                     imageVector = Icons.Default.KeyboardArrowDown,
-                                    contentDescription = "Select model"
+                                    contentDescription = stringResource(R.string.llm_select_model)
                                 )
                             }
                         },
@@ -379,7 +377,6 @@ fun LlmConfigScreen(
                         )
                     )
                     
-                    // Invisible clickable overlay
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -407,11 +404,10 @@ fun LlmConfigScreen(
                                 }
                             )
                         }
-                        // Custom option
                         DropdownMenuItem(
                             text = {
                                 Text(
-                                    text = "Custom Model...",
+                                    text = stringResource(R.string.llm_custom_model_option),
                                     fontWeight = if (isCustomModel) FontWeight.Bold else FontWeight.Normal,
                                     color = MaterialTheme.colorScheme.primary
                                 )
@@ -424,7 +420,6 @@ fun LlmConfigScreen(
                     }
                 }
                 
-                // Custom Model Input
                 AnimatedVisibility(
                     visible = isCustomModel,
                     enter = expandVertically() + fadeIn(),
@@ -436,8 +431,8 @@ fun LlmConfigScreen(
                             value = customModelName,
                             onValueChange = { customModelName = it },
                             modifier = Modifier.fillMaxWidth(),
-                            placeholder = { Text("Enter custom model name (e.g., gpt-4-turbo-preview)") },
-                            label = { Text("Custom Model") },
+                            placeholder = { Text(stringResource(R.string.llm_custom_model_hint)) },
+                            label = { Text(stringResource(R.string.llm_custom_model)) },
                             singleLine = true,
                             shape = RoundedCornerShape(12.dp),
                             colors = OutlinedTextFieldDefaults.colors(
@@ -451,6 +446,8 @@ fun LlmConfigScreen(
                 }
             }
 
+            Spacer(modifier = Modifier.height(16.dp))
+
             // Authentication Section
             Column {
                 Row(
@@ -459,7 +456,7 @@ fun LlmConfigScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "AUTHENTICATION",
+                        text = stringResource(R.string.llm_authentication),
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
                     )
@@ -474,7 +471,7 @@ fun LlmConfigScreen(
                 Spacer(modifier = Modifier.height(12.dp))
                 
                 Text(
-                    text = "API Key",
+                    text = stringResource(R.string.llm_api_key),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -485,14 +482,14 @@ fun LlmConfigScreen(
                     value = apiKey,
                     onValueChange = { apiKey = it },
                     modifier = Modifier.fillMaxWidth(),
-                    placeholder = { Text("Enter your API key") },
+                    placeholder = { Text(stringResource(R.string.llm_api_key_hint)) },
                     visualTransformation = if (showApiKey) VisualTransformation.None else PasswordVisualTransformation(),
                     trailingIcon = {
                         Row {
                             IconButton(onClick = { showApiKey = !showApiKey }) {
                                 Icon(
                                     imageVector = if (showApiKey) Icons.Default.Warning else Icons.Default.Lock,
-                                    contentDescription = if (showApiKey) "Hide" else "Show"
+                                    contentDescription = if (showApiKey) stringResource(R.string.llm_hide) else stringResource(R.string.llm_show)
                                 )
                             }
                             IconButton(
@@ -504,7 +501,7 @@ fun LlmConfigScreen(
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.ContentPaste,
-                                    contentDescription = "Paste"
+                                    contentDescription = stringResource(R.string.llm_paste)
                                 )
                             }
                         }
@@ -522,7 +519,7 @@ fun LlmConfigScreen(
                 Spacer(modifier = Modifier.height(8.dp))
                 
                 Text(
-                    text = "We prioritize privacy. Keys are encrypted and never leave your device except to contact the provider.",
+                    text = stringResource(R.string.llm_api_key_privacy),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
                 )
@@ -549,7 +546,7 @@ fun LlmConfigScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = "Additional Settings",
+                            text = stringResource(R.string.llm_additional_settings),
                             style = MaterialTheme.typography.bodyLarge,
                             fontWeight = FontWeight.Medium
                         )
@@ -558,7 +555,7 @@ fun LlmConfigScreen(
                                 Icons.Default.KeyboardArrowUp 
                             else 
                                 Icons.Default.KeyboardArrowDown,
-                            contentDescription = if (showAdvancedSettings) "Collapse" else "Expand"
+                            contentDescription = if (showAdvancedSettings) stringResource(R.string.llm_collapse) else stringResource(R.string.llm_expand)
                         )
                     }
                     
@@ -582,7 +579,7 @@ fun LlmConfigScreen(
                                     horizontalArrangement = Arrangement.SpaceBetween
                                 ) {
                                     Text(
-                                        text = "Temperature",
+                                        text = stringResource(R.string.llm_temperature),
                                         style = MaterialTheme.typography.bodyMedium
                                     )
                                     Text(
@@ -604,12 +601,12 @@ fun LlmConfigScreen(
                                     horizontalArrangement = Arrangement.SpaceBetween
                                 ) {
                                     Text(
-                                        text = "Precise",
+                                        text = stringResource(R.string.llm_precise),
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                     Text(
-                                        text = "Creative",
+                                        text = stringResource(R.string.llm_creative),
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
@@ -623,7 +620,7 @@ fun LlmConfigScreen(
                                     horizontalArrangement = Arrangement.SpaceBetween
                                 ) {
                                     Text(
-                                        text = "Max Tokens",
+                                        text = stringResource(R.string.llm_max_tokens),
                                         style = MaterialTheme.typography.bodyMedium
                                     )
                                     Text(
@@ -645,12 +642,12 @@ fun LlmConfigScreen(
                                     horizontalArrangement = Arrangement.SpaceBetween
                                 ) {
                                     Text(
-                                        text = "100",
+                                        text = stringResource(R.string.onboarding_100),
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                     Text(
-                                        text = "4000",
+                                        text = stringResource(R.string.onboarding_4000),
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
@@ -717,10 +714,10 @@ fun LlmConfigScreen(
                             provider = selectedProvider,
                             apiKey = apiKey,
                             baseUrl = LlmClientFactory.getDefaultBaseUrl(selectedProvider),
-                            modelId = modelId,
-                            isDefault = uiState.selectedConfig?.isDefault ?: false,
-                            maxTokens = maxTokens,
-                            temperature = temperature
+                        modelId = modelId,
+                        isDefault = uiState.selectedConfig?.isDefault ?: false,
+                        maxTokens = maxTokens,
+                        temperature = temperature
                         )
                         onTestConnection(config)
                     },
@@ -738,7 +735,7 @@ fun LlmConfigScreen(
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                     }
-                    Text("Test Connection")
+                    Text(stringResource(R.string.llm_test_connection))
                 }
 
                 // Save Button
@@ -750,15 +747,15 @@ fun LlmConfigScreen(
                             name = "$selectedProvider Config",
                             provider = selectedProvider,
                             apiKey = apiKey,
-                            baseUrl = LlmClientFactory.getDefaultBaseUrl(selectedProvider),
-                            modelId = modelId,
-                            isDefault = true,
-                            maxTokens = maxTokens,
-                            temperature = temperature
-                        )
-                        onSaveConfig(config)
+                        baseUrl = LlmClientFactory.getDefaultBaseUrl(selectedProvider),
+                        modelId = modelId,
+                        isDefault = true,
+                        maxTokens = maxTokens,
+                        temperature = temperature
+                    )
+                    onSaveConfig(config)
                         scope.launch {
-                            snackbarHostState.showSnackbar("Configuration saved successfully!")
+                            snackbarHostState.showSnackbar(context.getString(R.string.llm_config_saved))
                         }
                     },
                     modifier = Modifier.weight(1f),
@@ -766,7 +763,7 @@ fun LlmConfigScreen(
                 ) {
                     Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Save Configuration")
+                    Text(stringResource(R.string.llm_save_config))
                 }
             }
             
@@ -774,7 +771,7 @@ fun LlmConfigScreen(
             if (uiState.configs.size > 1) {
                 Spacer(modifier = Modifier.height(16.dp))
                 Text(
-                    text = "Saved Configurations",
+                    text = stringResource(R.string.llm_saved_configs),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
                 )
@@ -810,7 +807,7 @@ fun LlmConfigScreen(
                                 if (config.isDefault) {
                                     Icon(
                                         imageVector = Icons.Default.Check,
-                                        contentDescription = "Default",
+                                        contentDescription = stringResource(R.string.default_label),
                                         tint = Color(0xFF4CAF50),
                                         modifier = Modifier.size(20.dp)
                                     )
@@ -819,7 +816,7 @@ fun LlmConfigScreen(
                                 TextButton(
                                     onClick = { onDeleteConfig(config) }
                                 ) {
-                                    Text("Delete", color = MaterialTheme.colorScheme.error)
+                                    Text(stringResource(R.string.delete), color = MaterialTheme.colorScheme.error)
                                 }
                             }
                         }

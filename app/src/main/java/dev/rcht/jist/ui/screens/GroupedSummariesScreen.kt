@@ -1,5 +1,6 @@
 package dev.rcht.jist.ui.screens
 
+import dev.rcht.jist.R
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -29,6 +30,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import dev.rcht.jist.data.db.entity.NotificationEntity
 import dev.rcht.jist.ui.summaries.GroupedSummariesUiState
@@ -67,7 +69,7 @@ fun GroupedSummariesScreen(
                 OutlinedTextField(
                     value = uiState.searchQuery,
                     onValueChange = onSearchChange,
-                    label = { Text("Search summaries") },
+                    label = { Text(stringResource(R.string.summaries_search)) },
                     modifier = Modifier.fillMaxWidth(),
                     leadingIcon = { Icon(Icons.Filled.Search, contentDescription = "Search") },
                     singleLine = true
@@ -86,11 +88,11 @@ fun GroupedSummariesScreen(
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
                             Text(
-                                text = "No summaries yet",
+                                text = stringResource(R.string.summaries_empty),
                                 style = MaterialTheme.typography.titleMedium
                             )
                             Text(
-                                text = "Notifications will be summarized soon",
+                                text = stringResource(R.string.summaries_empty_desc),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.padding(top = 8.dp)

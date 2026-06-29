@@ -6,6 +6,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dev.rcht.jist.data.preferences.PreferencesRepository
 import dev.rcht.jist.data.repository.AppRuleRepository
+import dev.rcht.jist.data.repository.LlmConfigRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -16,6 +17,8 @@ data class SettingsUiState(
     val userEmail: String = "local@jist.app",
     val llmModelName: String = "Loading...",
     val summarizationStyle: String = "Concise",
+    val summaryTone: String = "PROFESSIONAL",
+    val summaryLength: String = "MEDIUM",
     val activeAppCount: Int = 0,
     val notificationsEnabled: Boolean = false,
     val hasSystemNotificationPermission: Boolean = false,
@@ -26,7 +29,8 @@ data class SettingsUiState(
 class SettingsViewModel(
     private val context: Context,
     private val preferencesRepository: PreferencesRepository,
-    private val appRuleRepository: AppRuleRepository
+    private val appRuleRepository: AppRuleRepository,
+    private val llmConfigRepository: LlmConfigRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(SettingsUiState())
@@ -39,13 +43,31 @@ class SettingsViewModel(
 
     private fun loadSettings() {
         viewModelScope.launch {
+            val defaultConfig = llmConfigRepository.getDefault()
+            val modelName = defaultConfig?.modelId ?: "Not configured"
+            val isZh = java.util.Locale.getDefault().language == "zh"
+            
             preferencesRepository.preferencesFlow.collect { prefs ->
-                // Check system notification permission
                 val hasSystemPermission = NotificationManagerCompat.from(context).areNotificationsEnabled()
+                val toneLabel = when (prefs.summaryTone) {
+                    "PROFESSIONAL" -> if (isZh) "专业" else "Professional"
+                    "CASUAL" -> if (isZh) "随意" else "Casual"
+                    "WITTY" -> if (isZh) "幽默" else "Witty"
+                    "URGENT" -> if (isZh) "紧急" else "Urgent"
+                    else -> prefs.summaryTone.lowercase().replaceFirstChar { it.uppercase() }
+                }
+                val lengthLabel = when (prefs.summaryLength) {
+                    "SHORT" -> if (isZh) "短" else "Short"
+                    "MEDIUM" -> if (isZh) "中" else "Medium"
+                    "LONG" -> if (isZh) "长" else "Long"
+                    else -> prefs.summaryLength.lowercase().replaceFirstChar { it.uppercase() }
+                }
                 
                 _uiState.value = _uiState.value.copy(
-                    summarizationStyle = prefs.writingStyle.lowercase().replaceFirstChar { it.uppercase() },
-                    llmModelName = "Configured",
+                    summarizationStyle = "$toneLabel · $lengthLabel",
+                    summaryTone = prefs.summaryTone,
+                    summaryLength = prefs.summaryLength,
+                    llmModelName = modelName,
                     notificationsEnabled = hasSystemPermission && prefs.notificationsEnabled,
                     hasSystemNotificationPermission = hasSystemPermission
                 )
@@ -117,6 +139,18 @@ class SettingsViewModel(
                     hasSystemNotificationPermission = hasSystemPermission
                 )
             }
+        }
+    }
+
+    fun setSummaryTone(tone: String) {
+        viewModelScope.launch {
+            preferencesRepository.setSummaryTone(tone)
+        }
+    }
+
+    fun setSummaryLength(length: String) {
+        viewModelScope.launch {
+            preferencesRepository.setSummaryLength(length)
         }
     }
 }

@@ -1,5 +1,6 @@
 package dev.rcht.jist.ui.screens
 
+import dev.rcht.jist.R
 import android.content.Intent
 import android.provider.Settings
 import androidx.compose.foundation.background
@@ -23,6 +24,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.ViewModel
@@ -46,11 +49,13 @@ fun SettingsScreen(
         factory = object : ViewModelProvider.Factory {
             override fun <T : ViewModel> create(modelClass: Class<T>): T {
                 @Suppress("UNCHECKED_CAST")
-                return SettingsViewModel(context, app.preferencesRepository, app.appRuleRepository) as T
+                return SettingsViewModel(context, app.preferencesRepository, app.appRuleRepository, app.llmConfigRepository) as T
             }
         }
     )
     val uiState by viewModel.uiState.collectAsState()
+
+    var showStyleDialog by remember { mutableStateOf(false) }
 
     // Refresh notification permission state when returning to this screen
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -69,12 +74,12 @@ fun SettingsScreen(
     GlassScaffold(
         topBar = {
             CenterAlignedTopAppBar(
-                title = { Text("Settings", fontWeight = FontWeight.SemiBold) },
+                title = { Text(stringResource(R.string.settings_title), fontWeight = FontWeight.SemiBold) },
                 navigationIcon = {
                      IconButton(onClick = onNavigateBack) {
                          Icon(
                              imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                             contentDescription = "Back"
+                              contentDescription = stringResource(R.string.nav_back)
                          )
                      }
                 },
@@ -93,47 +98,40 @@ fun SettingsScreen(
         ) {
             // Intelligence Section
             item {
-                SettingsSection(title = "INTELLIGENCE") {
+                SettingsSection(title = stringResource(R.string.settings_intelligence)) {
                     SettingsItem(
                         icon = Icons.Outlined.SmartToy, // or similar
-                        title = "LLM Model",
+                        title = stringResource(R.string.settings_llm_model),
                         value = uiState.llmModelName,
                         onClick = onNavigateToLlmConfig
                     )
                     Divider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha=0.2f))
                     SettingsItem(
                         icon = Icons.Outlined.Description,
-                        title = "Summarization Style",
+                        title = stringResource(R.string.settings_summarization_style),
                         value = uiState.summarizationStyle,
-                        onClick = { /* Navigate to Style settings (maybe reuse onboarding step or simple dialog) */ onNavigateToLlmConfig() }
+                        onClick = { showStyleDialog = !showStyleDialog }
                     )
                 }
             }
 
-            // Content Sources Section
-            // item {
-            //     SettingsSection(title = "CONTENT SOURCES") {
-            //         SettingsItem(
-            //             icon = Icons.Outlined.Apps,
-            //             title = "App Selection",
-            //             value = "${uiState.activeAppCount} Active", // Logic to update this needed
-            //             onClick = onNavigateToApps
-            //         )
-            //         Divider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha=0.2f))
-            //         SettingsItem(
-            //             icon = Icons.Outlined.Block,
-            //             title = "Blocked Words",
-            //             onClick = { /* Placeholder */ }
-            //         )
-            //     }
-            // }
+            item {
+                SettingsSection(title = stringResource(R.string.settings_content_sources)) {
+                    SettingsItem(
+                        icon = Icons.Outlined.Apps,
+                        title = stringResource(R.string.app_settings_title),
+                        value = stringResource(R.string.settings_apps_active, uiState.activeAppCount),
+                        onClick = onNavigateToApps
+                    )
+                }
+            }
 
             // Behavior Section
             item {
-                SettingsSection(title = "BEHAVIOR") {
+                SettingsSection(title = stringResource(R.string.settings_behavior)) {
                     SettingsSwitchItem(
                         icon = Icons.Outlined.Notifications,
-                        title = "Push Notifications",
+                        title = stringResource(R.string.settings_push_notifications),
                         checked = uiState.notificationsEnabled,
                         onCheckedChange = { enabled ->
                             viewModel.toggleNotifications(enabled) {
@@ -148,9 +146,9 @@ fun SettingsScreen(
                     Divider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha=0.2f))
                     SettingsItem(
                         icon = Icons.Outlined.Schedule,
-                        title = "Daily Digest",
+                        title = stringResource(R.string.settings_daily_digest),
                         // value = uiState.dailyDigestTime,
-                        value = "Coming Soon",
+                        value = stringResource(R.string.coming_soon),
                         onClick = { /* Time picker placeholder */ }
                     )
                     // Haptic Feedback omitted as requested
@@ -159,21 +157,21 @@ fun SettingsScreen(
 
             // About Section
             item {
-                SettingsSection(title = "ABOUT") {
+                SettingsSection(title = stringResource(R.string.settings_about_section)) {
                     SettingsItem(
-                        title = "Help & Support",
+                        title = stringResource(R.string.settings_help_support),
                         trailingIcon = Icons.Outlined.OpenInNew,
                         onClick = { /* Open URL */ }
                     )
                     Divider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha=0.2f))
                     SettingsItem(
-                        title = "Privacy Policy",
+                        title = stringResource(R.string.settings_privacy_policy),
                          trailingIcon = Icons.Outlined.OpenInNew,
                         onClick = { /* Open URL */ }
                     )
                     Divider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha=0.2f))
                     SettingsItem(
-                        title = "Version",
+                        title = stringResource(R.string.settings_version),
                         value = uiState.version,
                         showChevron = false,
                         onClick = {}
@@ -186,7 +184,7 @@ fun SettingsScreen(
                 Spacer(modifier = Modifier.height(16.dp))
                 
                 Text(
-                    text = "Jist 2026",
+                    text = stringResource(R.string.settings_jist_2026),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.fillMaxWidth(),
@@ -197,6 +195,132 @@ fun SettingsScreen(
             }
         }
     }
+
+    if (showStyleDialog) {
+        SummarizationStyleDialog(
+            currentTone = uiState.summaryTone,
+            currentLength = uiState.summaryLength,
+            onSelectTone = { tone -> viewModel.setSummaryTone(tone) },
+            onSelectLength = { length -> viewModel.setSummaryLength(length) },
+            onDismiss = { showStyleDialog = false }
+        )
+    }
+}
+
+@Composable
+fun SummarizationStyleDialog(
+    currentTone: String,
+    currentLength: String,
+    onSelectTone: (String) -> Unit,
+    onSelectLength: (String) -> Unit = {},
+    onDismiss: () -> Unit
+) {
+    var selectedTone by remember { mutableStateOf(currentTone) }
+    var selectedLength by remember { mutableStateOf(currentLength.ifBlank { "MEDIUM" }) }
+
+    val isZh = java.util.Locale.getDefault().language == "zh"
+
+    val tones = listOf(
+        "PROFESSIONAL" to if (isZh) "专业" else "Professional",
+        "CASUAL" to if (isZh) "随意" else "Casual",
+        "WITTY" to if (isZh) "幽默" else "Witty",
+        "URGENT" to if (isZh) "紧急" else "Urgent"
+    )
+    val builder = remember { dev.rcht.jist.llm.PromptBuilder() }
+    val toneDesc = mapOf(
+        "PROFESSIONAL" to if (isZh) "正式、中立" else "Formal & neutral",
+        "CASUAL" to if (isZh) "口语化、轻松" else "Conversational",
+        "WITTY" to if (isZh) "轻松幽默" else "Light-hearted",
+        "URGENT" to if (isZh) "突出紧急事项" else "Action-oriented"
+    )
+    val lengths = listOf(
+        "SHORT" to if (isZh) "短" else "Short",
+        "MEDIUM" to if (isZh) "中" else "Medium",
+        "LONG" to if (isZh) "长" else "Long"
+    )
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(if (isZh) "摘要风格" else "Summarization Style") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text(
+                    text = if (isZh) "语气" else "Tone",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                tones.forEach { (value, label) ->
+                    val isSelected = selectedTone == value
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { selectedTone = value }
+                            .padding(vertical = 4.dp, horizontal = 8.dp)
+                            .background(
+                                if (isSelected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
+                                else Color.Transparent,
+                                RoundedCornerShape(8.dp)
+                            )
+                            .padding(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        RadioButton(selected = isSelected, onClick = { selectedTone = value })
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column {
+                            Text(text = label, style = MaterialTheme.typography.bodyLarge)
+                            Text(
+                                text = builder.toneInstruction(value),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = if (isSelected) 0.8f else 0.5f)
+                            )
+                        }
+                    }
+                }
+
+                HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+
+                Text(
+                    text = if (isZh) "长度" else "Length",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+                    lengths.forEach { (value, label) ->
+                        val sub = when (value) {
+                            "SHORT" -> if (isZh) "50字以内" else "50 words"
+                            "MEDIUM" -> if (isZh) "150字以内" else "150 words"
+                            "LONG" -> if (isZh) "300字以内" else "300 words"
+                            else -> ""
+                        }
+                        FilterChip(
+                            selected = selectedLength == value,
+                            onClick = { selectedLength = value },
+                            label = {
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Text(text = label, fontWeight = FontWeight.Medium, fontSize = 13.sp)
+                                    Text(text = sub, fontSize = 9.sp, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f))
+                                }
+                            }
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = {
+                onSelectTone(selectedTone)
+                onSelectLength(selectedLength)
+                onDismiss()
+            }) {
+                Text(if (isZh) "保存" else "Save")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(if (isZh) "取消" else "Cancel")
+            }
+        }
+    )
 }
 
 @Composable

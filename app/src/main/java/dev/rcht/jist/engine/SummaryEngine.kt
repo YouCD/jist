@@ -5,6 +5,7 @@ import dev.rcht.jist.data.db.entity.SummaryEntity
 import dev.rcht.jist.data.repository.AppRuleRepository
 import dev.rcht.jist.data.repository.LlmConfigRepository
 import dev.rcht.jist.data.repository.NotificationRepository
+import dev.rcht.jist.data.preferences.PreferencesRepository
 import dev.rcht.jist.data.repository.SummaryRepository
 import dev.rcht.jist.llm.LlmClient
 import dev.rcht.jist.llm.LlmClientFactory
@@ -13,6 +14,7 @@ import dev.rcht.jist.llm.LlmResult
 import dev.rcht.jist.llm.NotificationForSummary
 import dev.rcht.jist.llm.PromptBuilder
 import dev.rcht.jist.util.AppIconExtractor
+import kotlinx.coroutines.flow.first
 import okhttp3.OkHttpClient
 
 /**
@@ -24,20 +26,26 @@ class SummaryEngine(
     private val summaryRepository: SummaryRepository,
     private val llmConfigRepository: LlmConfigRepository,
     private val appRuleRepository: AppRuleRepository,
+    private val preferencesRepository: PreferencesRepository,
     private val httpClient: OkHttpClient
 ) {
 
     private val promptBuilder = PromptBuilder()
 
     /**
-     * Summarize all unsummarized notifications for a specific conversation
+     * Summarize notifications for a specific conversation
+     * @param includeSummarized If true, includes already-summarized notifications (for re-summarize)
      */
-    suspend fun summarizeConversation(conversationKey: String): SummaryResult {
+    suspend fun summarizeConversation(
+        conversationKey: String,
+        includeSummarized: Boolean = false
+    ): SummaryResult {
         try {
-            // Get unsummarized notifications for this conversation
-            val notifications = notificationRepository.getUnsummarizedByConversationKey(
-                conversationKey
-            )
+            val notifications = if (includeSummarized) {
+                notificationRepository.getByConversationKey(conversationKey)
+            } else {
+                notificationRepository.getUnsummarizedByConversationKey(conversationKey)
+            }
 
             if (notifications.isEmpty()) {
                 return SummaryResult.Error("No notifications to summarize")
@@ -63,6 +71,12 @@ class SummaryEngine(
             // Build prompt
             val packageName = notifications.firstOrNull()?.packageName
             val appName = notifications.firstOrNull()?.appName
+            val appRule = if (!packageName.isNullOrBlank() && packageName != "Unknown") {
+                appRuleRepository.getForApp(packageName)
+            } else {
+                null
+            }
+            val customPrompt = appRule?.customPrompt
             // Get human-readable app label if package name is available
             val appLabelForDisplay = if (!packageName.isNullOrBlank() && packageName != "Unknown") {
                 AppIconExtractor.getAppLabel(context, packageName)
@@ -70,10 +84,16 @@ class SummaryEngine(
                 appName
             }
             val contactOrGroup = notifications.firstOrNull()?.title
+            val prefs = preferencesRepository.preferencesFlow.first()
+            val tone = prefs.summaryTone
+            val length = prefs.summaryLength
             val messages = promptBuilder.buildMessages(
                 notificationsForPrompt,
                 appName,
-                contactOrGroup
+                contactOrGroup,
+                customPrompt,
+                tone,
+                length
             )
 
             // Call LLM
@@ -141,15 +161,17 @@ class SummaryEngine(
             for ((conversationKey, notifications) in conversationsByKey) {
                 // Check if app is enabled
                 val packageName = notifications.firstOrNull()?.packageName
-                if (!packageName.isNullOrBlank() && packageName != "Unknown") {
-                    val appRule = appRuleRepository.getForApp(packageName)
-                    if (appRule != null && !appRule.enabled) {
-                        continue // Skip disabled apps
-                    }
+                val appRule = if (!packageName.isNullOrBlank() && packageName != "Unknown") {
+                    appRuleRepository.getForApp(packageName)
+                } else {
+                    null
+                }
+                if (appRule != null && !appRule.enabled) {
+                    continue // Skip disabled apps
                 }
 
-                // Summarize when there are 5+ messages from the same chat
-                if (notifications.size >= 5) {
+                val minMessages = appRule?.minMessagesForSummary ?: 5
+                if (notifications.size >= minMessages) {
                     val result = summarizeConversation(conversationKey)
                     results.add(result)
                 }
