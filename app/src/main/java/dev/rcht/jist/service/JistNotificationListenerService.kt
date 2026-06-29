@@ -27,7 +27,7 @@ class JistNotificationListenerService : NotificationListenerService() {
         if (shouldIgnore(sbn)) return
         
         try {
-            val appInfo = NotificationParser.extractAppInfo(sbn)
+            val appInfo = NotificationParser.extractAppInfo(sbn, this)
             
             if (appInfo.title.isNullOrBlank() || appInfo.content.isNullOrBlank()) {
                 return // Ignore notifications without text
@@ -67,13 +67,20 @@ class JistNotificationListenerService : NotificationListenerService() {
 
             app?.let {
                 scope.launch {
-                    val isDup = it.notificationRepository.isDuplicate(
-                        notificationWithKey.packageName,
-                        notificationWithKey.title,
-                        notificationWithKey.content
-                    )
-                    if (isDup) {
-                        Log.d(TAG, "Skipping duplicate notification: $conversationKey")
+                    val newContent = notificationWithKey.content
+                    val prefix = if (newContent.length > 60) newContent.take(60) else ""
+                    val existing = if (prefix.isNotEmpty()) {
+                        it.notificationRepository.findPrefixDuplicate(
+                            notificationWithKey.packageName, notificationWithKey.title, prefix
+                        )
+                    } else null
+                    if (existing != null) {
+                        if (newContent.length > existing.content.length) {
+                            it.notificationRepository.update(existing.copy(content = newContent, timestamp = notificationWithKey.timestamp))
+                            Log.d(TAG, "Updated notification with longer content: $conversationKey")
+                        } else {
+                            Log.d(TAG, "Skipped duplicate (existing is longer): $conversationKey")
+                        }
                     } else {
                         it.notificationRepository.insert(notificationWithKey)
                         Log.d(TAG, "Notification inserted: $conversationKey")

@@ -28,6 +28,18 @@ class NotificationRepository(private val notificationDao: NotificationDao) {
     suspend fun getAllUnsummarized(): List<NotificationEntity> {
         return notificationDao.getAllUnsummarized()
     }
+
+    suspend fun getAll(): List<NotificationEntity> {
+        return notificationDao.getAll()
+    }
+
+    suspend fun deleteByIds(ids: List<Long>) {
+        notificationDao.deleteByIds(ids)
+    }
+
+    suspend fun findPrefixDuplicate(pkg: String, title: String, prefix: String): NotificationEntity? {
+        return notificationDao.findPrefixDuplicate(pkg, title, prefix)
+    }
     
     suspend fun getPendingConversationKeys(minCount: Int): List<String> {
         return notificationDao.getPendingConversationKeys(minCount)
@@ -49,6 +61,10 @@ class NotificationRepository(private val notificationDao: NotificationDao) {
         notificationDao.deleteOlderThan(timestampMs)
     }
     
+    suspend fun count(): Int {
+        return notificationDao.count()
+    }
+
     suspend fun deleteAll() {
         notificationDao.deleteAll()
     }

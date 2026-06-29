@@ -30,6 +30,9 @@ interface NotificationDao {
 
     @Query("SELECT * FROM notifications WHERE isSummarized = 0 ORDER BY timestamp ASC")
     suspend fun getAllUnsummarized(): List<NotificationEntity>
+
+    @Query("SELECT * FROM notifications ORDER BY timestamp DESC")
+    suspend fun getAll(): List<NotificationEntity>
     
     @Query("""
         SELECT DISTINCT conversationKey FROM notifications 
@@ -47,10 +50,19 @@ interface NotificationDao {
     
     @Query("SELECT * FROM notifications WHERE packageName = :packageName ORDER BY timestamp DESC")
     suspend fun getByApp(packageName: String): List<NotificationEntity>
+
+    @Query("SELECT * FROM notifications WHERE packageName = :pkg AND title = :title AND content LIKE :prefix || '%' ORDER BY LENGTH(content) DESC LIMIT 1")
+    suspend fun findPrefixDuplicate(pkg: String, title: String, prefix: String): NotificationEntity?
     
     @Query("DELETE FROM notifications WHERE timestamp < :before")
     suspend fun deleteOlderThan(before: Long)
+
+    @Query("DELETE FROM notifications WHERE id IN (:ids)")
+    suspend fun deleteByIds(ids: List<Long>)
     
+    @Query("SELECT COUNT(*) FROM notifications")
+    suspend fun count(): Int
+
     @Query("DELETE FROM notifications")
     suspend fun deleteAll()
     

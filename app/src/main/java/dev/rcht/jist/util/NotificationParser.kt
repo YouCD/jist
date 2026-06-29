@@ -6,14 +6,22 @@ import android.text.TextUtils
 
 object NotificationParser {
     
-    fun extractAppInfo(sbn: StatusBarNotification): AppInfo {
+    fun extractAppInfo(sbn: StatusBarNotification, context: android.content.Context? = null): AppInfo {
         val packageName = sbn.packageName
         val notification = sbn.notification ?: return AppInfo(packageName, packageName, null, null, null)
         
         val title = extractTitle(notification)
         val content = extractContent(notification)
+        val senderName = extractSenderName(notification)
+        val appName = try {
+            context?.packageManager?.getApplicationLabel(
+                context.packageManager.getApplicationInfo(packageName, 0)
+            )?.toString() ?: packageName
+        } catch (e: Exception) {
+            packageName
+        }
         
-        return AppInfo(packageName, packageName, title, content, null)
+        return AppInfo(packageName, appName, title, content, senderName)
     }
     
     private fun extractTitle(notification: Notification): String? {
@@ -40,6 +48,15 @@ object NotificationParser {
         }
     }
     
+    private fun extractSenderName(notification: Notification): String? {
+        return try {
+            notification.extras?.getString(Notification.EXTRA_SELF_DISPLAY_NAME)
+                ?: notification.extras?.getString(Notification.EXTRA_SUB_TEXT)
+        } catch (e: Exception) {
+            null
+        }
+    }
+
     data class AppInfo(
         val packageName: String,
         val appName: String,

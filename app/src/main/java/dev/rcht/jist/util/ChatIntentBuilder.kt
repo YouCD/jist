@@ -5,6 +5,7 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.util.Log
+import java.net.URLEncoder
 
 /**
  * Builds app-specific intents to open a conversation/chat
@@ -59,23 +60,13 @@ object ChatIntentBuilder {
      */
     private fun buildTelegramIntent(context: Context, contactOrGroup: String): Intent? {
         return try {
-            // Try to open via Telegram URI scheme if contactOrGroup is a username
-            if (isValidTelegramUsername(contactOrGroup)) {
-                Intent(Intent.ACTION_VIEW, Uri.parse("tg://resolve?domain=$contactOrGroup")).apply {
-                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-                    Log.d(TAG, "Telegram deep link created for: $contactOrGroup")
-                }
-            } else {
-                // Fallback to opening Telegram app
-                val launchIntent = context.packageManager.getLaunchIntentForPackage("org.telegram.messenger")
-                launchIntent?.apply {
-                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-                    Log.d(TAG, "Telegram launch intent created (fallback)")
-                } ?: run {
-                    Log.w(TAG, "Telegram launch intent not found")
-                    null
-                }
+            val encoded = URLEncoder.encode(contactOrGroup, "UTF-8").replace("+", "%20")
+            val uri = "tg://resolve?domain=$encoded"
+            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(uri)).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
             }
+            Log.d(TAG, "Trying Telegram deep link: $uri")
+            intent
         } catch (e: Exception) {
             Log.e(TAG, "Error creating Telegram intent: ${e.message}")
             null
@@ -120,13 +111,6 @@ object ChatIntentBuilder {
         }
     }
 
-    /**
-     * Check if a string is a valid Telegram username (starts with @, alphanumeric)
-     */
-    private fun isValidTelegramUsername(username: String): Boolean {
-        val cleaned = username.removePrefix("@").trim()
-        return cleaned.matches(Regex("^[a-zA-Z0-9_]{5,}$"))
-    }
-    
+
     private const val TAG = "ChatIntentBuilder"
 }

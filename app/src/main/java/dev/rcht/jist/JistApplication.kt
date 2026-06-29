@@ -79,6 +79,9 @@ class JistApplication : Application() {
             }
         }
 
+        // Initialize persistent stores
+        dev.rcht.jist.notification.PendingIntentStore.init(this)
+
         // Initialize engines
         summaryEngine = SummaryEngine(
             this,

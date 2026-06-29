@@ -292,7 +292,22 @@ fun JistNavHost(
             )
         }
         composable(Screen.NotificationLog.route) {
-            NotificationLogScreen()
+            val vm: dev.rcht.jist.ui.notificationlog.NotificationLogViewModel = viewModel(
+                factory = object : ViewModelProvider.Factory {
+                    override fun <T : ViewModel> create(modelClass: Class<T>): T {
+                        @Suppress("UNCHECKED_CAST")
+                        return dev.rcht.jist.ui.notificationlog.NotificationLogViewModel(
+                            jistApp.notificationRepository
+                        ) as T
+                    }
+                }
+            )
+            val state by vm.uiState.collectAsState()
+            NotificationLogScreen(
+                notifications = state.notifications,
+                isLoading = state.isLoading,
+                onDelete = { ids -> vm.deleteNotifications(ids) }
+            )
         }
         composable(Screen.About.route) {
             AboutScreen(

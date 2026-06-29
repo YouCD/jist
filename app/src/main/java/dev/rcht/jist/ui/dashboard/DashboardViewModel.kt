@@ -94,7 +94,7 @@ class DashboardViewModel(
 
                 _uiState.value = DashboardUiState(
                     notificationsTodayCount = notificationsTodayCount,
-                    totalNotificationsCount = recentNotifications.size,
+                    totalNotificationsCount = notificationRepository.count(),
                     unsummarizedCount = unsummarizedCount,
                     summariesTodayCount = summariesTodayCount,
                     lastSummarizedTime = lastSummarizedTime,

@@ -1,7 +1,10 @@
 package dev.rcht.jist.ui.screens
 
+import android.content.Intent
+import android.net.Uri
 import dev.rcht.jist.R
 import androidx.compose.animation.core.LinearEasing
+import androidx.compose.foundation.clickable
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
@@ -20,6 +23,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Redo
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.OpenInNew
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -34,6 +38,7 @@ import androidx.compose.material3.Text
 import kotlinx.coroutines.delay
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.ui.graphics.Color
+import android.util.Log
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -42,6 +47,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.res.stringResource
@@ -66,6 +72,8 @@ fun SummaryDetailScreen(
             .format(java.util.Date(timeMs))
     }
 ) {
+    val context = LocalContext.current
+
     GlassScaffold(
         topBar = {
             CenterAlignedTopAppBar(
@@ -164,7 +172,7 @@ fun SummaryDetailScreen(
             if (notifications.isNotEmpty()) {
                 item {
                     Text(
-                        text = "Original Notifications (${notifications.size})",
+                        text = "${stringResource(R.string.summary_original_notifications, notifications.size)}",
                         style = MaterialTheme.typography.titleMedium
                     )
                 }
@@ -172,9 +180,29 @@ fun SummaryDetailScreen(
                 items(notifications.size) { index ->
                     val notification = notifications[index]
                     NotificationPreviewCard(
-                        sender = notification.senderName ?: "Unknown",
+                        sender = notification.senderName ?: notification.title,
                         text = notification.content,
-                        timestamp = formatDate(notification.timestamp)
+                        timestamp = formatDate(notification.timestamp),
+                        onClick = {
+                            val uri = dev.rcht.jist.notification.PendingIntentStore.getIntentUri(notification.conversationKey)
+                            if (uri != null) {
+                                try {
+                                    context.startActivity(Intent(Intent.ACTION_VIEW, android.net.Uri.parse(uri)).apply {
+                                        flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                                    })
+                                } catch (e: Exception) { Log.e("SummaryDetail", "Failed to open saved URI", e) }
+                            } else {
+                                val pi = dev.rcht.jist.notification.PendingIntentStore.get(notification.conversationKey)
+                                if (pi != null) {
+                                    try { pi.send() } catch (e: Exception) { Log.e("SummaryDetail", "Failed to send PI", e) }
+                                } else {
+                                    val intent = dev.rcht.jist.util.ChatIntentBuilder.buildChatIntent(
+                                        context, notification.packageName, notification.conversationKey, notification.title
+                                    )
+                                    if (intent != null) context.startActivity(intent)
+                                }
+                            }
+                        }
                     )
                 }
             }
@@ -239,9 +267,14 @@ private fun NotificationPreviewCard(
     sender: String,
     text: String,
     timestamp: String,
+    onClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
-    Card(modifier = modifier.fillMaxWidth()) {
+    Card(
+        modifier = modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+    ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
