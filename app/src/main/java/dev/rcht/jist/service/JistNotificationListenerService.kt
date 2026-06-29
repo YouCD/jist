@@ -67,8 +67,17 @@ class JistNotificationListenerService : NotificationListenerService() {
 
             app?.let {
                 scope.launch {
-                    it.notificationRepository.insert(notificationWithKey)
-                    Log.d(TAG, "Notification inserted: $conversationKey")
+                    val isDup = it.notificationRepository.isDuplicate(
+                        notificationWithKey.packageName,
+                        notificationWithKey.title,
+                        notificationWithKey.content
+                    )
+                    if (isDup) {
+                        Log.d(TAG, "Skipping duplicate notification: $conversationKey")
+                    } else {
+                        it.notificationRepository.insert(notificationWithKey)
+                        Log.d(TAG, "Notification inserted: $conversationKey")
+                    }
                 }
             }
         } catch (e: Exception) {

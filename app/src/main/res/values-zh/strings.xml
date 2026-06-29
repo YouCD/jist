@@ -116,6 +116,11 @@
     <string name="summaries_empty">暂无摘要</string>
     <string name="summaries_empty_desc">通知即将被摘要</string>
     <string name="summaries_msg_count">%d 条消息</string>
+    <string name="summaries_select">选择</string>
+    <string name="summaries_delete_title">删除摘要</string>
+    <string name="summaries_delete_message">确定要删除选中的 %d 条摘要吗？</string>
+    <string name="summaries_delete_confirm">删除</string>
+    <string name="summaries_delete_cancel">取消</string>
 
     <!-- Summary Detail -->
     <string name="summary_detail_title">摘要详情</string>

@@ -56,4 +56,8 @@ class NotificationRepository(private val notificationDao: NotificationDao) {
     suspend fun getByConversationKey(key: String): List<NotificationEntity> {
         return notificationDao.getByConversationKey(key)
     }
+
+    suspend fun isDuplicate(pkg: String, title: String, content: String): Boolean {
+        return notificationDao.countDuplicate(pkg, title, content) > 0
+    }
 }

@@ -25,6 +25,9 @@ interface NotificationDao {
     @Query("SELECT * FROM notifications WHERE conversationKey = :key ORDER BY timestamp ASC")
     suspend fun getByConversationKey(key: String): List<NotificationEntity>
 
+    @Query("SELECT COUNT(*) FROM notifications WHERE packageName = :pkg AND title = :title AND content = :content")
+    suspend fun countDuplicate(pkg: String, title: String, content: String): Int
+
     @Query("SELECT * FROM notifications WHERE isSummarized = 0 ORDER BY timestamp ASC")
     suspend fun getAllUnsummarized(): List<NotificationEntity>
     

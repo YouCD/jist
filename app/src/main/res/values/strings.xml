@@ -116,6 +116,11 @@
     <string name="summaries_empty">No summaries yet</string>
     <string name="summaries_empty_desc">Notifications will be summarized soon</string>
     <string name="summaries_msg_count">%d msg</string>
+    <string name="summaries_select">Select</string>
+    <string name="summaries_delete_title">Delete summaries</string>
+    <string name="summaries_delete_message">Are you sure you want to delete %d selected summaries?</string>
+    <string name="summaries_delete_confirm">Delete</string>
+    <string name="summaries_delete_cancel">Cancel</string>
 
     <!-- Summary Detail -->
     <string name="summary_detail_title">Summary Details</string>

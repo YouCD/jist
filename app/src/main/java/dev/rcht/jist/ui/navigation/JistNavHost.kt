@@ -5,8 +5,12 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -134,6 +138,16 @@ fun JistNavHost(
                 val context = LocalContext.current
                 val hasNotificationListenerPermission = remember { mutableStateOf(dev.rcht.jist.util.PermissionHelper.hasNotificationListenerPermission(context)) }
                 val isBatteryOptimizationDisabled = remember { mutableStateOf(dev.rcht.jist.util.BatteryOptimizationHelper.isBatteryOptimizationDisabled(context)) }
+                val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+                androidx.compose.runtime.DisposableEffect(lifecycleOwner) {
+                    val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+                        if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
+                            viewModel.refreshData()
+                        }
+                    }
+                    lifecycleOwner.lifecycle.addObserver(observer)
+                    onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+                }
 
                 DashboardScreen(
                     uiState = uiState,
@@ -170,7 +184,8 @@ fun JistNavHost(
                 onAppFilterChange = { app -> viewModel.filterByApp(app) },
                 onSummaryClick = { summaryId ->
                     navController.navigate("summary_detail/$summaryId")
-                }
+                },
+                onDeleteSummaries = { ids -> viewModel.deleteSummaries(ids) }
             )
         }
         composable("summary_detail/{summaryId}") { backStackEntry ->
@@ -206,7 +221,8 @@ fun JistNavHost(
                     createdAt = summary.createdAt,
                     notifications = uiState.notifications,
                     onNavigateBack = { navController.popBackStack() },
-                    onReSummarize = { viewModel.reSummarize() }
+                    onReSummarize = { viewModel.reSummarize() },
+                    isReSummarizing = uiState.isReSummarizing
                 )
             }
         }

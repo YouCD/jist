@@ -111,6 +111,13 @@ class SummariesViewModel(
         loadSummaries()
     }
 
+    fun deleteSummaries(ids: List<Long>) {
+        viewModelScope.launch(Dispatchers.IO) {
+            summaryRepository.deleteByIds(ids)
+            loadSummaries()
+        }
+    }
+
     fun formatDate(timeMs: Long): String {
         return SimpleDateFormat("MMM dd, HH:mm", Locale.getDefault()).format(Date(timeMs))
     }

@@ -40,6 +40,10 @@ class SummaryRepository(private val summaryDao: SummaryDao) {
     suspend fun getById(id: Long): SummaryEntity? {
         return summaryDao.getById(id)
     }
+
+    suspend fun deleteByIds(ids: List<Long>) {
+        summaryDao.deleteByIds(ids)
+    }
     
     suspend fun searchFts(query: String): List<SummaryEntity> {
         return if (query.isBlank()) {
