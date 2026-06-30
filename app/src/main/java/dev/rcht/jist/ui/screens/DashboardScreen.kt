@@ -618,7 +618,7 @@ private fun DashboardScreenPreview() {
                         conversationKey = "design_team", appName = "Slack",
                         contactOrGroup = "#Design-Team",
                         summaryText = "Sarah updated the Figma file and requested a review of the dashboard components by 3 PM.",
-                        messageCount = 5, modelUsed = "gemini-pro",
+                        messageCount = 5, modelUsed = "gpt-4o-mini",
                         createdAt = System.currentTimeMillis() - 120_000
                     ),
                     SummaryEntity(
@@ -626,7 +626,7 @@ private fun DashboardScreenPreview() {
                         conversationKey = "newsletter", appName = "Gmail",
                         contactOrGroup = "Gmail • Newsletter",
                         summaryText = "\"Weekly Tech Digest\" discusses new AI regulations and 5 productivity tools for developers.",
-                        messageCount = 1, modelUsed = "gemini-pro",
+                        messageCount = 1, modelUsed = "gpt-4o-mini",
                         createdAt = System.currentTimeMillis() - 900_000
                     )
                 )

@@ -57,8 +57,7 @@
     <string name="llm_ai_provider">AI 提供商</string>
     <string name="llm_provider_openai">OpenAI</string>
     <string name="llm_provider_anthropic">Anthropic</string>
-    <string name="llm_provider_gemini">Gemini</string>
-    <string name="llm_provider_openrouter">OpenRouter</string>
+
     <string name="llm_model_version">模型版本</string>
     <string name="llm_model">模型</string>
     <string name="llm_custom_model">自定义模型</string>
@@ -109,6 +108,8 @@
     <string name="app_settings_suggested">推荐</string>
     <string name="app_settings_all_apps">所有应用</string>
     <string name="app_settings_apps_installed">已安装 %d 个应用</string>
+    <string name="app_settings_no_apps">未找到应用</string>
+    <string name="error_loading_apps">加载应用失败: %s</string>
 
     <!-- Summaries -->
     <string name="summaries_title">摘要</string>

@@ -1,5 +1,7 @@
 package dev.rcht.jist.ui.screens
 
+import android.content.Intent
+import android.util.Log
 import dev.rcht.jist.R
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
@@ -48,6 +50,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import dev.rcht.jist.data.db.entity.NotificationEntity
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -55,6 +58,7 @@ import dev.rcht.jist.data.db.entity.NotificationEntity
 fun NotificationLogScreen(
     notifications: List<NotificationEntity> = emptyList(),
     isLoading: Boolean = false,
+    onRefresh: () -> Unit = {},
     onDelete: (List<Long>) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
@@ -97,27 +101,49 @@ fun NotificationLogScreen(
             )
         }
     ) { paddingValues ->
-        if (isLoading) {
-            Box(Modifier.fillMaxSize().padding(paddingValues), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator()
-            }
-        } else if (notifications.isEmpty()) {
-            Box(Modifier.fillMaxSize().padding(paddingValues), contentAlignment = Alignment.Center) {
-                Text(stringResource(R.string.notification_log_title), style = MaterialTheme.typography.titleMedium)
-            }
-        } else {
-            LazyColumn(
-                modifier = Modifier.fillMaxSize().padding(paddingValues).padding(horizontal = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(6.dp)
-            ) {
+        PullToRefreshBox(
+            isRefreshing = isLoading,
+            onRefresh = onRefresh,
+            modifier = Modifier.fillMaxSize().padding(paddingValues)
+        ) {
+            if (isLoading) {
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator()
+                }
+            } else if (notifications.isEmpty()) {
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text(stringResource(R.string.notification_log_title), style = MaterialTheme.typography.titleMedium)
+                }
+            } else {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
                 items(notifications, key = { it.id }) { notification ->
                     val selected = notification.id in selectedIds
+                    val ctx = androidx.compose.ui.platform.LocalContext.current
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clickable {
                                 if (isSelecting) {
                                     selectedIds = if (selected) selectedIds - notification.id else selectedIds + notification.id
+                                 } else {
+                                    // For Telegram, send GOTO_CHAT broadcast for LSPosed module
+                                    if (notification.packageName == "org.telegram.messenger") {
+                                        ctx.sendBroadcast(Intent("dev.rcht.jist.GOTO_CHAT").apply {
+                                            putExtra("title", notification.title)
+                                            addFlags(Intent.FLAG_INCLUDE_STOPPED_PACKAGES)
+                                        })
+                                    }
+                                    // Use ChatIntentBuilder for all apps (reliable, always brings to front)
+                                    val intent = dev.rcht.jist.util.ChatIntentBuilder.buildChatIntent(
+                                        ctx, notification.packageName, notification.conversationKey, notification.title
+                                    )
+                                    if (intent != null) {
+                                        Log.d("NotifLog", "Launching ${notification.conversationKey}")
+                                        ctx.startActivity(intent)
+                                    }
                                 }
                             },
                         colors = CardDefaults.cardColors(
@@ -174,6 +200,7 @@ fun NotificationLogScreen(
                 }
                 item { Spacer(Modifier.height(80.dp)) }
             }
+        }
         }
     }
 

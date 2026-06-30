@@ -15,5 +15,8 @@ data class NotificationEntity(
     val timestamp: Long,
     val isSummarized: Boolean = false,
     val summaryId: Long? = null,
-    val senderName: String? = null
+    val senderName: String? = null,
+    val pendingIntentData: String? = null,
+    val notificationTag: String? = null,
+    val notificationId: Int = 0
 )

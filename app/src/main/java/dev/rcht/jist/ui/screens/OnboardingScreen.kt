@@ -136,11 +136,12 @@ fun OnboardingScreen(
     // LLM Config State
     var apiKey by remember { mutableStateOf("") }
     var selectedProvider by remember { mutableStateOf("OPENAI") }
-    var selectedModel by remember { mutableStateOf("gpt-4-turbo") }
+    var modelName by remember { mutableStateOf("gpt-4o-mini") }
     var temperature by remember { mutableStateOf(0.7f) }
     var maxTokens by remember { mutableStateOf(1000) }
     var testConnectionResult by remember { mutableStateOf<String?>(null) }
     var testConnectionLoading by remember { mutableStateOf(false) }
+    var baseUrl by remember { mutableStateOf("") }
     
     // Refresh function
     fun refreshStatuses() {
@@ -154,13 +155,14 @@ fun OnboardingScreen(
 
     // Test connection function
     fun testConnection() {
+        val effectiveBaseUrl = baseUrl.ifBlank { LlmClientFactory.getDefaultBaseUrl(selectedProvider) }
         val config = LlmConfigEntity(
             id = 0,
             name = "$selectedProvider Config",
             provider = selectedProvider,
             apiKey = apiKey,
-            baseUrl = LlmClientFactory.getDefaultBaseUrl(selectedProvider),
-            modelId = selectedModel,
+            baseUrl = effectiveBaseUrl,
+            modelId = modelName,
             isDefault = true,
             temperature = temperature,
             maxTokens = maxTokens
@@ -181,11 +183,11 @@ fun OnboardingScreen(
                     ChatMessage(role = "user", content = "Say 'OK' if you receive this.")
                 )
                 val requestConfig = LlmRequestConfig(
-                    model = selectedModel,
+                    model = modelName,
                     maxTokens = 10,
                     temperature = 0.7f,
                     apiKey = apiKey,
-                    baseUrl = LlmClientFactory.getDefaultBaseUrl(selectedProvider)
+                    baseUrl = effectiveBaseUrl
                 )
 
                 val result = llmClient.complete(testMessages, requestConfig)
@@ -229,7 +231,7 @@ fun OnboardingScreen(
                         if (step < totalSteps - 1) {
                             step++
                         } else {
-                            viewModel.saveLlmConfig(apiKey, selectedProvider, selectedModel, temperature, maxTokens)
+                            viewModel.saveLlmConfig(apiKey, selectedProvider, modelName, temperature, maxTokens, baseUrl)
                             viewModel.startSetup()
                             viewModel.finishOnboarding()
                             onOnboardingComplete()
@@ -245,7 +247,7 @@ fun OnboardingScreen(
                     ),
                     enabled = when (step) {
                         1 -> listenerEnabled
-                        4 -> apiKey.isNotBlank() && selectedModel.isNotBlank()
+                        4 -> apiKey.isNotBlank() && modelName.isNotBlank()
                         else -> true
                     }
                 ) {
@@ -324,8 +326,8 @@ fun OnboardingScreen(
                         4 -> Step6LlmConfiguration(
                             selectedProvider = selectedProvider,
                             onSelectProvider = { selectedProvider = it },
-                            selectedModel = selectedModel,
-                            onSelectModel = { selectedModel = it },
+                            modelName = modelName,
+                            onModelNameChange = { modelName = it },
                             apiKey = apiKey,
                             onApiKeyChange = { apiKey = it },
                             temperature = temperature,
@@ -338,7 +340,9 @@ fun OnboardingScreen(
                             summaryTone = uiState.summaryTone,
                             onSelectTone = { viewModel.setSummaryTone(it) },
                             summaryLength = uiState.summaryLength,
-                            onSelectLength = { viewModel.setSummaryLength(it) }
+                            onSelectLength = { viewModel.setSummaryLength(it) },
+                            baseUrl = baseUrl,
+                            onBaseUrlChange = { baseUrl = it }
                         )
                     }
                 }
@@ -782,8 +786,8 @@ fun Step4ManageApps(
 fun Step6LlmConfiguration(
     selectedProvider: String,
     onSelectProvider: (String) -> Unit,
-    selectedModel: String,
-    onSelectModel: (String) -> Unit,
+    modelName: String,
+    onModelNameChange: (String) -> Unit,
     apiKey: String,
     onApiKeyChange: (String) -> Unit,
     temperature: Float,
@@ -796,36 +800,12 @@ fun Step6LlmConfiguration(
     summaryTone: String,
     onSelectTone: (String) -> Unit,
     summaryLength: String,
-    onSelectLength: (String) -> Unit
+    onSelectLength: (String) -> Unit,
+    baseUrl: String,
+    onBaseUrlChange: (String) -> Unit
 ) {
-    val context = LocalContext.current
-    
-    val openAiModels = listOf("gpt-5.2", "gpt-4o", "gpt-4o-mini", "o1", "o3-mini")
-    val geminiModels = listOf("gemini-2.5-pro", "gemini-2.5-flash", "gemini-2.0-flash")
-    val anthropicModels = listOf("claude-3-5-sonnet-20241022", "claude-3-5-haiku-20241022")
-    val openRouterModels = listOf("openai/gpt-4o", "anthropic/claude-3.5-sonnet", "google/gemini-pro-1.5")
-
-    val currentModels = when(selectedProvider) {
-        "OPENAI" -> openAiModels
-        "GEMINI" -> geminiModels
-        "ANTHROPIC" -> anthropicModels
-        "OPENROUTER" -> openRouterModels
-        else -> openAiModels
-    }
-    
-    var expanded by remember { mutableStateOf(false) }
     var showApiKey by remember { mutableStateOf(false) }
     var showAdvancedSettings by remember { mutableStateOf(false) }
-    var isCustomModel by remember { mutableStateOf(false) }
-    var customModelName by remember { mutableStateOf("") }
-
-    LaunchedEffect(selectedProvider) {
-        isCustomModel = false
-        customModelName = ""
-        if (currentModels.isNotEmpty()) {
-            onSelectModel(currentModels.first())
-        }
-    }
 
     Column(
         modifier = Modifier
@@ -852,7 +832,7 @@ fun Step6LlmConfiguration(
         
         Spacer(modifier = Modifier.height(24.dp))
         
-        // Provider Cards - Similar to settings screen
+        // Provider Cards
         Text(
             text = stringResource(R.string.llm_ai_provider),
             style = MaterialTheme.typography.labelMedium,
@@ -862,7 +842,7 @@ fun Step6LlmConfiguration(
         
         Spacer(modifier = Modifier.height(12.dp))
         
-        val providers = listOf("OPENAI", "ANTHROPIC", "GEMINI", "OPENROUTER")
+        val providers = listOf("OPENAI", "ANTHROPIC")
         
         Row(
             modifier = Modifier
@@ -876,8 +856,6 @@ fun Step6LlmConfiguration(
                 val (primaryColor, _) = when (provider) {
                     "OPENAI" -> Pair(Color(0xFF10A37F), "O")
                     "ANTHROPIC" -> Pair(Color(0xFFCC785C), "A")
-                    "GEMINI" -> Pair(Color(0xFF4285F4), "G")
-                    "OPENROUTER" -> Pair(Color(0xFFFF6B35), "R")
                     else -> Pair(MaterialTheme.colorScheme.primary, "?")
                 }
                 
@@ -919,8 +897,6 @@ fun Step6LlmConfiguration(
                                 val drawableId = when (provider) {
                                     "OPENAI" -> R.drawable.openai
                                     "ANTHROPIC" -> R.drawable.anthropic
-                                    "GEMINI" -> R.drawable.gemini
-                                    "OPENROUTER" -> R.drawable.openrouter
                                     else -> R.drawable.ic_launcher_foreground
                                 }
 
@@ -953,8 +929,6 @@ fun Step6LlmConfiguration(
                                 text = when (provider) {
                                     "OPENAI" -> stringResource(R.string.llm_provider_openai)
                                     "ANTHROPIC" -> stringResource(R.string.llm_provider_anthropic)
-                                    "GEMINI" -> stringResource(R.string.llm_provider_gemini)
-                                    "OPENROUTER" -> stringResource(R.string.llm_provider_openrouter)
                                     else -> provider
                                 },
                                 style = MaterialTheme.typography.bodyMedium,
@@ -970,67 +944,68 @@ fun Step6LlmConfiguration(
         
         Spacer(modifier = Modifier.height(24.dp))
         
-        // Model Selection
+        // Model
         Text(
-            text = stringResource(R.string.llm_model_version),
+            text = stringResource(R.string.llm_model),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.fillMaxWidth()
         )
-        
-        Spacer(modifier = Modifier.height(8.dp))
-        
-        Box(modifier = Modifier.fillMaxWidth()) {
-            OutlinedTextField(
-                value = selectedModel,
-                onValueChange = {},
-                modifier = Modifier.fillMaxWidth(),
-                readOnly = true,
-                trailingIcon = {
-                    IconButton(onClick = { expanded = true }) {
-                        Icon(Icons.Default.KeyboardArrowDown, stringResource(R.string.llm_select_model))
-                    }
-                },
-                shape = RoundedCornerShape(12.dp),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
-                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
-                    focusedBorderColor = Color.Transparent,
-                    unfocusedBorderColor = Color.Transparent
-                )
-            )
-            
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp)
-                    .clickable { expanded = true }
-            )
-            
-            DropdownMenu(
-                expanded = expanded,
-                onDismissRequest = { expanded = false },
-                modifier = Modifier.fillMaxWidth(0.9f)
-            ) {
-                currentModels.forEach { model ->
-                    DropdownMenuItem(
-                        text = {
-                            Text(
-                                text = model,
-                                fontWeight = if (model == selectedModel) FontWeight.Bold else FontWeight.Normal
-                            )
-                        },
-                        onClick = {
-                            onSelectModel(model)
-                            expanded = false
-                        }
-                    )
-                }
-            }
-        }
 
-        Spacer(modifier = Modifier.height(24.dp))
-        
+        Spacer(modifier = Modifier.height(8.dp))
+
+        OutlinedTextField(
+            value = modelName,
+            onValueChange = onModelNameChange,
+            modifier = Modifier.fillMaxWidth(),
+            placeholder = { Text(stringResource(R.string.llm_custom_model_hint)) },
+            singleLine = true,
+            shape = RoundedCornerShape(12.dp),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                focusedBorderColor = Color.Transparent,
+                unfocusedBorderColor = Color.Transparent
+            )
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Base URL
+        Text(
+            text = stringResource(R.string.llm_base_url),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        OutlinedTextField(
+            value = baseUrl,
+            onValueChange = onBaseUrlChange,
+            modifier = Modifier.fillMaxWidth(),
+            placeholder = { Text(stringResource(R.string.llm_base_url_hint)) },
+            singleLine = true,
+            shape = RoundedCornerShape(12.dp),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                focusedBorderColor = Color.Transparent,
+                unfocusedBorderColor = Color.Transparent
+            )
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Text(
+            text = stringResource(R.string.llm_api_key_privacy),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
         // Authentication
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -1049,9 +1024,9 @@ fun Step6LlmConfiguration(
                 tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
             )
         }
-        
+
         Spacer(modifier = Modifier.height(12.dp))
-        
+
         OutlinedTextField(
             value = apiKey,
             onValueChange = onApiKeyChange,
@@ -1077,17 +1052,9 @@ fun Step6LlmConfiguration(
             ),
             singleLine = true
         )
-        
-        Spacer(modifier = Modifier.height(8.dp))
-        
-        Text(
-            text = stringResource(R.string.llm_api_key_privacy),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
-        )
-        
+
         Spacer(modifier = Modifier.height(24.dp))
-        
+
         // Additional Settings (Collapsible)
         Card(
             modifier = Modifier.fillMaxWidth(),
@@ -1121,7 +1088,7 @@ fun Step6LlmConfiguration(
                         contentDescription = if (showAdvancedSettings) stringResource(R.string.llm_collapse) else stringResource(R.string.llm_expand)
                     )
                 }
-                
+
                 // Expandable content
                 AnimatedVisibility(
                     visible = showAdvancedSettings,
@@ -1151,14 +1118,14 @@ fun Step6LlmConfiguration(
                                     fontWeight = FontWeight.Bold
                                 )
                             }
-                            
+
                             Slider(
                                 value = temperature,
                                 onValueChange = { onTemperatureChange(it) },
                                 valueRange = 0f..2f,
                                 steps = 19
                             )
-                            
+
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceBetween
@@ -1175,7 +1142,7 @@ fun Step6LlmConfiguration(
                                 )
                             }
                         }
-                        
+
                         // Max Tokens
                         Column {
                             Row(
@@ -1192,14 +1159,14 @@ fun Step6LlmConfiguration(
                                     fontWeight = FontWeight.Bold
                                 )
                             }
-                            
+
                             Slider(
                                 value = maxTokens.toFloat(),
                                 onValueChange = { onMaxTokensChange(it.toInt()) },
                                 valueRange = 100f..4000f,
                                 steps = 38
                             )
-                            
+
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceBetween
@@ -1220,9 +1187,9 @@ fun Step6LlmConfiguration(
                 }
             }
         }
-        
+
         Spacer(modifier = Modifier.height(24.dp))
-        
+
         // Action Buttons
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -1236,7 +1203,7 @@ fun Step6LlmConfiguration(
                     containerColor = MaterialTheme.colorScheme.surfaceVariant,
                     contentColor = MaterialTheme.colorScheme.onSurface
                 ),
-                enabled = apiKey.isNotBlank() && !testConnectionLoading
+                enabled = apiKey.isNotBlank() && !testConnectionLoading && modelName.isNotBlank()
             ) {
                 if (testConnectionLoading) {
                     CircularProgressIndicator(
@@ -1252,14 +1219,14 @@ fun Step6LlmConfiguration(
             Button(
                 onClick = { /* Save handled by main flow */ },
                 modifier = Modifier.weight(1f),
-                enabled = apiKey.isNotBlank() && selectedModel.isNotBlank()
+                enabled = apiKey.isNotBlank() && modelName.isNotBlank()
             ) {
                 Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(stringResource(R.string.save))
             }
         }
-        
+
         // Test Connection Result
         if (testConnectionResult != null) {
             Spacer(modifier = Modifier.height(16.dp))
@@ -1299,7 +1266,7 @@ fun Step6LlmConfiguration(
                 }
             }
         }
-        
+
         Spacer(modifier = Modifier.height(32.dp))
     }
 }

@@ -16,7 +16,7 @@ import okhttp3.OkHttpClient
 data class LlmConfigUiState(
     val configs: List<LlmConfigEntity> = emptyList(),
     val selectedConfig: LlmConfigEntity? = null,
-    val providers: List<String> = listOf("OPENAI", "GEMINI", "CLAUDE", "OPENROUTER", "CUSTOM"),
+    val providers: List<String> = listOf("OPENAI", "CLAUDE", "CUSTOM"),
     val isLoading: Boolean = false,
     val testConnectionLoading: Boolean = false,
     val testConnectionResult: String? = null,

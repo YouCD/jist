@@ -8,6 +8,7 @@ import android.service.notification.StatusBarNotification
 import android.util.Log
 import dev.rcht.jist.JistApplication
 import dev.rcht.jist.data.db.entity.NotificationEntity
+import dev.rcht.jist.notification.PendingIntentStore
 import dev.rcht.jist.util.ConversationKeyExtractor
 import dev.rcht.jist.util.NotificationParser
 import kotlinx.coroutines.CoroutineScope
@@ -42,7 +43,9 @@ class JistNotificationListenerService : NotificationListenerService() {
                 conversationKey = "",  // Will be set below
                 timestamp = System.currentTimeMillis(),
                 isSummarized = false,
-                senderName = appInfo.senderName
+                senderName = appInfo.senderName,
+                notificationTag = sbn.tag,
+                notificationId = sbn.id
             )
             
             // Derive conversation key with app-specific extraction
@@ -54,35 +57,81 @@ class JistNotificationListenerService : NotificationListenerService() {
             // Insert into database
             val app = applicationContext as? JistApplication
 
-            // Store original content intent (if available) for later reuse in summary notifications
+            val notificationObj = sbn.notification
+
+            // Capture original PendingIntent for precise redirection
+            val originalPendingIntent = notificationObj?.contentIntent
+            if (originalPendingIntent != null) {
+                PendingIntentStore.put(conversationKey, originalPendingIntent)
+            }
+
+            // Extract MessagingStyle Person URI for precise deep linking
             try {
-                val originalPendingIntent = sbn.notification?.contentIntent
-                if (originalPendingIntent != null) {
-                    dev.rcht.jist.notification.PendingIntentStore.put(conversationKey, originalPendingIntent)
-                    Log.d(TAG, "Stored pending intent for conversation: $conversationKey")
+                val messageBundles = notificationObj?.extras?.getParcelableArray("android.messages")
+                if (messageBundles != null) {
+                    for (msg in messageBundles) {
+                        if (msg is android.os.Bundle) {
+                            val person = if (android.os.Build.VERSION.SDK_INT >= 28) {
+                                msg.getParcelable("sender_person", android.app.Person::class.java)
+                            } else {
+                                @Suppress("DEPRECATION")
+                                msg.getParcelable("sender_person")
+                            }
+                            val uri = person?.uri
+                            val key = person?.key
+                            val personName = person?.name
+                            Log.d(TAG, "Person data for $conversationKey: name=$personName uri=$uri key=$key")
+                            if (!uri.isNullOrBlank()) {
+                                PendingIntentStore.putChatUri(conversationKey, uri)
+                                break
+                            }
+                            // Fallback: if we have a key, store it as potential deep link data
+                            if (!key.isNullOrBlank()) {
+                                PendingIntentStore.putChatUri(conversationKey, key)
+                                Log.d(TAG, "Stored Person key: $conversationKey -> $key")
+                                break
+                            }
+                        }
+                    }
                 }
             } catch (e: Exception) {
-                Log.w(TAG, "Unable to store original pending intent", e)
+                Log.w(TAG, "Failed to extract Person URI: ${e.message}")
+            }
+
+            // Serialize to base64 and store with notification entity
+            val piData = originalPendingIntent?.let { pi ->
+                try {
+                    val parcel = android.os.Parcel.obtain()
+                    pi.writeToParcel(parcel, 0)
+                    val b64 = android.util.Base64.encodeToString(parcel.marshall(), android.util.Base64.NO_WRAP)
+                    parcel.recycle()
+                    Log.d(TAG, "PendingIntent serialized OK for: $conversationKey (${b64.length} chars)")
+                    b64
+                } catch (e: Exception) {
+                    Log.w(TAG, "PendingIntent serialization FAILED for: $conversationKey - ${e.message}")
+                    null
+                }
             }
 
             app?.let {
                 scope.launch {
                     val newContent = notificationWithKey.content
-                    val prefix = if (newContent.length > 60) newContent.take(60) else ""
-                    val existing = if (prefix.isNotEmpty()) {
-                        it.notificationRepository.findPrefixDuplicate(
-                            notificationWithKey.packageName, notificationWithKey.title, prefix
-                        )
-                    } else null
+                    // Dedup by notificationTag + notificationId (app-level notification identity)
+                    val existing = it.notificationRepository.findByNotificationKey(
+                        notificationWithKey.packageName,
+                        notificationWithKey.notificationTag,
+                        notificationWithKey.notificationId
+                    )
                     if (existing != null) {
-                        if (newContent.length > existing.content.length) {
-                            it.notificationRepository.update(existing.copy(content = newContent, timestamp = notificationWithKey.timestamp))
-                            Log.d(TAG, "Updated notification with longer content: $conversationKey")
-                        } else {
-                            Log.d(TAG, "Skipped duplicate (existing is longer): $conversationKey")
-                        }
+                        // Notification update: same tag+id, update content/timestamp
+                        it.notificationRepository.update(existing.copy(
+                            content = newContent,
+                            timestamp = notificationWithKey.timestamp,
+                            pendingIntentData = piData ?: existing.pendingIntentData
+                        ))
+                        Log.d(TAG, "Updated notification (tag+id match): $conversationKey")
                     } else {
-                        it.notificationRepository.insert(notificationWithKey)
+                        it.notificationRepository.insert(notificationWithKey.copy(pendingIntentData = piData))
                         Log.d(TAG, "Notification inserted: $conversationKey")
                     }
                 }

@@ -57,13 +57,14 @@
     <string name="llm_ai_provider">AI PROVIDER</string>
     <string name="llm_provider_openai">OpenAI</string>
     <string name="llm_provider_anthropic">Anthropic</string>
-    <string name="llm_provider_gemini">Gemini</string>
-    <string name="llm_provider_openrouter">OpenRouter</string>
+
     <string name="llm_model_version">Model Version</string>
     <string name="llm_model">Model</string>
     <string name="llm_custom_model">Custom Model</string>
     <string name="llm_custom_model_option">Custom Model…</string>
     <string name="llm_custom_model_hint">Enter model name (e.g., gpt-4-turbo-preview)</string>
+    <string name="llm_base_url">Base URL</string>
+    <string name="llm_base_url_hint">https://api.openai.com/v1/</string>
     <string name="llm_authentication">AUTHENTICATION</string>
     <string name="llm_api_key">API Key</string>
     <string name="llm_api_key_hint">Enter your API key</string>
@@ -109,6 +110,8 @@
     <string name="app_settings_suggested">SUGGESTED</string>
     <string name="app_settings_all_apps">ALL APPS</string>
     <string name="app_settings_apps_installed">%d APPS INSTALLED</string>
+    <string name="app_settings_no_apps">No apps found</string>
+    <string name="error_loading_apps">Error loading apps: %s</string>
 
     <!-- Summaries -->
     <string name="summaries_title">Summaries</string>

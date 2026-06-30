@@ -184,23 +184,18 @@ fun SummaryDetailScreen(
                         text = notification.content,
                         timestamp = formatDate(notification.timestamp),
                         onClick = {
-                            val uri = dev.rcht.jist.notification.PendingIntentStore.getIntentUri(notification.conversationKey)
-                            if (uri != null) {
-                                try {
-                                    context.startActivity(Intent(Intent.ACTION_VIEW, android.net.Uri.parse(uri)).apply {
-                                        flags = Intent.FLAG_ACTIVITY_NEW_TASK
-                                    })
-                                } catch (e: Exception) { Log.e("SummaryDetail", "Failed to open saved URI", e) }
-                            } else {
-                                val pi = dev.rcht.jist.notification.PendingIntentStore.get(notification.conversationKey)
-                                if (pi != null) {
-                                    try { pi.send() } catch (e: Exception) { Log.e("SummaryDetail", "Failed to send PI", e) }
-                                } else {
-                                    val intent = dev.rcht.jist.util.ChatIntentBuilder.buildChatIntent(
-                                        context, notification.packageName, notification.conversationKey, notification.title
-                                    )
-                                    if (intent != null) context.startActivity(intent)
-                                }
+                            if (notification.packageName == "org.telegram.messenger") {
+                                context.sendBroadcast(Intent("dev.rcht.jist.GOTO_CHAT").apply {
+                                    putExtra("title", notification.title)
+                                    addFlags(Intent.FLAG_INCLUDE_STOPPED_PACKAGES)
+                                })
+                            }
+                            val intent = dev.rcht.jist.util.ChatIntentBuilder.buildChatIntent(
+                                context, notification.packageName, notification.conversationKey, notification.title
+                            )
+                            if (intent != null) {
+                                Log.d("SummaryDetail", "Launching ${notification.conversationKey}")
+                                context.startActivity(intent)
                             }
                         }
                     )

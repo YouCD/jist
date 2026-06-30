@@ -45,6 +45,10 @@ class NotificationLogViewModel(
         }
     }
 
+    fun refresh() {
+        loadNotifications()
+    }
+
     fun deleteNotifications(ids: List<Long>) {
         viewModelScope.launch(Dispatchers.IO) {
             try {

@@ -25,14 +25,14 @@ interface NotificationDao {
     @Query("SELECT * FROM notifications WHERE conversationKey = :key ORDER BY timestamp ASC")
     suspend fun getByConversationKey(key: String): List<NotificationEntity>
 
-    @Query("SELECT COUNT(*) FROM notifications WHERE packageName = :pkg AND title = :title AND content = :content")
-    suspend fun countDuplicate(pkg: String, title: String, content: String): Int
-
     @Query("SELECT * FROM notifications WHERE isSummarized = 0 ORDER BY timestamp ASC")
     suspend fun getAllUnsummarized(): List<NotificationEntity>
 
     @Query("SELECT * FROM notifications ORDER BY timestamp DESC")
     suspend fun getAll(): List<NotificationEntity>
+
+    @Query("UPDATE notifications SET pendingIntentData = :data WHERE id = :id")
+    suspend fun updatePendingIntentData(id: Long, data: String)
     
     @Query("""
         SELECT DISTINCT conversationKey FROM notifications 
@@ -51,8 +51,8 @@ interface NotificationDao {
     @Query("SELECT * FROM notifications WHERE packageName = :packageName ORDER BY timestamp DESC")
     suspend fun getByApp(packageName: String): List<NotificationEntity>
 
-    @Query("SELECT * FROM notifications WHERE packageName = :pkg AND title = :title AND content LIKE :prefix || '%' ORDER BY LENGTH(content) DESC LIMIT 1")
-    suspend fun findPrefixDuplicate(pkg: String, title: String, prefix: String): NotificationEntity?
+    @Query("SELECT * FROM notifications WHERE packageName = :pkg AND notificationTag = :tag AND notificationId = :nid LIMIT 1")
+    suspend fun findByNotificationKey(pkg: String, tag: String?, nid: Int): NotificationEntity?
     
     @Query("DELETE FROM notifications WHERE timestamp < :before")
     suspend fun deleteOlderThan(before: Long)

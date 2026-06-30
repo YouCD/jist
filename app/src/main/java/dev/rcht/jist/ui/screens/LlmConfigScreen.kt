@@ -109,12 +109,10 @@ fun LlmConfigScreen(
     val clipboardManager = LocalClipboardManager.current
     
     // Provider and model state
-    val providers = listOf("OPENAI", "ANTHROPIC", "GEMINI", "OPENROUTER")
+    val providers = listOf("OPENAI", "ANTHROPIC")
     val modelsByProvider = mapOf(
         "OPENAI" to listOf("gpt-5.2", "gpt-5-mini-2025-08-07", "gpt-4o", "gpt-4o-mini", "o1", "o3-mini"),
-        "ANTHROPIC" to listOf("claude-3-5-sonnet-20241022", "claude-3-5-haiku-20241022", "claude-3-opus-20240229", "claude-3-haiku-20240307"),
-        "GEMINI" to listOf("gemini-3-pro-preview", "gemini-3-flash-preview", "gemini-2.5-pro", "gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-2.0-flash", "gemini-2.0-pro"),
-        "OPENROUTER" to listOf("openai/gpt-4o", "openai/gpt-4o-mini", "anthropic/claude-3.5-sonnet", "google/gemini-pro-1.5", "google/gemini-flash-1.5")
+        "ANTHROPIC" to listOf("claude-3-5-sonnet-20241022", "claude-3-5-haiku-20241022", "claude-3-opus-20240229", "claude-3-haiku-20240307")
     )
     
     // Form state
@@ -240,8 +238,6 @@ fun LlmConfigScreen(
                         val (primaryColor, logoText) = when (provider) {
                             "OPENAI" -> Pair(Color(0xFF10A37F), "O")
                             "ANTHROPIC" -> Pair(Color(0xFFCC785C), "A")
-                            "GEMINI" -> Pair(Color(0xFF4285F4), "G")
-                            "OPENROUTER" -> Pair(Color(0xFFFF6B35), "R")
                             else -> Pair(MaterialTheme.colorScheme.primary, "?")
                         }
                         
@@ -291,8 +287,6 @@ fun LlmConfigScreen(
                                         val drawableId = when (provider) {
                                             "OPENAI" -> R.drawable.openai
                                             "ANTHROPIC" -> R.drawable.anthropic
-                                            "GEMINI" -> R.drawable.gemini
-                                            "OPENROUTER" -> R.drawable.openrouter
                                             else -> R.drawable.ic_launcher_foreground
                                         }
 
@@ -325,8 +319,6 @@ fun LlmConfigScreen(
                                         text = when (provider) {
                                             "OPENAI" -> stringResource(R.string.llm_provider_openai)
                                             "ANTHROPIC" -> stringResource(R.string.llm_provider_anthropic)
-                                            "GEMINI" -> stringResource(R.string.llm_provider_gemini)
-                                            "OPENROUTER" -> stringResource(R.string.llm_provider_openrouter)
                                             else -> provider
                                         },
                                         style = MaterialTheme.typography.bodyMedium,
@@ -356,10 +348,15 @@ fun LlmConfigScreen(
                 
                 Box(modifier = Modifier.fillMaxWidth()) {
                     OutlinedTextField(
-                        value = if (isCustomModel) customModelName else selectedModel,
+                        value = if (isCustomModel && customModelName.isNotBlank()) customModelName else if (isCustomModel) "" else selectedModel,
                         onValueChange = {},
                         modifier = Modifier.fillMaxWidth(),
                         readOnly = true,
+                        placeholder = {
+                            if (isCustomModel && customModelName.isBlank()) {
+                                Text(stringResource(R.string.llm_custom_model_option))
+                            }
+                        },
                         trailingIcon = {
                             IconButton(onClick = { expandedModel = true }) {
                                 Icon(

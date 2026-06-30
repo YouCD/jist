@@ -8,7 +8,7 @@ data class LlmConfigEntity(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,
     val name: String,
-    val provider: String, // OPENAI, GEMINI, CLAUDE, OPENROUTER, CUSTOM
+    val provider: String, // OPENAI, CLAUDE, CUSTOM
     val apiKey: String, // Should be encrypted
     val baseUrl: String,
     val modelId: String,

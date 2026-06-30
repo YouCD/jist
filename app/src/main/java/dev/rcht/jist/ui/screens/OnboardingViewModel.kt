@@ -75,16 +75,17 @@ class OnboardingViewModel(private val context: Context) : ViewModel() {
         }
     }
     
-    fun saveLlmConfig(apiKey: String, provider: String = "openai", model: String = "gpt-4-turbo", temperature: Float = 0.7f, maxTokens: Int = 1000) {
+    fun saveLlmConfig(apiKey: String, provider: String = "openai", model: String = "gpt-4-turbo", temperature: Float = 0.7f, maxTokens: Int = 1000, baseUrl: String = "") {
          viewModelScope.launch {
             try {
                 val existing = app.llmConfigRepository.getAll().firstOrNull { it.provider == provider }
+                val effectiveBaseUrl = baseUrl.ifBlank { dev.rcht.jist.llm.LlmClientFactory.getDefaultBaseUrl(provider) }
                 
                 if (existing != null) {
                     app.llmConfigRepository.update(existing.copy(
                         apiKey = apiKey,
                         modelId = model,
-                        baseUrl = "https://api.openai.com/v1/",
+                        baseUrl = effectiveBaseUrl,
                         temperature = temperature,
                         maxTokens = maxTokens
                     ))
@@ -93,7 +94,7 @@ class OnboardingViewModel(private val context: Context) : ViewModel() {
                         name = provider.replaceFirstChar { it.uppercase() },
                         provider = provider,
                         apiKey = apiKey,
-                        baseUrl = "https://api.openai.com/v1/",
+                        baseUrl = effectiveBaseUrl,
                         modelId = model,
                         isDefault = true,
                         temperature = temperature,

@@ -306,6 +306,7 @@ fun JistNavHost(
             NotificationLogScreen(
                 notifications = state.notifications,
                 isLoading = state.isLoading,
+                onRefresh = { vm.refresh() },
                 onDelete = { ids -> vm.deleteNotifications(ids) }
             )
         }

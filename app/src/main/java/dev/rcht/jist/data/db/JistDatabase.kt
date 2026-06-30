@@ -25,7 +25,7 @@ import dev.rcht.jist.data.db.fts.SummaryFts
         SummaryFts::class,
         CustomPromptEntity::class
     ],
-    version = 5,
+    version = 6,
     exportSchema = false
 )
 abstract class JistDatabase : RoomDatabase() {

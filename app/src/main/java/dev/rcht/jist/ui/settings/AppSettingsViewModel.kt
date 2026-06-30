@@ -48,6 +48,7 @@ class AppSettingsViewModel(
                 val packageManager = context.packageManager
                 val mainIntent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
                 val launcherApps = packageManager.queryIntentActivities(mainIntent, 0)
+                    .filter { it.activityInfo != null }
                     .distinctBy { it.activityInfo.packageName }
 
                 // Get existing rules from database

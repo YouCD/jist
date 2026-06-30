@@ -37,8 +37,12 @@ class NotificationRepository(private val notificationDao: NotificationDao) {
         notificationDao.deleteByIds(ids)
     }
 
-    suspend fun findPrefixDuplicate(pkg: String, title: String, prefix: String): NotificationEntity? {
-        return notificationDao.findPrefixDuplicate(pkg, title, prefix)
+    suspend fun updatePendingIntentData(id: Long, data: String) {
+        notificationDao.updatePendingIntentData(id, data)
+    }
+
+    suspend fun findByNotificationKey(pkg: String, tag: String?, nid: Int): NotificationEntity? {
+        return notificationDao.findByNotificationKey(pkg, tag, nid)
     }
     
     suspend fun getPendingConversationKeys(minCount: Int): List<String> {
@@ -71,9 +75,5 @@ class NotificationRepository(private val notificationDao: NotificationDao) {
     
     suspend fun getByConversationKey(key: String): List<NotificationEntity> {
         return notificationDao.getByConversationKey(key)
-    }
-
-    suspend fun isDuplicate(pkg: String, title: String, content: String): Boolean {
-        return notificationDao.countDuplicate(pkg, title, content) > 0
     }
 }

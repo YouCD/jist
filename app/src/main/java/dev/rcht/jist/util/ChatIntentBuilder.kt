@@ -2,10 +2,7 @@ package dev.rcht.jist.util
 
 import android.content.Context
 import android.content.Intent
-import android.content.pm.PackageManager
-import android.net.Uri
 import android.util.Log
-import java.net.URLEncoder
 
 /**
  * Builds app-specific intents to open a conversation/chat
@@ -27,7 +24,7 @@ object ChatIntentBuilder {
         return when (packageName) {
             "com.whatsapp" -> buildWhatsAppIntent(context, contactOrGroup)
             "com.whatsapp.w4b" -> buildWhatsAppIntent(context, contactOrGroup) // Business
-            "org.telegram.messenger" -> buildTelegramIntent(context, contactOrGroup)
+            "org.telegram.messenger" -> buildTelegramIntent(context, contactOrGroup, conversationKey)
             "com.google.android.gm" -> buildGmailIntent(context, contactOrGroup)
             else -> buildGenericAppIntent(context, packageName)
         }
@@ -58,15 +55,13 @@ object ChatIntentBuilder {
      * Telegram: Open app to search for chat
      * Telegram supports URI scheme for opening chats by username or contact
      */
-    private fun buildTelegramIntent(context: Context, contactOrGroup: String): Intent? {
+    private fun buildTelegramIntent(context: Context, contactOrGroup: String, conversationKey: String): Intent? {
         return try {
-            val encoded = URLEncoder.encode(contactOrGroup, "UTF-8").replace("+", "%20")
-            val uri = "tg://resolve?domain=$encoded"
-            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(uri)).apply {
+            // Open Telegram main screen - reliable and always works
+            val launchIntent = context.packageManager.getLaunchIntentForPackage("org.telegram.messenger")
+            launchIntent?.apply {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
             }
-            Log.d(TAG, "Trying Telegram deep link: $uri")
-            intent
         } catch (e: Exception) {
             Log.e(TAG, "Error creating Telegram intent: ${e.message}")
             null
