@@ -45,7 +45,8 @@ class JistNotificationListenerService : NotificationListenerService() {
                 isSummarized = false,
                 senderName = appInfo.senderName,
                 notificationTag = sbn.tag,
-                notificationId = sbn.id
+                notificationId = sbn.id,
+                notificationKey = sbn.key
             )
             
             // Derive conversation key with app-specific extraction

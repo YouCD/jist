@@ -18,5 +18,6 @@ data class NotificationEntity(
     val senderName: String? = null,
     val pendingIntentData: String? = null,
     val notificationTag: String? = null,
-    val notificationId: Int = 0
+    val notificationId: Int = 0,
+    val notificationKey: String? = null
 )

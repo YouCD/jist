@@ -1,6 +1,9 @@
 package dev.rcht.jist.ui.screens
 
+import android.app.NotificationManager
+import android.content.Context
 import android.content.Intent
+import android.os.Bundle
 import android.util.Log
 import dev.rcht.jist.R
 import androidx.compose.foundation.Image
@@ -52,6 +55,24 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import dev.rcht.jist.data.db.entity.NotificationEntity
+
+/**
+ * Try to perform a notification action via NAF (Notification Action Framework).
+ * Uses reflection to call hidden @SystemApi NotificationManager.performNotificationAction().
+ */
+private fun tryNafAction(context: Context, key: String, action: Int, extras: Bundle?): Boolean {
+    return try {
+        val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        val method = NotificationManager::class.java
+            .getDeclaredMethod("performNotificationAction",
+                String::class.java, Int::class.java, Bundle::class.java)
+        method.invoke(nm, key, action, extras)
+        true
+    } catch (e: Exception) {
+        Log.w("NotificationLog", "NAF failed: ${e.message}")
+        false
+    }
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -129,20 +150,21 @@ fun NotificationLogScreen(
                                 if (isSelecting) {
                                     selectedIds = if (selected) selectedIds - notification.id else selectedIds + notification.id
                                  } else {
-                                    // For Telegram, send GOTO_CHAT broadcast for LSPosed module
-                                    if (notification.packageName == "org.telegram.messenger") {
-                                        ctx.sendBroadcast(Intent("dev.rcht.jist.GOTO_CHAT").apply {
-                                            putExtra("title", notification.title)
-                                            addFlags(Intent.FLAG_INCLUDE_STOPPED_PACKAGES)
-                                        })
+                                    // Priority 1: NAF (Notification Action Framework)
+                                    // Requires device with NAF framework patch (Android 16+ LineageOS)
+                                    var nafSuccess = false
+                                    val notifKey = notification.notificationKey
+                                    if (!notifKey.isNullOrBlank()) {
+                                        nafSuccess = tryNafAction(ctx, notifKey, 1 /* ACTION_CONTENT */, null)
                                     }
-                                    // Use ChatIntentBuilder for all apps (reliable, always brings to front)
-                                    val intent = dev.rcht.jist.util.ChatIntentBuilder.buildChatIntent(
-                                        ctx, notification.packageName, notification.conversationKey, notification.title
-                                    )
-                                    if (intent != null) {
-                                        Log.d("NotifLog", "Launching ${notification.conversationKey}")
-                                        ctx.startActivity(intent)
+                                    if (!nafSuccess) {
+                                        // Fallback: ChatIntentBuilder (always works, opens app main screen)
+                                        val intent = dev.rcht.jist.util.ChatIntentBuilder.buildChatIntent(
+                                            ctx, notification.packageName, notification.conversationKey, notification.title
+                                        )
+                                        if (intent != null) {
+                                            ctx.startActivity(intent)
+                                        }
                                     }
                                 }
                             },
