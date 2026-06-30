@@ -31,6 +31,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.BatteryStd
 import androidx.compose.material.icons.filled.Bolt
@@ -78,6 +79,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import dev.rcht.jist.JistApplication
+import dev.rcht.jist.data.config.ConfigManager
 import dev.rcht.jist.data.db.entity.LlmConfigEntity
 import dev.rcht.jist.llm.LlmClientFactory
 import dev.rcht.jist.llm.LlmRequestConfig
@@ -113,10 +115,36 @@ fun OnboardingScreen(
     )
     val uiState by viewModel.uiState.collectAsState()
     val scope = rememberCoroutineScope()
+    val snackbarHostState = remember { SnackbarHostState() }
+    val configManager = remember {
+        ConfigManager(context, context.applicationContext.let { (it as JistApplication).preferencesRepository }, (context.applicationContext as JistApplication).llmConfigRepository, (context.applicationContext as JistApplication).appRuleRepository, (context.applicationContext as JistApplication).customPromptRepository)
+    }
+
+    val importSuccessMsg = stringResource(R.string.onboarding_import_config_success)
+    var importSuccess by remember { mutableStateOf(false) }
+
+    val importLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        if (uri != null) {
+            scope.launch {
+                configManager.importFromUri(uri).fold(
+                    onSuccess = {
+                        importSuccess = true
+                        snackbarHostState.showSnackbar(importSuccessMsg)
+                    },
+                    onFailure = { e ->
+                        snackbarHostState.showSnackbar("${e.message}")
+                    }
+                )
+            }
+        }
+    }
+
     val pkg = context.packageName
 
     var step by rememberSaveable { mutableStateOf(0) }
-    val totalSteps = 5
+    val totalSteps = 6
 
     // Permissions State
     var notificationsEnabled by remember { mutableStateOf(NotificationManagerCompat.from(context).areNotificationsEnabled()) }
@@ -212,6 +240,7 @@ fun OnboardingScreen(
     }
 
     GlassScaffold(
+        snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         topBar = {
             OnboardingStepIndicator(
                 currentStep = step,
@@ -228,7 +257,11 @@ fun OnboardingScreen(
             ) {
                 Button(
                     onClick = {
-                        if (step < totalSteps - 1) {
+                        if (step == 3 && importSuccess) {
+                            viewModel.startSetup()
+                            viewModel.finishOnboarding()
+                            onOnboardingComplete()
+                        } else if (step < totalSteps - 1) {
                             step++
                         } else {
                             viewModel.saveLlmConfig(apiKey, selectedProvider, modelName, temperature, maxTokens, baseUrl)
@@ -247,12 +280,16 @@ fun OnboardingScreen(
                     ),
                     enabled = when (step) {
                         1 -> listenerEnabled
-                        4 -> apiKey.isNotBlank() && modelName.isNotBlank()
+                        5 -> apiKey.isNotBlank() && modelName.isNotBlank()
                         else -> true
                     }
                 ) {
                     Text(
-                        text = if (step == totalSteps - 1) stringResource(R.string.llm_save_config) else stringResource(R.string.onboarding_next_step),
+                        text = when {
+                            step == 3 && importSuccess -> stringResource(R.string.done)
+                            step == totalSteps - 1 -> stringResource(R.string.llm_save_config)
+                            else -> stringResource(R.string.onboarding_next_step)
+                        },
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold
                     )
@@ -320,10 +357,14 @@ fun OnboardingScreen(
                                 }
                             }
                         )
-                        3 -> Step4ManageApps(
+                        3 -> Step4ImportConfig(
+                            importSuccess = importSuccess,
+                            onSelectFile = { importLauncher.launch(arrayOf("application/json", "*/*")) }
+                        )
+                        4 -> Step4ManageApps(
                             onOpenAppSettings = onOpenAppSettings
                         )
-                        4 -> Step6LlmConfiguration(
+                        5 -> Step6LlmConfiguration(
                             selectedProvider = selectedProvider,
                             onSelectProvider = { selectedProvider = it },
                             modelName = modelName,
@@ -779,6 +820,99 @@ fun Step4ManageApps(
             textAlign = TextAlign.Center,
             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
         )
+    }
+}
+
+@Composable
+fun Step4ImportConfig(
+    importSuccess: Boolean,
+    onSelectFile: () -> Unit
+) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Spacer(modifier = Modifier.height(48.dp))
+
+        Box(
+            modifier = Modifier
+                .size(120.dp)
+                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f), RoundedCornerShape(32.dp)),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = if (importSuccess) Icons.Default.Check else Icons.Default.Add,
+                contentDescription = null,
+                modifier = Modifier.size(48.dp),
+                tint = if (importSuccess) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+
+        Spacer(modifier = Modifier.height(32.dp))
+
+        Text(
+            text = stringResource(R.string.onboarding_import_config_title),
+            style = MaterialTheme.typography.headlineMedium,
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        Text(
+            text = stringResource(R.string.onboarding_import_config_desc),
+            style = MaterialTheme.typography.bodyLarge,
+            textAlign = TextAlign.Center,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+
+        Spacer(modifier = Modifier.height(32.dp))
+
+        if (importSuccess) {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)),
+                shape = RoundedCornerShape(16.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(Icons.Default.Check, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(24.dp))
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text(
+                        text = stringResource(R.string.onboarding_import_config_success),
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
+        } else {
+            Button(
+                onClick = onSelectFile,
+                modifier = Modifier.fillMaxWidth().height(56.dp),
+                shape = RoundedCornerShape(16.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary
+                )
+            ) {
+                Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(24.dp))
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = stringResource(R.string.onboarding_import_config_button),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Text(
+                text = stringResource(R.string.onboarding_import_config_skip),
+                style = MaterialTheme.typography.bodySmall,
+                textAlign = TextAlign.Center,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+            )
+        }
     }
 }
 

@@ -30,6 +30,7 @@
     <string name="disabled">已禁用</string>
     <string name="settings">设置</string>
     <string name="coming_soon">即将推出</string>
+    <string name="settings_data_management">数据管理</string>
 
     <!-- Dashboard -->
     <string name="dashboard_intercepted">已拦截</string>
@@ -82,6 +83,13 @@
     <string name="llm_select_model">选择模型</string>
     <string name="llm_expand">展开</string>
     <string name="llm_collapse">收起</string>
+    <string name="llm_connection_success">✓ 连接成功！\n\n响应：%s</string>
+    <string name="llm_connection_failed">✗ 连接失败：%s</string>
+    <string name="llm_connection_error">✗ 错误：%s</string>
+    <string name="llm_error_loading">加载配置失败：%s</string>
+    <string name="llm_error_saving">保存配置失败：%s</string>
+    <string name="llm_error_deleting">删除配置失败：%s</string>
+    <string name="llm_error_default">设置默认配置失败：%s</string>
 
     <!-- Settings -->
     <string name="settings_title">设置</string>
@@ -109,6 +117,11 @@
     <string name="app_settings_all_apps">所有应用</string>
     <string name="app_settings_apps_installed">已安装 %d 个应用</string>
     <string name="app_settings_no_apps">未找到应用</string>
+    <string name="app_settings_custom_prompt">自定义提示词</string>
+    <string name="app_settings_custom_prompt_hint">正在使用默认提示词 — 编辑下方内容以自定义：</string>
+    <string name="app_settings_reset_to_default">重置为默认</string>
+    <string name="app_settings_edit_prompt">编辑自定义提示词</string>
+    <string name="app_settings_collapse_prompt">收起</string>
     <string name="error_loading_apps">加载应用失败: %s</string>
 
     <!-- Summaries -->
@@ -180,6 +193,23 @@
     <string name="perm_tap_to_enable">点击启用监听服务</string>
     <string name="perm_battery_restricted">后台进程受限</string>
     <string name="perm_tap_to_disable_battery">点击关闭电池优化</string>
+
+    <!-- Config -->
+    <string name="settings_export_config">导出配置</string>
+    <string name="settings_import_config">导入配置</string>
+    <string name="settings_config_exported">配置已导出</string>
+    <string name="settings_config_imported">配置已导入</string>
+    <string name="settings_config_import_failed">导入失败：%s</string>
+    <string name="settings_config_export_failed">导出失败</string>
+    <string name="settings_config_import_confirm_title">导入配置</string>
+    <string name="settings_config_import_confirm_message">这将替换所有当前设置，是否继续？</string>
+    <string name="settings_confirm">确认</string>
+    <string name="settings_cancel">取消</string>
+    <string name="onboarding_import_config_title">导入现有配置</string>
+    <string name="onboarding_import_config_desc">导入之前导出的配置文件，快速恢复所有设置、LLM 配置和已监控的应用。</string>
+    <string name="onboarding_import_config_button">选择配置文件</string>
+    <string name="onboarding_import_config_success">配置导入成功！</string>
+    <string name="onboarding_import_config_skip">跳过</string>
 
     <!-- Profile -->
     <string name="profile_local_user">本地用户</string>

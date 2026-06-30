@@ -162,7 +162,7 @@ fun AppSettingsScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "${uiState.allAppsCount} APPS INSTALLED",
+                        text = stringResource(R.string.app_settings_apps_installed, uiState.allAppsCount),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -291,7 +291,7 @@ fun AppItem(app: AppRuleEntity, onToggle: (Boolean) -> Unit, onUpdateCustomPromp
                 IconButton(onClick = { expanded = !expanded }) {
                     Icon(
                         imageVector = if (expanded) Icons.Default.KeyboardArrowUp else Icons.Default.Edit,
-                        contentDescription = if (expanded) "Collapse" else "Custom prompt",
+                        contentDescription = if (expanded) stringResource(R.string.app_settings_collapse_prompt) else stringResource(R.string.app_settings_edit_prompt),
                         tint = if (hasPrompt) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
@@ -313,14 +313,14 @@ fun AppItem(app: AppRuleEntity, onToggle: (Boolean) -> Unit, onUpdateCustomPromp
                     .padding(start = 16.dp, end = 16.dp, bottom = 12.dp)
             ) {
                 Text(
-                    text = "Custom Prompt",
+                    text = stringResource(R.string.app_settings_custom_prompt),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                     modifier = Modifier.padding(bottom = 4.dp)
                 )
                 if (isDefault) {
                     Text(
-                        text = "Using default prompt — edit below to customize:",
+                        text = stringResource(R.string.app_settings_custom_prompt_hint),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
                         modifier = Modifier.padding(bottom = 4.dp)
@@ -330,7 +330,7 @@ fun AppItem(app: AppRuleEntity, onToggle: (Boolean) -> Unit, onUpdateCustomPromp
                     value = promptText,
                     onValueChange = { promptText = it },
                     modifier = Modifier.fillMaxWidth(),
-                    label = { Text("Custom Prompt") },
+                    label = { Text(stringResource(R.string.app_settings_custom_prompt)) },
                     minLines = 2,
                     maxLines = 8,
                     shape = RoundedCornerShape(12.dp),
@@ -349,7 +349,7 @@ fun AppItem(app: AppRuleEntity, onToggle: (Boolean) -> Unit, onUpdateCustomPromp
                         TextButton(onClick = {
                             promptText = dev.rcht.jist.llm.getDefaultSystemPrompt()
                         }) {
-                            Text("Reset to default", color = MaterialTheme.colorScheme.error)
+                            Text(stringResource(R.string.app_settings_reset_to_default), color = MaterialTheme.colorScheme.error)
                         }
                         Spacer(modifier = Modifier.width(8.dp))
                     }
@@ -357,7 +357,7 @@ fun AppItem(app: AppRuleEntity, onToggle: (Boolean) -> Unit, onUpdateCustomPromp
                         onClick = { onUpdateCustomPrompt(promptText) },
                         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp)
                     ) {
-                        Text("Save")
+                        Text(stringResource(R.string.save))
                     }
                 }
             }

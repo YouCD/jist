@@ -34,4 +34,9 @@ class LlmConfigRepository(private val llmConfigDao: LlmConfigDao) {
     suspend fun delete(config: LlmConfigEntity) {
         llmConfigDao.delete(config)
     }
+
+    suspend fun replaceAll(configs: List<LlmConfigEntity>) {
+        llmConfigDao.deleteAll()
+        llmConfigDao.insertAll(configs)
+    }
 }

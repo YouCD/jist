@@ -253,6 +253,7 @@ fun JistNavHost(
                     override fun <T : ViewModel> create(modelClass: Class<T>): T {
                         @Suppress("UNCHECKED_CAST")
                         return dev.rcht.jist.ui.settings.LlmConfigViewModel(
+                            jistApp,
                             jistApp.llmConfigRepository,
                             jistApp.httpClient
                         ) as T

@@ -31,4 +31,10 @@ interface AppRuleDao {
     
     @Delete
     suspend fun delete(rule: AppRuleEntity)
+
+    @Query("DELETE FROM app_rules")
+    suspend fun deleteAll()
+
+    @Insert
+    suspend fun insertAll(rules: List<AppRuleEntity>)
 }

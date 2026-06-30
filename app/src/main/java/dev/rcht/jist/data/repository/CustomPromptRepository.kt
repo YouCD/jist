@@ -32,4 +32,9 @@ class CustomPromptRepository(private val customPromptDao: CustomPromptDao) {
     suspend fun deleteByApp(appName: String) {
         customPromptDao.deleteByApp(appName)
     }
+
+    suspend fun replaceAll(prompts: List<CustomPromptEntity>) {
+        customPromptDao.deleteAll()
+        customPromptDao.insertAll(prompts)
+    }
 }

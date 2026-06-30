@@ -30,9 +30,13 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import dev.rcht.jist.JistApplication
+import dev.rcht.jist.data.config.ConfigManager
 import dev.rcht.jist.ui.settings.SettingsViewModel
 import dev.rcht.jist.ui.components.GlassScaffold
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -55,7 +59,51 @@ fun SettingsScreen(
     )
     val uiState by viewModel.uiState.collectAsState()
 
+    val scope = rememberCoroutineScope()
+    val snackbarHostState = remember { SnackbarHostState() }
+    val configManager = remember {
+        ConfigManager(context, app.preferencesRepository, app.llmConfigRepository, app.appRuleRepository, app.customPromptRepository)
+    }
+
     var showStyleDialog by remember { mutableStateOf(false) }
+    var showImportConfirmDialog by remember { mutableStateOf(false) }
+    var pendingImportJson by remember { mutableStateOf<String?>(null) }
+
+    val exportOk = stringResource(R.string.settings_config_exported)
+    val exportFail = stringResource(R.string.settings_config_export_failed)
+    val importOk = stringResource(R.string.settings_config_imported)
+    val importFail = stringResource(R.string.settings_config_import_failed, "")
+
+    val exportLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument("application/json")
+    ) { uri ->
+        if (uri != null) {
+            scope.launch {
+                configManager.exportToUri(uri).fold(
+                    onSuccess = { snackbarHostState.showSnackbar(exportOk) },
+                    onFailure = { snackbarHostState.showSnackbar(exportFail) }
+                )
+            }
+        }
+    }
+
+    val importLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        if (uri != null) {
+            scope.launch {
+                val result = configManager.importFromUri(uri)
+                result.fold(
+                    onSuccess = {
+                        snackbarHostState.showSnackbar(importOk)
+                    },
+                    onFailure = { e ->
+                        snackbarHostState.showSnackbar(importFail + e.message)
+                    }
+                )
+            }
+        }
+    }
 
     // Refresh notification permission state when returning to this screen
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -72,6 +120,7 @@ fun SettingsScreen(
     }
 
     GlassScaffold(
+        snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         topBar = {
             CenterAlignedTopAppBar(
                 title = { Text(stringResource(R.string.settings_title), fontWeight = FontWeight.SemiBold) },
@@ -152,6 +201,27 @@ fun SettingsScreen(
                         onClick = { /* Time picker placeholder */ }
                     )
                     // Haptic Feedback omitted as requested
+                }
+            }
+
+            // Data Management Section
+            item {
+                SettingsSection(title = stringResource(R.string.settings_data_management)) {
+                    SettingsItem(
+                        icon = Icons.Default.Share,
+                        title = stringResource(R.string.settings_export_config),
+                        onClick = {
+                            exportLauncher.launch("jist-config.json")
+                        }
+                    )
+                    Divider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha=0.2f))
+                    SettingsItem(
+                        icon = Icons.Default.Add,
+                        title = stringResource(R.string.settings_import_config),
+                        onClick = {
+                            importLauncher.launch(arrayOf("application/json", "*/*"))
+                        }
+                    )
                 }
             }
 

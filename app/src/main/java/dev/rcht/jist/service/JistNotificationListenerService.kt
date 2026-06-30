@@ -116,6 +116,13 @@ class JistNotificationListenerService : NotificationListenerService() {
 
             app?.let {
                 scope.launch {
+                    // Only save notifications from monitored & enabled apps
+                    val appRule = it.appRuleRepository.getForApp(notificationWithKey.packageName)
+                    if (appRule == null || !appRule.enabled) {
+                        Log.d(TAG, "Skipping notification from unmonitored/disabled app: ${notificationWithKey.packageName}")
+                        return@launch
+                    }
+
                     val newContent = notificationWithKey.content
                     // Dedup by notificationTag + notificationId (app-level notification identity)
                     val existing = it.notificationRepository.findByNotificationKey(

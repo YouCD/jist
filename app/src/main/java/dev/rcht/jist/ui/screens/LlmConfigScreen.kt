@@ -27,8 +27,9 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.ContentPaste
 import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Warning
@@ -67,7 +68,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -106,7 +106,6 @@ fun LlmConfigScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
-    val clipboardManager = LocalClipboardManager.current
     
     // Provider and model state
     val providers = listOf("OPENAI", "ANTHROPIC")
@@ -127,6 +126,7 @@ fun LlmConfigScreen(
     var showAdvancedSettings by remember { mutableStateOf(false) }
     var temperature by remember { mutableStateOf(uiState.selectedConfig?.temperature ?: 0.7f) }
     var maxTokens by remember { mutableStateOf(uiState.selectedConfig?.maxTokens ?: 1000) }
+    var baseUrl by remember { mutableStateOf(uiState.selectedConfig?.baseUrl ?: "") }
     
     // Dropdown state
     var expandedModel by remember { mutableStateOf(false) }
@@ -138,6 +138,7 @@ fun LlmConfigScreen(
             apiKey = config.apiKey
             temperature = config.temperature
             maxTokens = config.maxTokens
+            baseUrl = config.baseUrl
             val availableModels = modelsByProvider[config.provider] ?: emptyList()
             if (config.modelId in availableModels) {
                 selectedModel = config.modelId
@@ -482,25 +483,11 @@ fun LlmConfigScreen(
                     placeholder = { Text(stringResource(R.string.llm_api_key_hint)) },
                     visualTransformation = if (showApiKey) VisualTransformation.None else PasswordVisualTransformation(),
                     trailingIcon = {
-                        Row {
-                            IconButton(onClick = { showApiKey = !showApiKey }) {
-                                Icon(
-                                    imageVector = if (showApiKey) Icons.Default.Warning else Icons.Default.Lock,
-                                    contentDescription = if (showApiKey) stringResource(R.string.llm_hide) else stringResource(R.string.llm_show)
-                                )
-                            }
-                            IconButton(
-                                onClick = {
-                                    clipboardManager.getText()?.text?.let { text ->
-                                        apiKey = text
-                                    }
-                                }
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.ContentPaste,
-                                    contentDescription = stringResource(R.string.llm_paste)
-                                )
-                            }
+                        IconButton(onClick = { showApiKey = !showApiKey }) {
+                            Icon(
+                                imageVector = if (showApiKey) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                                contentDescription = if (showApiKey) stringResource(R.string.llm_hide) else stringResource(R.string.llm_show)
+                            )
                         }
                     },
                     shape = RoundedCornerShape(12.dp),
@@ -522,6 +509,30 @@ fun LlmConfigScreen(
                 )
             }
             
+            // Base URL
+            Column {
+                Text(
+                    text = stringResource(R.string.llm_base_url),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = baseUrl,
+                    onValueChange = { baseUrl = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    placeholder = { Text(stringResource(R.string.llm_base_url_hint)) },
+                    singleLine = true,
+                    shape = RoundedCornerShape(12.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                        focusedBorderColor = Color.Transparent,
+                        unfocusedBorderColor = Color.Transparent
+                    )
+                )
+            }
+
             // Additional Settings (Collapsible)
             Card(
                 modifier = Modifier.fillMaxWidth(),
@@ -650,6 +661,7 @@ fun LlmConfigScreen(
                                     )
                                 }
                             }
+                            
                         }
                     }
                 }
@@ -710,7 +722,7 @@ fun LlmConfigScreen(
                             name = "$selectedProvider Config",
                             provider = selectedProvider,
                             apiKey = apiKey,
-                            baseUrl = LlmClientFactory.getDefaultBaseUrl(selectedProvider),
+                            baseUrl = baseUrl.ifBlank { LlmClientFactory.getDefaultBaseUrl(selectedProvider) },
                         modelId = modelId,
                         isDefault = uiState.selectedConfig?.isDefault ?: false,
                         maxTokens = maxTokens,
@@ -744,7 +756,7 @@ fun LlmConfigScreen(
                             name = "$selectedProvider Config",
                             provider = selectedProvider,
                             apiKey = apiKey,
-                        baseUrl = LlmClientFactory.getDefaultBaseUrl(selectedProvider),
+                        baseUrl = baseUrl.ifBlank { LlmClientFactory.getDefaultBaseUrl(selectedProvider) },
                         modelId = modelId,
                         isDefault = true,
                         maxTokens = maxTokens,

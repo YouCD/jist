@@ -37,4 +37,9 @@ class AppRuleRepository(private val appRuleDao: AppRuleDao) {
     suspend fun delete(rule: AppRuleEntity) {
         appRuleDao.delete(rule)
     }
+
+    suspend fun replaceAll(rules: List<AppRuleEntity>) {
+        appRuleDao.deleteAll()
+        appRuleDao.insertAll(rules)
+    }
 }

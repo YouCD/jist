@@ -104,4 +104,24 @@ class PreferencesRepository(private val context: Context) {
             preferences[PreferenceKeys.NOTIFICATIONS_ENABLED] = enabled
         }
     }
+
+    suspend fun replaceAll(prefs: JistPreferences) {
+        context.dataStore.edit { preferences ->
+            preferences.clear()
+            preferences[PreferenceKeys.IS_ONBOARDING_COMPLETE] = prefs.isOnboardingComplete
+            preferences[PreferenceKeys.DEFAULT_MODE] = prefs.defaultMode
+            preferences[PreferenceKeys.DEFAULT_BATCH_WINDOW] = prefs.defaultBatchWindowMinutes
+            preferences[PreferenceKeys.DEFAULT_MIN_MESSAGES] = prefs.defaultMinMessages
+            preferences[PreferenceKeys.AUTO_DELETE_NOTIFICATIONS_DAYS] = prefs.autoDeleteNotificationsAfterDays
+            preferences[PreferenceKeys.AUTO_DELETE_SUMMARIES_DAYS] = prefs.autoDeleteSummariesAfterDays
+            preferences[PreferenceKeys.DELETE_RAW_AFTER_SUMMARIZING] = prefs.deleteRawAfterSummarizing
+            preferences[PreferenceKeys.THEME] = prefs.theme
+            preferences[PreferenceKeys.SUMMARY_NOTIFICATION_SOUND] = prefs.summaryNotificationSound
+            preferences[PreferenceKeys.SUMMARY_NOTIFICATION_VIBRATE] = prefs.summaryNotificationVibrate
+            preferences[PreferenceKeys.WRITING_STYLE] = prefs.writingStyle
+            preferences[PreferenceKeys.SUMMARY_TONE] = prefs.summaryTone
+            preferences[PreferenceKeys.SUMMARY_LENGTH] = prefs.summaryLength
+            preferences[PreferenceKeys.NOTIFICATIONS_ENABLED] = prefs.notificationsEnabled
+        }
+    }
 }

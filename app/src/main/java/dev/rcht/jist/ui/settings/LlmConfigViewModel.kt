@@ -1,7 +1,9 @@
 package dev.rcht.jist.ui.settings
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import dev.rcht.jist.R
 import dev.rcht.jist.data.db.entity.LlmConfigEntity
 import dev.rcht.jist.data.repository.LlmConfigRepository
 import dev.rcht.jist.llm.LlmClientFactory
@@ -24,6 +26,7 @@ data class LlmConfigUiState(
 )
 
 class LlmConfigViewModel(
+    private val context: Context,
     private val llmConfigRepository: LlmConfigRepository,
     private val httpClient: OkHttpClient
 ) : ViewModel() {
@@ -48,7 +51,7 @@ class LlmConfigViewModel(
                 )
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(
-                    error = "Error loading configs: ${e.message}",
+                    error = context.getString(R.string.llm_error_loading, e.message ?: ""),
                     isLoading = false
                 )
             }
@@ -70,7 +73,7 @@ class LlmConfigViewModel(
                 _uiState.value = _uiState.value.copy(error = null)
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(
-                    error = "Error saving config: ${e.message}"
+                    error = context.getString(R.string.llm_error_saving, e.message ?: "")
                 )
             }
         }
@@ -83,7 +86,7 @@ class LlmConfigViewModel(
                 loadConfigs()
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(
-                    error = "Error deleting config: ${e.message}"
+                    error = context.getString(R.string.llm_error_deleting, e.message ?: "")
                 )
             }
         }
@@ -96,7 +99,7 @@ class LlmConfigViewModel(
                 loadConfigs()
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(
-                    error = "Error setting default: ${e.message}"
+                    error = context.getString(R.string.llm_error_default, e.message ?: "")
                 )
             }
         }
@@ -125,20 +128,20 @@ class LlmConfigViewModel(
                 when (result) {
                     is dev.rcht.jist.llm.LlmResult.Success -> {
                         _uiState.value = _uiState.value.copy(
-                            testConnectionResult = "✓ Connection successful!\n\nResponse: ${result.data.text.take(100)}",
+                            testConnectionResult = context.getString(R.string.llm_connection_success, result.data.text.take(100)),
                             testConnectionLoading = false
                         )
                     }
                     is dev.rcht.jist.llm.LlmResult.Error -> {
                         _uiState.value = _uiState.value.copy(
-                            testConnectionResult = "✗ Connection failed: ${result.error.message}",
+                            testConnectionResult = context.getString(R.string.llm_connection_failed, result.error.message),
                             testConnectionLoading = false
                         )
                     }
                 }
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(
-                    testConnectionResult = "✗ Error: ${e.message}",
+                    testConnectionResult = context.getString(R.string.llm_connection_error, e.message ?: ""),
                     testConnectionLoading = false
                 )
             }

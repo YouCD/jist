@@ -30,4 +30,10 @@ interface CustomPromptDao {
     
     @Query("DELETE FROM custom_prompts WHERE appName = :appName")
     suspend fun deleteByApp(appName: String)
+
+    @Query("DELETE FROM custom_prompts")
+    suspend fun deleteAll()
+
+    @Insert
+    suspend fun insertAll(prompts: List<CustomPromptEntity>)
 }

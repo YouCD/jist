@@ -27,4 +27,10 @@ interface LlmConfigDao {
     
     @Delete
     suspend fun delete(config: LlmConfigEntity)
+
+    @Query("DELETE FROM llm_configs")
+    suspend fun deleteAll()
+
+    @Insert
+    suspend fun insertAll(configs: List<LlmConfigEntity>)
 }
