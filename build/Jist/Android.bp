@@ -1,0 +1,9 @@
+android_app_import {
+    name: "Jist",
+    apk: "Jist.apk",
+    certificate: "platform",
+    privileged: true,
+    dex_preopt: {
+        enabled: true,
+    },
+}

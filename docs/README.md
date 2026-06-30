@@ -1,51 +1,63 @@
-# Jist — AI Notification Summarizer for Android
+# Jist — AI 通知摘要助手（Android）
 
-## Overview
+## 概述
 
-**Jist** is an open-source, fully configurable AI-powered notification summarizer for Android. It intercepts notifications from apps like WhatsApp, Telegram, Gmail, Slack, etc., batches them per contact/group/thread, and uses LLM APIs (Gemini, OpenAI, Claude, OpenRouter, or any OpenAI-compatible endpoint) to generate concise summaries.
+**Jist** 是一款开源的、完全可配置的 AI 通知摘要工具，运行在 Android 系统上。它拦截来自 WhatsApp、Telegram、Gmail、Slack 等应用的通知，按联系人/群组/话题聚合，再调用 LLM API（Gemini、OpenAI、Claude、OpenRouter 或任意兼容 OpenAI 协议的端点）生成简洁摘要。
 
-Users can choose between **auto-summarize** mode (hands-free) or **manual mode** (a "Summarize" action button appears on notifications).
-
----
-
-## Key Features
-
-- 🔔 **Notification Capture** — Listens to all app notifications via `NotificationListenerService`
-- 🤖 **Multi-Model LLM Support** — OpenAI, Gemini, Claude, OpenRouter, and any OpenAI-compatible API
-- ⚙️ **Fully Configurable** — Per-app rules, custom prompts, batch windows, model selection
-- 📋 **Auto & Manual Modes** — Auto-summarize in the background, or tap a "Summarize" button
-- 📱 **Per-App Rules** — Different settings for WhatsApp, Telegram, Gmail, etc.
-- 🔑 **Bring Your Own Key** — Users provide their own API keys, no backend needed
-- 🔒 **Privacy First** — All processing on-device, only notification text sent to chosen LLM
-- 🌐 **Open Source** — Apache 2.0 / GPL v3 licensed
+支持**自动摘要**（全自动）和**手动模式**（通知上显示"摘要"操作按钮）。
 
 ---
 
-## Documentation
+## 主要功能
 
-| Document | Description |
+- 🔔 **通知捕获** — 通过 `NotificationListenerService` 监听所有应用通知
+- 🤖 **多模型 LLM 支持** — OpenAI、Gemini、Claude、OpenRouter 及任意兼容 OpenAI 协议的 API
+- ⚙️ **完全可配置** — 按应用规则、自定义提示词、批处理窗口、模型选择
+- 📋 **自动与手动模式** — 后台自动摘要，或点击"摘要"按钮手动触发
+- 📱 **按应用规则** — 为不同应用设置不同行为
+- 🔑 **自带密钥** — 用户提供自己的 API Key，无需后端服务
+- 🔒 **隐私优先** — 所有处理在设备本地完成，仅通知文本发往 LLM
+- 🌐 **开源** — Apache 2.0
+
+### NAF（Notification Action Framework）
+
+- 🎯 **通知远程操作** — 通过 `system_server` Binder API 对通知执行点击、回复、关闭，效果等同于用户手动操作
+- ⚡ **绕过 30 秒 BAL 限制** — 合入 Framework 补丁后，通知被清除后仍可触发 contentIntent
+- 🧩 **Shadow Cache** — 通知取消后自动缓存 `NotificationRecord`（容量 50），扩展操作窗口期
+- 🔄 **回退机制** — NAF 不可用时自动降级到 `getLaunchIntentForPackage()`
+- 🔧 **基于 LineageOS Android 16 实现** — 需要 ROM 集成 NAF Framework 补丁（详见 [NAF 设计文档](./NAF.md) 与 [NAF 集成指南](./NAF_INTEGRATION_GUIDE.md)）
+
+---
+
+## 文档
+
+| 文档 | 说明 |
 |---|---|
-| [Architecture](./ARCHITECTURE.md) | System architecture, components, and data flow |
-| [Implementation Plan](./IMPLEMENTATION_PLAN.md) | Phased roadmap with detailed tasks |
-| [Database Schema](./DATABASE_SCHEMA.md) | Room database tables and relationships |
-| [LLM Integration](./LLM_INTEGRATION.md) | How multi-model LLM support works |
-| [File Structure](./FILE_STRUCTURE.md) | Target project file/folder organization |
-| [Material 3 Expressive](./MATERIAL3_EXPRESSIVE.md) | UI design system, components, and guidelines |
-| [Feature Ideas](./FEATURE_IDEAS.md) | Future features and community suggestions |
+| [架构设计](./ARCHITECTURE.md) | 系统架构、组件及数据流 |
+| [实现路线图](./IMPLEMENTATION_PLAN.md) | 分阶段任务计划 |
+| [数据库设计](./DATABASE_SCHEMA.md) | Room 数据库表及关系 |
+| [LLM 集成](./LLM_INTEGRATION.md) | 多模型 LLM 支持实现 |
+| [文件结构](./FILE_STRUCTURE.md) | 项目目录组织 |
+| [Material 3 设计](./MATERIAL3_EXPRESSIVE.md) | UI 设计系统与组件规范 |
+| [功能构想](./FEATURE_IDEAS.md) | 未来功能与社区建议 |
+| [NAF 设计文档](./NAF.md) | Notification Action Framework 完整设计方案 |
+| [NAF 集成指南](./NAF_INTEGRATION_GUIDE.md) | AI Agent / 第三方 App 集成 NAF 的指引 |
+| [Framework 补丁报告](./FRAMEWORK_PATCH_REPORT.md) | AOSP 修改汇总与编译验证 |
 
 ---
 
-## Tech Stack
+## 技术栈
 
-| Component | Technology |
+| 组件 | 技术 |
 |---|---|
-| Language | Kotlin |
-| UI | Jetpack Compose, Material 3 Expressive (Material You on Android 12+) |
-| Navigation | Compose Navigation |
-| Database | Room |
-| Preferences | DataStore |
-| Networking | OkHttp |
-| Background work | WorkManager |
-| Security | AndroidKeyStore + EncryptedSharedPreferences |
-| Serialization | kotlinx.serialization |
-| Min SDK | 29 (Android 10) |
+| 语言 | Kotlin |
+| UI | Jetpack Compose、Material Design 3、Compose Material Icons Extended |
+| UI 增强 | Haze（模糊/毛玻璃效果） |
+| 导航 | Navigation Compose |
+| 数据库 | Room + KSP |
+| 偏好存储 | DataStore Preferences |
+| 网络 | OkHttp |
+| 后台任务 | WorkManager |
+| 序列化 | kotlinx.serialization、Gson |
+| 最低 SDK | 29（Android 10） |
+| 目标 SDK | 36（Android 16） |
