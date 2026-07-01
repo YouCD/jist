@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -119,10 +120,32 @@ fun DashboardScreen(
         modifier = modifier.fillMaxSize(),
         topBar = {
             TopAppBar(
-                title = { },
+                title = {
+                    Text(
+                        buildAnnotatedString {
+                            append(getGreeting())
+                            append("，Jist ")
+                            withStyle(style = SpanStyle(color = JistCyan)) {
+                                append(if (uiState.isNotificationListenerActive) stringResource(R.string.active) else stringResource(R.string.dashboard_inactive))
+                            }
+                        },
+                        style = MaterialTheme.typography.headlineMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
+                    )
+                },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = Color.Transparent
-                )
+                ),
+                actions = {
+                    IconButton(onClick = onSettingsClick) {
+                        Icon(
+                            imageVector = Icons.Filled.Settings,
+                            contentDescription = stringResource(R.string.settings),
+                            tint = Color.White.copy(alpha = 0.8f)
+                        )
+                    }
+                }
             )
         }
     ) { paddingValues ->
@@ -175,43 +198,8 @@ fun DashboardScreen(
                         .verticalScroll(rememberScrollState()),
                     verticalArrangement = Arrangement.spacedBy(24.dp)
                 ) {
-                    // Header Section
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.Top
-                ) {
-                    Column {
-                        Text(
-                            text = getGreeting(),
-                            style = MaterialTheme.typography.labelMedium,
-                            color = Color.White.copy(alpha = 0.6f),
-                            letterSpacing = 1.sp
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            buildAnnotatedString {
-                                append("Jist ")
-                                withStyle(style = SpanStyle(color = JistCyan)) {
-                                    append(if (uiState.isNotificationListenerActive) stringResource(R.string.active) else stringResource(R.string.dashboard_inactive))
-                                }
-                            },
-                            style = MaterialTheme.typography.headlineMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.White
-                        )
-                    }
-                    IconButton(onClick = onSettingsClick) {
-                        Icon(
-                            imageVector = Icons.Filled.Settings,
-                            contentDescription = stringResource(R.string.settings),
-                            tint = Color.White.copy(alpha = 0.8f)
-                        )
-                    }
-                }
-
-                // Permission banner if listener not enabled
-                if (!hasNotificationListenerPermission) {
+                    // Permission banner if listener not enabled
+                    if (!hasNotificationListenerPermission) {
                     PermissionBanner(
                         onEnable = {
                             PermissionHelper.openNotificationSettings(context)
@@ -677,10 +665,15 @@ fun ActivityItem(
 @Composable
 private fun getGreeting(): String {
     val hour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
-    return when (hour) {
-        in 5..11 -> stringResource(R.string.dashboard_good_morning)
-        in 12..16 -> stringResource(R.string.dashboard_good_afternoon)
-        in 17..20 -> stringResource(R.string.dashboard_good_evening)
+    val minute = Calendar.getInstance().get(Calendar.MINUTE)
+    val time = hour * 60 + minute
+    return when {
+        time < 5*60 -> stringResource(R.string.dashboard_good_wee_hours)
+        time < 8*60 -> stringResource(R.string.dashboard_good_morning)
+        time < 12*60 -> stringResource(R.string.dashboard_good_forenoon)
+        time < 13*60 -> stringResource(R.string.dashboard_good_noon)
+        time < 18*60 -> stringResource(R.string.dashboard_good_afternoon)
+        time < 19*60 + 30 -> stringResource(R.string.dashboard_good_evening)
         else -> stringResource(R.string.dashboard_good_night)
     }
 }

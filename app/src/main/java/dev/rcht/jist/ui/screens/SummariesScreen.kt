@@ -21,6 +21,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import dev.rcht.jist.ui.components.GlassScaffold
+import dev.rcht.jist.ui.components.MarkdownText
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -225,7 +226,7 @@ fun SummariesScreen(
                                                     Text("${summary.messageCount} msg", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                                 }
                                                 Spacer(modifier = Modifier.height(8.dp))
-                                                Text(summary.summaryText, style = MaterialTheme.typography.bodyMedium, maxLines = 3, overflow = TextOverflow.Ellipsis, color = MaterialTheme.colorScheme.onSurface)
+                                                MarkdownText(markdown = summary.summaryText, maxLines = 3)
                                                 Spacer(modifier = Modifier.height(4.dp))
                                                 Text(
                                                     java.text.SimpleDateFormat("MMM dd, HH:mm", java.util.Locale.getDefault()).format(java.util.Date(summary.createdAt)),
@@ -329,7 +330,7 @@ private fun SummaryCard(
                 }
                 Text("$messageCount msg", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-            Text(summaryText, style = MaterialTheme.typography.bodyMedium, maxLines = 3, overflow = TextOverflow.Ellipsis, color = MaterialTheme.colorScheme.onSurface)
+            MarkdownText(summaryText, maxLines = 3)
             Text(formatDate(createdAt), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }

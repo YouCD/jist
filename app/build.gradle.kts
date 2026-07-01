@@ -101,6 +101,7 @@ dependencies {
     implementation(libs.androidx.activity.compose)
     implementation(libs.haze)
     implementation(libs.haze.materials)
+    implementation("io.noties.markwon:core:4.6.2")
     debugImplementation(libs.androidx.compose.ui.tooling)
     
     testImplementation(libs.junit)

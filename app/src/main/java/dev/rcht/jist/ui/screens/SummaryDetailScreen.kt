@@ -34,6 +34,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import dev.rcht.jist.ui.components.GlassScaffold
+import dev.rcht.jist.ui.components.MarkdownText
 import androidx.compose.material3.Text
 import kotlinx.coroutines.delay
 import androidx.compose.material3.TopAppBarDefaults
@@ -158,9 +159,8 @@ fun SummaryDetailScreen(
                                 containerColor = if (showGlow) MaterialTheme.colorScheme.primary.copy(alpha = 0.15f) else Color.Transparent
                             )
                         ) {
-                            Text(
-                                text = summaryText,
-                                style = MaterialTheme.typography.bodyMedium,
+                            MarkdownText(
+                                markdown = summaryText,
                                 modifier = Modifier.padding(16.dp)
                             )
                         }

@@ -49,8 +49,13 @@
     <string name="dashboard_recent_matches">最近匹配</string>
     <string name="dashboard_good_morning">早上好</string>
     <string name="dashboard_good_afternoon">下午好</string>
-    <string name="dashboard_good_evening">晚上好</string>
-    <string name="dashboard_good_night">晚安</string>
+    <string name="dashboard_good_evening">傍晚好</string>
+    <string name="dashboard_good_night">晚上好</string>
+    <string name="dashboard_good_wee_hours">凌晨好</string>
+    <string name="dashboard_good_forenoon">上午好</string>
+    <string name="dashboard_good_noon">中午好</string>
+    <string name="jist_active">Jist 已启用</string>
+    <string name="jist_inactive">Jist 未启用</string>
     <string name="dashboard_just_now">刚刚</string>
     <string name="dashboard_min_ago">%d 分钟前</string>
     <string name="dashboard_hour_ago">%d 小时前</string>

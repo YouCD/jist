@@ -51,6 +51,11 @@
     <string name="dashboard_good_afternoon">GOOD AFTERNOON</string>
     <string name="dashboard_good_evening">GOOD EVENING</string>
     <string name="dashboard_good_night">GOOD NIGHT</string>
+    <string name="dashboard_good_wee_hours">WEE HOURS</string>
+    <string name="dashboard_good_forenoon">GOOD MORNING</string>
+    <string name="dashboard_good_noon">GOOD NOON</string>
+    <string name="jist_active">Jist Active</string>
+    <string name="jist_inactive">Jist Inactive</string>
     <string name="dashboard_just_now">Just now</string>
     <string name="dashboard_min_ago">%dm ago</string>
     <string name="dashboard_hour_ago">%dh ago</string>

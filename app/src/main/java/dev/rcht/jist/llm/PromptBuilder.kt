@@ -11,14 +11,14 @@ private val ENGLISH_PROMPT = """
     - Be brief but complete - capture essential information
     - Highlight action items or questions directed at the user
     - Preserve tone (urgent, casual, formal, etc)
-    - Format as plain paragraphs (NOT bullet points or markdown)
     - Keep the summary under 150 words
     - Include sender names if it's a group chat or multiple people
     - Flag any urgent or time-sensitive messages
     - Extract and highlight decisions or next steps
-    - Do NOT use markdown formatting, asterisks, dashes, or special characters
-    - Do NOT use bullet points or numbered lists
-    - Simply use plain text paragraphs separated by line breaks
+    - Use Markdown formatting: **bold** for emphasis, `code` for code/commands, 
+      > for quotes, --- for section separators
+    - Use bullet points or numbered lists when listing multiple items
+    - Keep paragraphs separated by line breaks
 """.trimIndent()
 
 private val CHINESE_PROMPT = """
@@ -28,14 +28,14 @@ private val CHINESE_PROMPT = """
     - 简洁完整 — 抓取关键信息
     - 突出需要用户处理的事项或问题
     - 保留原文语气（紧急、随意、正式等）
-    - 纯段落格式（不要使用项目符号或 Markdown）
     - 摘要控制在 150 字以内
     - 如果是群聊或多人群组，注明发送者
     - 标记任何紧急或时效性强的消息
     - 提取并突出决策或后续步骤
-    - 不要使用 Markdown 格式、星号、破折号或特殊符号
-    - 不要使用项目符号或编号列表
-    - 仅使用纯文本段落，段落之间用换行分隔
+    - 可以使用 Markdown 格式：**加粗** 强调、`代码` 表示命令/代码、
+      > 引用、--- 分隔线
+    - 可以使用项目符号或编号列表
+    - 段落之间用换行分隔
 """.trimIndent()
 
 fun getDefaultSystemPrompt(): String {

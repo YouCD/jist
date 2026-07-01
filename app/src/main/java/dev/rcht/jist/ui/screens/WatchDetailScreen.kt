@@ -34,6 +34,7 @@ import dev.rcht.jist.ui.components.GlassCard
 import dev.rcht.jist.ui.components.GlassScaffold
 import dev.rcht.jist.ui.theme.JistCyan
 import dev.rcht.jist.ui.theme.JistPurple
+import dev.rcht.jist.ui.components.MarkdownText
 import dev.rcht.jist.ui.watchdetail.AppGroup
 import dev.rcht.jist.ui.watchdetail.CollectedItemDisplay
 import dev.rcht.jist.ui.watchdetail.TimeGroup
@@ -186,7 +187,7 @@ fun WatchDetailScreen(
 @Composable
 private fun MetaInfoCard(uiState: WatchDetailUiState) {
     val topic = uiState.topic ?: return
-    GlassCard {
+    GlassCard(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp)) {
             if (topic.description.isNotBlank()) {
                 Text(topic.description, style = MaterialTheme.typography.bodyMedium,
@@ -230,7 +231,7 @@ private fun MetaInfoCard(uiState: WatchDetailUiState) {
 
 @Composable
 private fun SummaryCard(uiState: WatchDetailUiState) {
-    GlassCard {
+    GlassCard(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
                 stringResource(R.string.watch_collected_summary, uiState.totalCount, uiState.appCount),
@@ -326,10 +327,9 @@ private fun CollectedItemCard(item: CollectedItemDisplay) {
             }
             if (item.notificationContent.isNotBlank()) {
                 Spacer(Modifier.height(4.dp))
-                Text(
-                    item.notificationContent,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                MarkdownText(
+                    markdown = item.notificationContent,
+                    maxLines = Int.MAX_VALUE
                 )
             }
 
