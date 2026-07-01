@@ -9,11 +9,15 @@ import dev.rcht.jist.data.db.dao.CustomPromptDao
 import dev.rcht.jist.data.db.dao.LlmConfigDao
 import dev.rcht.jist.data.db.dao.NotificationDao
 import dev.rcht.jist.data.db.dao.SummaryDao
+import dev.rcht.jist.data.db.dao.WatchCollectedItemDao
+import dev.rcht.jist.data.db.dao.WatchTopicDao
 import dev.rcht.jist.data.db.entity.AppRuleEntity
 import dev.rcht.jist.data.db.entity.CustomPromptEntity
 import dev.rcht.jist.data.db.entity.LlmConfigEntity
 import dev.rcht.jist.data.db.entity.NotificationEntity
 import dev.rcht.jist.data.db.entity.SummaryEntity
+import dev.rcht.jist.data.db.entity.WatchCollectedItemEntity
+import dev.rcht.jist.data.db.entity.WatchTopicEntity
 import dev.rcht.jist.data.db.fts.SummaryFts
 
 @Database(
@@ -23,9 +27,11 @@ import dev.rcht.jist.data.db.fts.SummaryFts
         AppRuleEntity::class,
         LlmConfigEntity::class,
         SummaryFts::class,
-        CustomPromptEntity::class
+        CustomPromptEntity::class,
+        WatchTopicEntity::class,
+        WatchCollectedItemEntity::class
     ],
-    version = 7,
+    version = 9,
     exportSchema = false
 )
 abstract class JistDatabase : RoomDatabase() {
@@ -35,6 +41,8 @@ abstract class JistDatabase : RoomDatabase() {
     abstract fun appRuleDao(): AppRuleDao
     abstract fun llmConfigDao(): LlmConfigDao
     abstract fun customPromptDao(): CustomPromptDao
+    abstract fun watchTopicDao(): WatchTopicDao
+    abstract fun watchCollectedItemDao(): WatchCollectedItemDao
     
     companion object {
         private var instance: JistDatabase? = null

@@ -130,18 +130,28 @@ class JistNotificationListenerService : NotificationListenerService() {
                         notificationWithKey.notificationTag,
                         notificationWithKey.notificationId
                     )
+                    val savedNotification: NotificationEntity
                     if (existing != null) {
                         // Notification update: same tag+id, update content/timestamp
-                        it.notificationRepository.update(existing.copy(
+                        savedNotification = existing.copy(
                             content = newContent,
                             timestamp = notificationWithKey.timestamp,
                             pendingIntentData = piData ?: existing.pendingIntentData
-                        ))
+                        )
+                        it.notificationRepository.update(savedNotification)
                         Log.d(TAG, "Updated notification (tag+id match): $conversationKey")
                     } else {
-                        it.notificationRepository.insert(notificationWithKey.copy(pendingIntentData = piData))
-                        Log.d(TAG, "Notification inserted: $conversationKey")
+                        val savedId = it.notificationRepository.insert(
+                            notificationWithKey.copy(pendingIntentData = piData)
+                        )
+                        savedNotification = notificationWithKey.copy(
+                            id = savedId, pendingIntentData = piData
+                        )
+                        Log.d(TAG, "Notification inserted: $conversationKey (id=$savedId)")
                     }
+
+                    // WatchEngine: 实时匹配关注（通知已保存，有正确的 id）
+                    it.watchEngine.matchNewNotification(savedNotification)
                 }
             }
         } catch (e: Exception) {

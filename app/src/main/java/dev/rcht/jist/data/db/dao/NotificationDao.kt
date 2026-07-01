@@ -48,6 +48,9 @@ interface NotificationDao {
     @Query("SELECT * FROM notifications ORDER BY timestamp DESC LIMIT :limit OFFSET :offset")
     suspend fun getRecent(limit: Int, offset: Int): List<NotificationEntity>
     
+    @Query("SELECT * FROM notifications WHERE id = :id")
+    suspend fun getById(id: Long): NotificationEntity?
+
     @Query("SELECT * FROM notifications WHERE packageName = :packageName ORDER BY timestamp DESC")
     suspend fun getByApp(packageName: String): List<NotificationEntity>
 

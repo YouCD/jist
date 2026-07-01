@@ -3,6 +3,7 @@ package dev.rcht.jist.data.config
 import dev.rcht.jist.data.db.entity.AppRuleEntity
 import dev.rcht.jist.data.db.entity.CustomPromptEntity
 import dev.rcht.jist.data.db.entity.LlmConfigEntity
+import dev.rcht.jist.data.db.entity.WatchTopicEntity
 import dev.rcht.jist.data.preferences.JistPreferences
 import kotlinx.serialization.Serializable
 
@@ -13,7 +14,8 @@ data class ConfigExportData(
     val preferences: JistPreferences? = null,
     val llmConfigs: List<LlmConfigDto> = emptyList(),
     val appRules: List<AppRuleDto> = emptyList(),
-    val customPrompts: List<CustomPromptDto> = emptyList()
+    val customPrompts: List<CustomPromptDto> = emptyList(),
+    val watchTopics: List<WatchTopicDto> = emptyList()
 )
 
 @Serializable
@@ -47,6 +49,15 @@ data class CustomPromptDto(
     val enabled: Boolean = true,
     val createdAt: Long = System.currentTimeMillis(),
     val updatedAt: Long = System.currentTimeMillis()
+)
+
+@Serializable
+data class WatchTopicDto(
+    val title: String,
+    val description: String = "",
+    val keywords: String = "[]",
+    val matchMode: String = "KEYWORD_ONLY",
+    val isEnabled: Boolean = true
 )
 
 fun LlmConfigEntity.toDto() = LlmConfigDto(
@@ -107,4 +118,20 @@ fun CustomPromptDto.toEntity() = CustomPromptEntity(
     enabled = enabled,
     createdAt = createdAt,
     updatedAt = updatedAt
+)
+
+fun WatchTopicEntity.toDto() = WatchTopicDto(
+    title = title,
+    description = description,
+    keywords = keywords,
+    matchMode = matchMode,
+    isEnabled = isEnabled
+)
+
+fun WatchTopicDto.toEntity() = WatchTopicEntity(
+    title = title,
+    description = description,
+    keywords = keywords,
+    matchMode = matchMode,
+    isEnabled = isEnabled
 )

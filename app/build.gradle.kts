@@ -5,6 +5,18 @@ plugins {
     alias(libs.plugins.compose.compiler)
 }
 
+val gitTag: String = try {
+    val process = Runtime.getRuntime().exec(arrayOf("git", "describe", "--tags", "--abbrev=0"))
+    if (process.waitFor() != 0) throw Exception("git describe failed")
+    process.inputStream.bufferedReader().readText().trim().removePrefix("v")
+} catch (_: Exception) { "0.0.1" }
+val versionParts = gitTag.split(".").map { it.toIntOrNull() ?: 0 }
+val generatedVersionCode = when {
+    versionParts.size >= 3 -> versionParts[0] * 10000 + versionParts[1] * 100 + versionParts[2]
+    versionParts.size == 2 -> versionParts[0] * 10000 + versionParts[1] * 100
+    else -> versionParts[0] * 10000
+}
+
 android {
     namespace = "dev.rcht.jist"
     compileSdk = 36
@@ -13,8 +25,8 @@ android {
         applicationId = "dev.rcht.jist"
         minSdk = 29
         targetSdk = 36
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = generatedVersionCode
+        versionName = gitTag
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -33,6 +45,7 @@ android {
     }
     lint {
         disable.add("ProtectedPermissions")
+        disable.add("Instantiatable")
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
@@ -80,6 +93,7 @@ dependencies {
     implementation(libs.androidx.compose.ui.graphics)
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.foundation)
+    implementation("androidx.compose.foundation:foundation-layout:1.10.0")
     implementation(libs.androidx.compose.material3)
     implementation(libs.androidx.compose.material.icons.extended)
     implementation(libs.androidx.lifecycle.runtime.compose)

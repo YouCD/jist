@@ -10,10 +10,12 @@ import androidx.compose.material.icons.filled.Dashboard
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Summarize
+import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.outlined.Dashboard
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.Summarize
+import androidx.compose.material.icons.outlined.Visibility
 // removed duplicate import
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
@@ -51,10 +53,11 @@ data class BottomNavItem(
 fun bottomNavItems(): List<BottomNavItem> = listOf(
     BottomNavItem(stringResource(R.string.nav_dashboard), Screen.Dashboard.route, Icons.Filled.Dashboard, Icons.Outlined.Dashboard),
     BottomNavItem(stringResource(R.string.nav_summaries), Screen.Summaries.route, Icons.Filled.Summarize, Icons.Outlined.Summarize),
-    BottomNavItem(stringResource(R.string.nav_alerts), Screen.NotificationLog.route, Icons.Filled.Notifications, Icons.Outlined.Notifications)
+    BottomNavItem(stringResource(R.string.nav_alerts), Screen.NotificationLog.route, Icons.Filled.Notifications, Icons.Outlined.Notifications),
+    BottomNavItem(stringResource(R.string.watch_bottom_nav), Screen.WatchList.route, Icons.Filled.Visibility, Icons.Outlined.Visibility)
 )
 
-val mainTabRoutes = setOf(Screen.Dashboard.route, Screen.Summaries.route, Screen.NotificationLog.route)
+val mainTabRoutes = setOf(Screen.Dashboard.route, Screen.Summaries.route, Screen.NotificationLog.route, Screen.WatchList.route)
 
 @Composable
 fun JistApp(deepLinkSummaryId: String? = null) {

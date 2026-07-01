@@ -11,7 +11,10 @@ import dev.rcht.jist.data.repository.AppRuleRepository
 import dev.rcht.jist.data.repository.LlmConfigRepository
 import dev.rcht.jist.data.repository.NotificationRepository
 import dev.rcht.jist.data.repository.SummaryRepository
+import dev.rcht.jist.data.repository.WatchCollectedItemRepository
+import dev.rcht.jist.data.repository.WatchTopicRepository
 import dev.rcht.jist.engine.SummaryEngine
+import dev.rcht.jist.engine.WatchEngine
 import dev.rcht.jist.worker.SummaryWorker
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -36,9 +39,12 @@ class JistApplication : Application() {
     lateinit var llmConfigRepository: LlmConfigRepository
     lateinit var preferencesRepository: PreferencesRepository
     lateinit var customPromptRepository: dev.rcht.jist.data.repository.CustomPromptRepository
+    lateinit var watchTopicRepository: WatchTopicRepository
+    lateinit var watchCollectedItemRepository: WatchCollectedItemRepository
 
     // Engines
     lateinit var summaryEngine: SummaryEngine
+    lateinit var watchEngine: WatchEngine
     
     override fun onCreate() {
         super.onCreate()
@@ -64,6 +70,8 @@ class JistApplication : Application() {
         appRuleRepository = AppRuleRepository(database.appRuleDao())
         llmConfigRepository = LlmConfigRepository(database.llmConfigDao())
         customPromptRepository = dev.rcht.jist.data.repository.CustomPromptRepository(database.customPromptDao())
+        watchTopicRepository = WatchTopicRepository(database.watchTopicDao())
+        watchCollectedItemRepository = WatchCollectedItemRepository(database.watchCollectedItemDao())
         preferencesRepository = PreferencesRepository(this)
 
         // Ensure onboarding is shown when DB has no app rules even if preferences say complete (first-run recovery)
@@ -88,6 +96,13 @@ class JistApplication : Application() {
             llmConfigRepository,
             appRuleRepository,
             preferencesRepository,
+            httpClient
+        )
+        watchEngine = WatchEngine(
+            this,
+            watchTopicRepository,
+            watchCollectedItemRepository,
+            llmConfigRepository,
             httpClient
         )
         

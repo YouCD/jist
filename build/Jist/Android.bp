@@ -1,9 +1,13 @@
 android_app_import {
-    name: "Jist",
+    name: "dev.rcht.jist",
     apk: "Jist.apk",
     certificate: "platform",
     privileged: true,
     dex_preopt: {
-        enabled: true,
+        enabled: false,
     },
+    optional_uses_libs: [
+        "androidx.window.extensions",
+        "androidx.window.sidecar",
+    ],
 }

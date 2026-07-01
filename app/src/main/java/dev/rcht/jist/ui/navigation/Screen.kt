@@ -12,8 +12,15 @@ sealed class Screen(val route: String) {
     data object About : Screen("about")
     
     data object LlmConfig : Screen("llm_config")
+    data object WatchList : Screen("watch_list")
+    data object WatchEdit : Screen("watch_edit?watchId={watchId}") {
+        fun createRoute(watchId: Long? = null) = "watch_edit?watchId=$watchId"
+    }
+    data object WatchDetail : Screen("watch_detail/{watchId}") {
+        fun createRoute(watchId: Long) = "watch_detail/$watchId"
+    }
     
     companion object {
-        val allScreens = listOf(Dashboard, Summaries, Settings, AppSettings, NotificationLog, About, LlmConfig)
+        val allScreens = listOf(Dashboard, Summaries, Settings, AppSettings, NotificationLog, About, LlmConfig, WatchList)
     }
 }

@@ -117,7 +117,7 @@ fun OnboardingScreen(
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
     val configManager = remember {
-        ConfigManager(context, context.applicationContext.let { (it as JistApplication).preferencesRepository }, (context.applicationContext as JistApplication).llmConfigRepository, (context.applicationContext as JistApplication).appRuleRepository, (context.applicationContext as JistApplication).customPromptRepository)
+        ConfigManager(context, context.applicationContext.let { (it as JistApplication).preferencesRepository }, (context.applicationContext as JistApplication).llmConfigRepository, (context.applicationContext as JistApplication).appRuleRepository, (context.applicationContext as JistApplication).customPromptRepository, (context.applicationContext as JistApplication).watchTopicRepository)
     }
 
     val importSuccessMsg = stringResource(R.string.onboarding_import_config_success)

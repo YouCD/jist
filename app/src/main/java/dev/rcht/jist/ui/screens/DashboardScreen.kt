@@ -2,7 +2,11 @@ package dev.rcht.jist.ui.screens
 
 import dev.rcht.jist.R
 import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.Canvas
 import android.graphics.drawable.Drawable
+import androidx.compose.animation.core.animateIntAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -32,6 +36,7 @@ import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material.icons.outlined.Security
@@ -50,8 +55,11 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -75,6 +83,7 @@ import dev.rcht.jist.data.db.entity.SummaryEntity
 import dev.rcht.jist.ui.components.GlassCard
 import dev.rcht.jist.ui.components.GlassScaffold
 import dev.rcht.jist.ui.dashboard.DashboardUiState
+import dev.rcht.jist.ui.dashboard.WatchRecentMatch
 import dev.rcht.jist.ui.theme.JistCyan
 import dev.rcht.jist.ui.theme.JistPurple
 import dev.rcht.jist.ui.components.PermissionBanner
@@ -82,6 +91,7 @@ import dev.rcht.jist.ui.components.BatteryOptimizationBanner
 import dev.rcht.jist.util.BatteryOptimizationHelper
 import dev.rcht.jist.util.PermissionHelper
 import java.util.Calendar
+import kotlinx.coroutines.delay
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeSource
 import dev.chrisbanes.haze.rememberHazeState
@@ -94,6 +104,9 @@ fun DashboardScreen(
     onSettingsClick: () -> Unit = {},
     onViewAllClick: () -> Unit = {},
     onSummaryClick: (Long) -> Unit = {},
+    onWatchTopicClick: (Long) -> Unit = {},
+    onWatchCreateClick: () -> Unit = {},
+    onWatchListClick: () -> Unit = {},
     hasNotificationListenerPermission: Boolean = false,
     isBatteryOptimizationDisabled: Boolean = false,
     modifier: Modifier = Modifier
@@ -242,16 +255,9 @@ fun DashboardScreen(
                             }
                             
                             Column {
-                                Text(
-                                    buildAnnotatedString {
-                                        withStyle(style = SpanStyle(fontSize = 32.sp, fontWeight = FontWeight.Bold)) {
-                                            append(uiState.totalNotificationsCount.toString())
-                                        }
-                                        withStyle(style = SpanStyle(fontSize = 12.sp, color = Color.White.copy(alpha = 0.6f))) {
-                                            append("\n${stringResource(R.string.dashboard_notifications)}")
-                                        }
-                                    },
-                                    color = Color.White
+                                AnimatedCounter(
+                                    target = uiState.totalNotificationsCount,
+                                    suffix = stringResource(R.string.dashboard_notifications)
                                 )
                             }
 
@@ -298,16 +304,9 @@ fun DashboardScreen(
                             }
 
                             Column {
-                                Text(
-                                    buildAnnotatedString {
-                                        withStyle(style = SpanStyle(fontSize = 32.sp, fontWeight = FontWeight.Bold)) {
-                                            append(uiState.summariesTodayCount.toString())
-                                        }
-                                        withStyle(style = SpanStyle(fontSize = 12.sp, color = Color.White.copy(alpha = 0.6f))) {
-                                            append("\n${stringResource(R.string.dashboard_digests)}")
-                                        }
-                                    },
-                                    color = Color.White
+                                AnimatedCounter(
+                                    target = uiState.summariesTodayCount,
+                                    suffix = stringResource(R.string.dashboard_digests)
                                 )
                             }
                             // Dashed progress based on real ratio
@@ -345,53 +344,102 @@ fun DashboardScreen(
                     )
                 }
 
-                // Time Saved Card
-                GlassCard(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(80.dp),
-                    hazeState = hazeState
+                // Watch Section
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(horizontal = 20.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
+                    GlassCard(
+                        modifier = Modifier.weight(1f).height(120.dp).clickable { onWatchListClick() },
+                        hazeState = hazeState
                     ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Box(
-                                modifier = Modifier
-                                    .size(40.dp)
-                                    .background(JistCyan.copy(alpha = 0.15f), CircleShape)
-                                    .padding(8.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
+                        Column(
+                            modifier = Modifier.fillMaxSize().padding(16.dp),
+                            verticalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
                                 Icon(
-                                    imageVector = Icons.Filled.HourglassEmpty,
+                                    imageVector = Icons.Filled.Visibility,
                                     contentDescription = null,
-                                    tint = JistCyan
+                                    tint = JistCyan,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(Modifier.width(8.dp))
+                                Text(
+                                    stringResource(R.string.watch_list_title),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = JistCyan,
+                                    fontWeight = FontWeight.Bold
                                 )
                             }
-                            Spacer(modifier = Modifier.width(16.dp))
                             Column {
-                                Text(
-                                    text = stringResource(R.string.dashboard_time_saved),
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = Color.White.copy(alpha = 0.6f)
-                                )
-                                Text(
-                                    text = "~${uiState.timeSavedMinutes} minutes",
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.Bold,
-                                    color = Color.White
+                                AnimatedCounter(
+                                    target = uiState.watchActiveCount,
+                                    suffix = stringResource(R.string.dashboard_watching)
                                 )
                             }
                         }
-                        Icon(
-                            imageVector = Icons.Filled.ArrowForward,
-                            contentDescription = null,
-                            tint = Color.White.copy(alpha = 0.4f)
+                    }
+
+                    GlassCard(
+                        modifier = Modifier.weight(1f).height(120.dp).clickable { onWatchListClick() },
+                        hazeState = hazeState
+                    ) {
+                        Column(
+                            modifier = Modifier.fillMaxSize().padding(16.dp),
+                            verticalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    imageVector = Icons.Filled.Info,
+                                    contentDescription = null,
+                                    tint = JistPurple,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(Modifier.width(8.dp))
+                                Text(
+                                    stringResource(R.string.dashboard_collected),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = JistPurple,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                            Column {
+                                AnimatedCounter(
+                                    target = uiState.watchCollectedCount,
+                                    suffix = stringResource(R.string.dashboard_items)
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // Recent Watch Matches
+                if (uiState.recentWatchMatches.isNotEmpty()) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            stringResource(R.string.dashboard_recent_matches),
+                            style = MaterialTheme.typography.titleMedium,
+                            color = Color.White,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Text(
+                            stringResource(R.string.dashboard_view_all),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = JistCyan,
+                            modifier = Modifier.clickable { onWatchListClick() }
+                        )
+                    }
+
+                    uiState.recentWatchMatches.forEach { match ->
+                        WatchMatchItem(
+                            match = match,
+                            hazeState = hazeState,
+                            onClick = { onWatchTopicClick(match.topicId) }
                         )
                     }
                 }
@@ -456,6 +504,76 @@ fun DashboardScreen(
 
                 Spacer(modifier = Modifier.height(80.dp)) // Bottom padding for nav bar
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun WatchMatchItem(
+    match: WatchRecentMatch,
+    hazeState: HazeState?,
+    onClick: () -> Unit
+) {
+    GlassCard(
+        modifier = Modifier.fillMaxWidth().clickable { onClick() },
+        shape = RoundedCornerShape(16.dp),
+        hazeState = hazeState
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            val context = LocalContext.current
+            val iconBitmap = remember(match.packageName) {
+                try {
+                    val d = context.packageManager.getApplicationIcon(match.packageName)
+                    val bmp = Bitmap.createBitmap(
+                        d.intrinsicWidth.coerceAtLeast(1), d.intrinsicHeight.coerceAtLeast(1),
+                        Bitmap.Config.ARGB_8888
+                    )
+                    val c = Canvas(bmp)
+                    d.setBounds(0, 0, c.width, c.height)
+                    d.draw(c)
+                    bmp.asImageBitmap()
+                } catch (_: Exception) { null }
+            }
+            if (iconBitmap != null) {
+                Image(
+                    bitmap = iconBitmap,
+                    contentDescription = null,
+                    modifier = Modifier.size(32.dp).clip(CircleShape)
+                )
+                Spacer(Modifier.width(12.dp))
+            }
+            Column(modifier = Modifier.weight(1f)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        match.appName,
+                        style = MaterialTheme.typography.bodySmall,
+                        fontWeight = FontWeight.SemiBold,
+                        color = Color.White
+                    )
+                    Spacer(Modifier.width(6.dp))
+                    Text(
+                        "·",
+                        color = Color.White.copy(alpha = 0.4f)
+                    )
+                    Spacer(Modifier.width(6.dp))
+                    Text(
+                        match.timeAgo,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = Color.White.copy(alpha = 0.6f)
+                    )
+                }
+                Spacer(Modifier.height(2.dp))
+                Text(
+                    stringResource(R.string.watch_match_display, match.matchedKeyword),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = JistCyan,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
             }
         }
     }
@@ -596,6 +714,36 @@ private fun getAppAccentColor(appName: String): Color {
         "signal" -> Color(0xFF3A76F0)
         else -> Color(0xFF6C63FF) // Default purple
     }
+}
+
+@Composable
+private fun AnimatedCounter(
+    target: Int,
+    suffix: String,
+    modifier: Modifier = Modifier,
+    color: Color = Color.White
+) {
+    val animatedState = remember { mutableIntStateOf(0) }
+    LaunchedEffect(target) {
+        val frames = 20
+        for (i in 1..frames) {
+            delay(40)
+            animatedState.intValue = target * i / frames
+        }
+        animatedState.intValue = target
+    }
+    Text(
+        buildAnnotatedString {
+            withStyle(SpanStyle(fontSize = 32.sp, fontWeight = FontWeight.Bold)) {
+                append(animatedState.intValue.toString())
+            }
+            withStyle(SpanStyle(fontSize = 12.sp, color = color.copy(alpha = 0.6f))) {
+                append("\n$suffix")
+            }
+        },
+        color = color,
+        modifier = modifier
+    )
 }
 
 @androidx.compose.ui.tooling.preview.Preview

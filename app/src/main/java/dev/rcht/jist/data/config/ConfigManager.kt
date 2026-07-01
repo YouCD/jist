@@ -7,6 +7,7 @@ import dev.rcht.jist.data.preferences.PreferencesRepository
 import dev.rcht.jist.data.repository.AppRuleRepository
 import dev.rcht.jist.data.repository.CustomPromptRepository
 import dev.rcht.jist.data.repository.LlmConfigRepository
+import dev.rcht.jist.data.repository.WatchTopicRepository
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.serialization.json.Json
@@ -18,7 +19,8 @@ class ConfigManager(
     private val preferencesRepository: PreferencesRepository,
     private val llmConfigRepository: LlmConfigRepository,
     private val appRuleRepository: AppRuleRepository,
-    private val customPromptRepository: CustomPromptRepository
+    private val customPromptRepository: CustomPromptRepository,
+    private val watchTopicRepository: WatchTopicRepository
 ) {
     private val json = Json {
         prettyPrint = true
@@ -30,12 +32,14 @@ class ConfigManager(
         val llmConfigs = llmConfigRepository.getAll().map { it.toDto() }
         val appRules = appRuleRepository.getAll().map { it.toDto() }
         val customPrompts = customPromptRepository.getAll().map { it.toDto() }
+        val watchTopics = watchTopicRepository.getAll().map { it.toDto() }
 
         val data = ConfigExportData(
             preferences = prefs,
             llmConfigs = llmConfigs,
             appRules = appRules,
-            customPrompts = customPrompts
+            customPrompts = customPrompts,
+            watchTopics = watchTopics
         )
         return json.encodeToString(ConfigExportData.serializer(), data)
     }
@@ -91,6 +95,10 @@ class ConfigManager(
 
         if (data.customPrompts.isNotEmpty()) {
             customPromptRepository.replaceAll(data.customPrompts.map { it.toEntity() })
+        }
+
+        if (data.watchTopics.isNotEmpty()) {
+            watchTopicRepository.replaceAll(data.watchTopics.map { it.toEntity() })
         }
     }
 }

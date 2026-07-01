@@ -1,6 +1,7 @@
 package dev.rcht.jist.ui.dashboard
 
 import android.content.Context
+import android.content.pm.PackageManager
 import androidx.core.app.NotificationManagerCompat
 import android.util.Log
 import androidx.lifecycle.ViewModel
@@ -8,11 +9,24 @@ import androidx.lifecycle.viewModelScope
 import dev.rcht.jist.data.repository.NotificationRepository
 import dev.rcht.jist.data.db.entity.SummaryEntity
 import dev.rcht.jist.data.repository.SummaryRepository
+import dev.rcht.jist.data.repository.WatchTopicRepository
+import dev.rcht.jist.data.repository.WatchCollectedItemRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import java.util.Calendar
+
+data class WatchRecentMatch(
+    val collectedItemId: Long,
+    val topicId: Long,
+    val topicTitle: String,
+    val appName: String,
+    val packageName: String,
+    val matchedKeyword: String,
+    val matchedAt: Long,
+    val timeAgo: String
+)
 
 data class DashboardUiState(
     val notificationsTodayCount: Int = 0,
@@ -25,13 +39,18 @@ data class DashboardUiState(
     val isSummarizing: Boolean = false,
     val summarizeError: String? = null,
     val recentSummaries: List<SummaryEntity> = emptyList(),
-    val timeSavedMinutes: Int = 0
+    val timeSavedMinutes: Int = 0,
+    val watchActiveCount: Int = 0,
+    val watchCollectedCount: Int = 0,
+    val recentWatchMatches: List<WatchRecentMatch> = emptyList()
 )
 
 class DashboardViewModel(
     private val context: Context,
     private val notificationRepository: NotificationRepository,
     private val summaryRepository: SummaryRepository,
+    private val watchTopicRepository: WatchTopicRepository,
+    private val watchCollectedItemRepository: WatchCollectedItemRepository,
     private val summaryEngine: dev.rcht.jist.engine.SummaryEngine,
     private val summaryNotificationManager: dev.rcht.jist.notification.SummaryNotificationManager
 ) : ViewModel() {
@@ -92,6 +111,37 @@ class DashboardViewModel(
                 val timeSavedMinutes = (summariesTodayCount * 3 + (notificationsTodayCount * 0.3)).toInt()
                 Log.d(TAG, "Time saved today: ~$timeSavedMinutes minutes")
 
+                // Watch data
+                val activeTopics = watchTopicRepository.getActiveTopics()
+                val watchActiveCount = activeTopics.size
+                val watchCollectedCount = activeTopics.sumOf {
+                    watchCollectedItemRepository.countForTopic(it.id)
+                }
+                val recentCollected = activeTopics.flatMap {
+                    watchCollectedItemRepository.getRecentItemsForTopic(it.id, 3)
+                }
+                val recentMatches = recentCollected
+                    .sortedByDescending { it.matchedAt }
+                    .take(5)
+                    .map { item ->
+                        val topic = activeTopics.find { it.id == item.topicId }
+                        val appLabel = try {
+                            context.packageManager.getApplicationLabel(
+                                context.packageManager.getApplicationInfo(item.sourceApp, 0)
+                            ).toString()
+                        } catch (_: Exception) { item.sourceApp }
+                        WatchRecentMatch(
+                            collectedItemId = item.id,
+                            topicId = item.topicId,
+                            topicTitle = topic?.title ?: "",
+                            appName = appLabel,
+                            packageName = item.sourceApp,
+                            matchedKeyword = item.matchedKeyword,
+                            matchedAt = item.matchedAt,
+                            timeAgo = formatTimestamp(item.matchedAt)
+                        )
+                    }
+
                 _uiState.value = DashboardUiState(
                     notificationsTodayCount = notificationsTodayCount,
                     totalNotificationsCount = notificationRepository.count(),
@@ -101,7 +151,10 @@ class DashboardViewModel(
                     isNotificationListenerActive = isListenerActive,
                     isLoading = false,
                     recentSummaries = recentSummaries,
-                    timeSavedMinutes = timeSavedMinutes
+                    timeSavedMinutes = timeSavedMinutes,
+                    watchActiveCount = watchActiveCount,
+                    watchCollectedCount = watchCollectedCount,
+                    recentWatchMatches = recentMatches
                 )
                 Log.d(TAG, "Dashboard data loaded successfully")
             } catch (e: Exception) {

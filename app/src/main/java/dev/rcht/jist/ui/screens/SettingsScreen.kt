@@ -62,7 +62,7 @@ fun SettingsScreen(
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
     val configManager = remember {
-        ConfigManager(context, app.preferencesRepository, app.llmConfigRepository, app.appRuleRepository, app.customPromptRepository)
+        ConfigManager(context, app.preferencesRepository, app.llmConfigRepository, app.appRuleRepository, app.customPromptRepository, app.watchTopicRepository)
     }
 
     var showStyleDialog by remember { mutableStateOf(false) }
@@ -210,9 +210,10 @@ fun SettingsScreen(
                     SettingsItem(
                         icon = Icons.Default.Share,
                         title = stringResource(R.string.settings_export_config),
-                        onClick = {
-                            exportLauncher.launch("jist-config.json")
-                        }
+                            onClick = {
+                                val ts = java.text.SimpleDateFormat("yyyy-MM-dd_HHmm", java.util.Locale.getDefault()).format(java.util.Date())
+                                exportLauncher.launch("jist-config-$ts.json")
+                            }
                     )
                     Divider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha=0.2f))
                     SettingsItem(

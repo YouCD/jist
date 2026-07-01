@@ -41,6 +41,10 @@ class NotificationRepository(private val notificationDao: NotificationDao) {
         notificationDao.updatePendingIntentData(id, data)
     }
 
+    suspend fun getById(id: Long): NotificationEntity? {
+        return notificationDao.getById(id)
+    }
+
     suspend fun findByNotificationKey(pkg: String, tag: String?, nid: Int): NotificationEntity? {
         return notificationDao.findByNotificationKey(pkg, tag, nid)
     }
