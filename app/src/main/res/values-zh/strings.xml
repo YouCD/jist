@@ -127,6 +127,7 @@
     <string name="app_settings_custom_prompt_hint">正在使用默认提示词 — 编辑下方内容以自定义：</string>
     <string name="app_settings_reset_to_default">重置为默认</string>
     <string name="app_settings_edit_prompt">编辑自定义提示词</string>
+    <string name="app_settings_min_messages">摘要前最少消息数</string>
     <string name="app_settings_collapse_prompt">收起</string>
     <string name="error_loading_apps">加载应用失败: %s</string>
 

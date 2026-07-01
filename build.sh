@@ -9,5 +9,5 @@ ${SIGNER_PATH} sign --key ${CRT_PATH}/platform.pk8 --cert ${CRT_PATH}/platform.x
 adb push "$SIGNED" /system/priv-app/Jist/Jist.apk && \
 adb shell pm install -r -t /system/priv-app/Jist/Jist.apk && \
 adb shell am force-stop dev.rcht.jist && \
-adb shell am start -n dev.rcht.jist/.MainActivity
+adb shell am start -n dev.rcht.jist/.MainActivity && \
 rm "$SIGNED"

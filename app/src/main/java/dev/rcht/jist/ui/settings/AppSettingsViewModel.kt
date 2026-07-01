@@ -219,6 +219,18 @@ class AppSettingsViewModel(
         }
     }
 
+    fun updateMinMessages(appRule: AppRuleEntity, minMessages: Int) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val updatedRule = appRule.copy(minMessagesForSummary = minMessages)
+            if (updatedRule.id == 0L) {
+                val newId = appRuleRepository.insert(updatedRule)
+                updateCacheAndUI(updatedRule.copy(id = newId))
+            } else {
+                appRuleRepository.update(updatedRule)
+            }
+        }
+    }
+
     fun updateSearchQuery(query: String) {
         _uiState.value = _uiState.value.copy(searchQuery = query)
         updateUiStateFromCache()

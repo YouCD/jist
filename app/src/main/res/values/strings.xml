@@ -127,6 +127,7 @@
     <string name="app_settings_custom_prompt_hint">Using default prompt — edit below to customize:</string>
     <string name="app_settings_reset_to_default">Reset to default</string>
     <string name="app_settings_edit_prompt">Edit custom prompt</string>
+    <string name="app_settings_min_messages">Min Messages Before Summarize</string>
     <string name="app_settings_collapse_prompt">Collapse</string>
     <string name="error_loading_apps">Error loading apps: %s</string>
 

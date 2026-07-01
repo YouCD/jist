@@ -15,6 +15,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Clear
@@ -35,6 +37,8 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -196,7 +200,8 @@ fun AppSettingsScreen(
                                         AppItem(
                                             app = app,
                                             onToggle = { viewModel.toggleAppEnabled(app) },
-                                            onUpdateCustomPrompt = { viewModel.updateCustomPrompt(app, it) }
+                                            onUpdateCustomPrompt = { viewModel.updateCustomPrompt(app, it) },
+                                            onUpdateMinMessages = { viewModel.updateMinMessages(app, it) }
                                         )
                                         if (index < uiState.suggestedApps.size - 1) {
                                             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha=0.1f), modifier = Modifier.padding(horizontal = 16.dp))
@@ -239,7 +244,8 @@ fun AppSettingsScreen(
                                         AppItem(
                                             app = app,
                                             onToggle = { viewModel.toggleAppEnabled(app) },
-                                            onUpdateCustomPrompt = { viewModel.updateCustomPrompt(app, it) }
+                                            onUpdateCustomPrompt = { viewModel.updateCustomPrompt(app, it) },
+                                            onUpdateMinMessages = { viewModel.updateMinMessages(app, it) }
                                         )
                                         if (index < uiState.otherApps.size - 1) {
                                             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha=0.1f), modifier = Modifier.padding(horizontal = 16.dp))
@@ -257,10 +263,12 @@ fun AppSettingsScreen(
 }
 
 @Composable
-fun AppItem(app: AppRuleEntity, onToggle: (Boolean) -> Unit, onUpdateCustomPrompt: (String) -> Unit = {}) {
+fun AppItem(app: AppRuleEntity, onToggle: (Boolean) -> Unit, onUpdateCustomPrompt: (String) -> Unit = {}, onUpdateMinMessages: (Int) -> Unit = {}) {
     var expanded by remember { mutableStateOf(false) }
     var promptText by remember(app.id, app.customPrompt) { mutableStateOf(app.customPrompt ?: dev.rcht.jist.llm.getDefaultSystemPrompt()) }
     val hasPrompt = app.customPrompt != null && app.customPrompt.isNotBlank()
+    var minMessagesText by remember(app.id, app.minMessagesForSummary) { mutableStateOf(app.minMessagesForSummary.toString()) }
+    var showButtons by remember(app.id) { mutableStateOf(false) }
     val isDefault = promptText == dev.rcht.jist.llm.getDefaultSystemPrompt()
 
     Column {
@@ -328,8 +336,8 @@ fun AppItem(app: AppRuleEntity, onToggle: (Boolean) -> Unit, onUpdateCustomPromp
                 }
                 OutlinedTextField(
                     value = promptText,
-                    onValueChange = { promptText = it },
-                    modifier = Modifier.fillMaxWidth(),
+                    onValueChange = { promptText = it; showButtons = true },
+                    modifier = Modifier.fillMaxWidth().onFocusChanged { if (it.isFocused) showButtons = true },
                     label = { Text(stringResource(R.string.app_settings_custom_prompt)) },
                     minLines = 2,
                     maxLines = 8,
@@ -341,23 +349,51 @@ fun AppItem(app: AppRuleEntity, onToggle: (Boolean) -> Unit, onUpdateCustomPromp
                         unfocusedBorderColor = Color.Transparent
                     )
                 )
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
-                    horizontalArrangement = Arrangement.End
-                ) {
-                    if (!isDefault) {
-                        TextButton(onClick = {
-                            promptText = dev.rcht.jist.llm.getDefaultSystemPrompt()
-                        }) {
-                            Text(stringResource(R.string.app_settings_reset_to_default), color = MaterialTheme.colorScheme.error)
-                        }
-                        Spacer(modifier = Modifier.width(8.dp))
-                    }
-                    Button(
-                        onClick = { onUpdateCustomPrompt(promptText) },
-                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp)
+                Spacer(Modifier.height(12.dp))
+                Text(
+                    text = stringResource(R.string.app_settings_min_messages),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                )
+                OutlinedTextField(
+                    value = minMessagesText,
+                    onValueChange = { minMessagesText = it.filter { c -> c.isDigit() }; showButtons = true },
+                    modifier = Modifier.fillMaxWidth().onFocusChanged { if (it.isFocused) showButtons = true },
+                    placeholder = { Text("5") },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                        focusedBorderColor = MaterialTheme.colorScheme.primary,
+                        unfocusedBorderColor = Color.Transparent
+                    )
+                )
+                if (showButtons) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                        horizontalArrangement = Arrangement.End
                     ) {
-                        Text(stringResource(R.string.save))
+                        if (!isDefault) {
+                            TextButton(onClick = {
+                                promptText = dev.rcht.jist.llm.getDefaultSystemPrompt()
+                            }) {
+                                Text(stringResource(R.string.app_settings_reset_to_default), color = MaterialTheme.colorScheme.error)
+                            }
+                            Spacer(modifier = Modifier.width(8.dp))
+                        }
+                        Button(
+                            onClick = {
+                                onUpdateCustomPrompt(promptText)
+                                val count = minMessagesText.toIntOrNull()
+                                if (count != null && count > 0) onUpdateMinMessages(count)
+                                showButtons = false
+                            },
+                            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp)
+                        ) {
+                            Text(stringResource(R.string.save))
+                        }
                     }
                 }
             }
