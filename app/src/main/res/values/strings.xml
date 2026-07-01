@@ -123,10 +123,9 @@
     <string name="app_settings_title">Monitored Apps</string>
     <string name="app_settings_search">Search apps…</string>
     <string name="app_settings_select_all">Select All</string>
-    <string name="app_settings_disable_all">Disable All</string>
-    <string name="app_settings_suggested">SUGGESTED</string>
-    <string name="app_settings_all_apps">ALL APPS</string>
-    <string name="app_settings_apps_installed">%d APPS INSTALLED</string>
+    <string name="app_settings_apps_installed">%1$d / %2$d MONITORED</string>
+    <string name="app_settings_show_all">Show All</string>
+    <string name="app_settings_show_monitored">Monitored</string>
     <string name="app_settings_no_apps">No apps found</string>
     <string name="app_settings_custom_prompt">Custom Prompt</string>
     <string name="app_settings_custom_prompt_hint">Using default prompt — edit below to customize:</string>
@@ -310,6 +309,9 @@
     <string name="watch_content_desc_enable">Enable</string>
     <string name="watch_widget_title">🔍 Watch</string>
     <string name="watch_widget_create">＋ Create Watch</string>
+    <string name="app_settings_prompt_saved">Custom prompt saved</string>
+    <string name="app_settings_min_messages_saved">Minimum messages saved</string>
+    <string name="app_settings_save_failed">Save failed: %s</string>
 
     <!-- Watch Engine Prompts -->
     <string name="watch_prompt_system">You are an information collection assistant. The user is watching the following topic:\n«%1$s»\n%2$s\n\nDetermine if the following notification is relevant to the topic the user is watching. If relevant, extract key information and return in JSON format:\n{\"relevant\":true,\"keyInfo\":\"extracted key information\",\"importance\":1-5}\nIf not relevant, return:\n{\"relevant\":false}</string>

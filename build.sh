@@ -1,7 +1,7 @@
 APK=$(pwd)/app/build/outputs/apk/debug/app-debug.apk
 CRT_PATH=$(pwd)/build/security
 SIGNED=/tmp/jist-signed.apk
-SIGNER_PATH=/home/ycd/Android/Sdk/build-tools/36.1.0/apksigner
+SIGNER_PATH=/home/ycd/Android/Sdk/build-tools/36.0.0/apksigner
 ./gradlew assembleDebug && \
 adb wait-for-device && adb root && adb remount && \
 cp "$APK" "$SIGNED" && \

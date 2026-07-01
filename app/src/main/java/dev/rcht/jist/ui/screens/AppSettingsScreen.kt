@@ -16,7 +16,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Clear
@@ -68,16 +67,33 @@ fun AppSettingsScreen(
                 @Suppress("UNCHECKED_CAST")
                 return AppSettingsViewModel(
                     context,
-                    app.appRuleRepository,
-                    app.notificationRepository
+                    app.appRuleRepository
                 ) as T
             }
         }
     )
     
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    LaunchedEffect(uiState.snackbarMessage) {
+        uiState.snackbarMessage?.let { message ->
+            snackbarHostState.showSnackbar(message)
+            viewModel.clearSnackbar()
+        }
+    }
 
     GlassScaffold(
+        snackbarHost = {
+            SnackbarHost(hostState = snackbarHostState) { data ->
+                Snackbar(
+                    snackbarData = data,
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.85f),
+                    contentColor = MaterialTheme.colorScheme.onSurface,
+                    shape = RoundedCornerShape(16.dp)
+                )
+            }
+        },
         topBar = {
             CenterAlignedTopAppBar(
                 title = { Text(stringResource(R.string.app_settings_title), fontWeight = FontWeight.SemiBold) },
@@ -166,12 +182,23 @@ fun AppSettingsScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = stringResource(R.string.app_settings_apps_installed, uiState.allAppsCount),
+                        text = stringResource(R.string.app_settings_apps_installed, uiState.apps.size, uiState.allAppsCount),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                    TextButton(onClick = { viewModel.toggleAll(true) }) {
-                         Text(stringResource(R.string.app_settings_select_all), fontSize = 12.sp)
+                    Row {
+                        TextButton(onClick = { viewModel.toggleShowAll() }) {
+                            Text(
+                                if (uiState.showAll) stringResource(R.string.app_settings_show_monitored)
+                                else stringResource(R.string.app_settings_show_all),
+                                fontSize = 12.sp
+                            )
+                        }
+                        if (uiState.showAll) {
+                            TextButton(onClick = { viewModel.toggleAll(true) }) {
+                                Text(stringResource(R.string.app_settings_select_all), fontSize = 12.sp)
+                            }
+                        }
                     }
                 }
 
@@ -179,75 +206,22 @@ fun AppSettingsScreen(
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                     modifier = Modifier.fillMaxSize()
                 ) {
-                    // Suggested Section
-                    if (uiState.suggestedApps.isNotEmpty()) {
-                        item {
-                            Text(
-                                text = stringResource(R.string.app_settings_suggested),
-                                style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha=0.7f),
-                                modifier = Modifier.padding(vertical = 8.dp)
-                            )
-                        }
-                        
+                    if (uiState.apps.isNotEmpty()) {
                         item {
                             Card(
                                 shape = RoundedCornerShape(16.dp),
                                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha=0.3f))
                             ) {
                                 Column(modifier = Modifier.padding(vertical = 8.dp)) {
-                                    uiState.suggestedApps.forEachIndexed { index, app ->
+                                    uiState.apps.forEachIndexed { index, app ->
                                         AppItem(
                                             app = app,
                                             onToggle = { viewModel.toggleAppEnabled(app) },
                                             onUpdateCustomPrompt = { viewModel.updateCustomPrompt(app, it) },
-                                            onUpdateMinMessages = { viewModel.updateMinMessages(app, it) }
+                                            onUpdateMinMessages = { viewModel.updateMinMessages(app, it) },
+                                            onSavePromptAndMinMessages = { prompt, minMessages -> viewModel.savePromptAndMinMessages(app, prompt, minMessages) }
                                         )
-                                        if (index < uiState.suggestedApps.size - 1) {
-                                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha=0.1f), modifier = Modifier.padding(horizontal = 16.dp))
-                                        }
-                                    }
-                                }
-                            }
-                            Spacer(modifier = Modifier.height(16.dp))
-                        }
-                    }
-
-                    // All Other Apps (No grouping)
-                    if (uiState.otherApps.isNotEmpty()) {
-                        item {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(vertical = 8.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    text = stringResource(R.string.app_settings_all_apps),
-                                    style = MaterialTheme.typography.labelMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha=0.7f)
-                                )
-                                TextButton(onClick = { viewModel.disableAllNonSuggested() }) {
-                                    Text(stringResource(R.string.app_settings_disable_all), fontSize = 12.sp)
-                                }
-                            }
-                        }
-                        
-                        item {
-                            Card(
-                                shape = RoundedCornerShape(16.dp),
-                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha=0.3f))
-                            ) {
-                                Column(modifier = Modifier.padding(vertical = 8.dp)) {
-                                    uiState.otherApps.forEachIndexed { index, app ->
-                                        AppItem(
-                                            app = app,
-                                            onToggle = { viewModel.toggleAppEnabled(app) },
-                                            onUpdateCustomPrompt = { viewModel.updateCustomPrompt(app, it) },
-                                            onUpdateMinMessages = { viewModel.updateMinMessages(app, it) }
-                                        )
-                                        if (index < uiState.otherApps.size - 1) {
+                                        if (index < uiState.apps.size - 1) {
                                             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha=0.1f), modifier = Modifier.padding(horizontal = 16.dp))
                                         }
                                     }
@@ -263,12 +237,11 @@ fun AppSettingsScreen(
 }
 
 @Composable
-fun AppItem(app: AppRuleEntity, onToggle: (Boolean) -> Unit, onUpdateCustomPrompt: (String) -> Unit = {}, onUpdateMinMessages: (Int) -> Unit = {}) {
+fun AppItem(app: AppRuleEntity, onToggle: (Boolean) -> Unit, onUpdateCustomPrompt: (String) -> Unit = {}, onUpdateMinMessages: (Int) -> Unit = {}, onSavePromptAndMinMessages: ((String, Int) -> Unit)? = null) {
     var expanded by remember { mutableStateOf(false) }
     var promptText by remember(app.id, app.customPrompt) { mutableStateOf(app.customPrompt ?: dev.rcht.jist.llm.getDefaultSystemPrompt()) }
     val hasPrompt = app.customPrompt != null && app.customPrompt.isNotBlank()
     var minMessagesText by remember(app.id, app.minMessagesForSummary) { mutableStateOf(app.minMessagesForSummary.toString()) }
-    var showButtons by remember(app.id) { mutableStateOf(false) }
     val isDefault = promptText == dev.rcht.jist.llm.getDefaultSystemPrompt()
 
     Column {
@@ -336,8 +309,8 @@ fun AppItem(app: AppRuleEntity, onToggle: (Boolean) -> Unit, onUpdateCustomPromp
                 }
                 OutlinedTextField(
                     value = promptText,
-                    onValueChange = { promptText = it; showButtons = true },
-                    modifier = Modifier.fillMaxWidth().onFocusChanged { if (it.isFocused) showButtons = true },
+                    onValueChange = { promptText = it },
+                    modifier = Modifier.fillMaxWidth(),
                     label = { Text(stringResource(R.string.app_settings_custom_prompt)) },
                     minLines = 2,
                     maxLines = 8,
@@ -357,8 +330,8 @@ fun AppItem(app: AppRuleEntity, onToggle: (Boolean) -> Unit, onUpdateCustomPromp
                 )
                 OutlinedTextField(
                     value = minMessagesText,
-                    onValueChange = { minMessagesText = it.filter { c -> c.isDigit() }; showButtons = true },
-                    modifier = Modifier.fillMaxWidth().onFocusChanged { if (it.isFocused) showButtons = true },
+                    onValueChange = { minMessagesText = it.filter { c -> c.isDigit() } },
+                    modifier = Modifier.fillMaxWidth(),
                     placeholder = { Text("5") },
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
@@ -370,30 +343,31 @@ fun AppItem(app: AppRuleEntity, onToggle: (Boolean) -> Unit, onUpdateCustomPromp
                         unfocusedBorderColor = Color.Transparent
                     )
                 )
-                if (showButtons) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
-                        horizontalArrangement = Arrangement.End
-                    ) {
-                        if (!isDefault) {
-                            TextButton(onClick = {
-                                promptText = dev.rcht.jist.llm.getDefaultSystemPrompt()
-                            }) {
-                                Text(stringResource(R.string.app_settings_reset_to_default), color = MaterialTheme.colorScheme.error)
-                            }
-                            Spacer(modifier = Modifier.width(8.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    if (!isDefault) {
+                        TextButton(onClick = {
+                            onUpdateCustomPrompt(dev.rcht.jist.llm.getDefaultSystemPrompt())
+                            promptText = dev.rcht.jist.llm.getDefaultSystemPrompt()
+                        }) {
+                            Text(stringResource(R.string.app_settings_reset_to_default), color = MaterialTheme.colorScheme.error)
                         }
-                        Button(
-                            onClick = {
+                        Spacer(modifier = Modifier.width(8.dp))
+                    }
+                    Button(
+                        onClick = {
+                            val count = minMessagesText.toIntOrNull()
+                            if (onSavePromptAndMinMessages != null && count != null && count > 0) {
+                                onSavePromptAndMinMessages(promptText, count)
+                            } else {
                                 onUpdateCustomPrompt(promptText)
-                                val count = minMessagesText.toIntOrNull()
-                                if (count != null && count > 0) onUpdateMinMessages(count)
-                                showButtons = false
-                            },
-                            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp)
-                        ) {
-                            Text(stringResource(R.string.save))
-                        }
+                            }
+                        },
+                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp)
+                    ) {
+                        Text(stringResource(R.string.save))
                     }
                 }
             }

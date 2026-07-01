@@ -123,10 +123,9 @@
     <string name="app_settings_title">已监控的应用</string>
     <string name="app_settings_search">搜索应用…</string>
     <string name="app_settings_select_all">全选</string>
-    <string name="app_settings_disable_all">全部禁用</string>
-    <string name="app_settings_suggested">推荐</string>
-    <string name="app_settings_all_apps">所有应用</string>
-    <string name="app_settings_apps_installed">已安装 %d 个应用</string>
+    <string name="app_settings_apps_installed">已监控 %1$d / 共 %2$d 个</string>
+    <string name="app_settings_show_all">显示全部</string>
+    <string name="app_settings_show_monitored">已监控</string>
     <string name="app_settings_no_apps">未找到应用</string>
     <string name="app_settings_custom_prompt">自定义提示词</string>
     <string name="app_settings_custom_prompt_hint">正在使用默认提示词 — 编辑下方内容以自定义：</string>
@@ -310,6 +309,9 @@
     <string name="watch_content_desc_enable">启用</string>
     <string name="watch_widget_title">🔍 我的关注</string>
     <string name="watch_widget_create">＋ 创建关注</string>
+    <string name="app_settings_prompt_saved">自定义提示词已保存</string>
+    <string name="app_settings_min_messages_saved">最小消息数已保存</string>
+    <string name="app_settings_save_failed">保存失败: %s</string>
 
     <!-- Watch Engine Prompts -->
     <string name="watch_prompt_system">你是一个信息收集助手。用户正在关注以下主题：\n「%1$s」\n%2$s\n\n请判断以下通知是否与用户关注的主题相关。如果相关，提取关键信息并以 JSON 格式返回：\n{\"relevant\":true,\"keyInfo\":\"提取的关键信息\",\"importance\":1-5}\n如果不相关，返回：\n{\"relevant\":false}</string>
