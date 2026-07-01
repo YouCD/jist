@@ -56,6 +56,9 @@ interface NotificationDao {
 
     @Query("SELECT * FROM notifications WHERE packageName = :pkg AND notificationTag = :tag AND notificationId = :nid LIMIT 1")
     suspend fun findByNotificationKey(pkg: String, tag: String?, nid: Int): NotificationEntity?
+
+    @Query("SELECT * FROM notifications WHERE packageName = :pkg AND title = :title AND content = :content AND ABS(timestamp - :now) < :windowMs LIMIT 1")
+    suspend fun findByContentDedup(pkg: String, title: String, content: String, now: Long, windowMs: Long): NotificationEntity?
     
     @Query("DELETE FROM notifications WHERE timestamp < :before")
     suspend fun deleteOlderThan(before: Long)

@@ -130,6 +130,20 @@ class JistNotificationListenerService : NotificationListenerService() {
                         notificationWithKey.notificationTag,
                         notificationWithKey.notificationId
                     )
+                    // Dedup by same content within 3 seconds (Telegram resends updates)
+                    if (existing == null) {
+                        val dup = it.notificationRepository.findByContentDedup(
+                            notificationWithKey.packageName,
+                            notificationWithKey.title,
+                            newContent,
+                            notificationWithKey.timestamp,
+                            3000
+                        )
+                        if (dup != null) {
+                            Log.d(TAG, "Skipping duplicate notification (same content within 3s): $conversationKey")
+                            return@launch
+                        }
+                    }
                     val savedNotification: NotificationEntity
                     if (existing != null) {
                         // Notification update: same tag+id, update content/timestamp

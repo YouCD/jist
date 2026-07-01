@@ -48,6 +48,10 @@ class NotificationRepository(private val notificationDao: NotificationDao) {
     suspend fun findByNotificationKey(pkg: String, tag: String?, nid: Int): NotificationEntity? {
         return notificationDao.findByNotificationKey(pkg, tag, nid)
     }
+
+    suspend fun findByContentDedup(pkg: String, title: String, content: String, now: Long, windowMs: Long): NotificationEntity? {
+        return notificationDao.findByContentDedup(pkg, title, content, now, windowMs)
+    }
     
     suspend fun getPendingConversationKeys(minCount: Int): List<String> {
         return notificationDao.getPendingConversationKeys(minCount)
