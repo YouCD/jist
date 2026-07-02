@@ -79,6 +79,7 @@ import androidx.compose.ui.unit.sp
 import dev.rcht.jist.data.db.entity.LlmConfigEntity
 import dev.rcht.jist.llm.LlmClientFactory
 import dev.rcht.jist.ui.components.GlassScaffold
+import dev.rcht.jist.ui.components.JistSnackbarHost
 import dev.rcht.jist.ui.settings.LlmConfigUiState
 import kotlinx.coroutines.launch
 import androidx.compose.foundation.Image
@@ -180,7 +181,7 @@ fun LlmConfigScreen(
                 )
             )
         },
-        snackbarHost = { SnackbarHost(snackbarHostState) }
+        snackbarHost = { JistSnackbarHost(hostState = snackbarHostState) }
     ) { paddingValues ->
         Column(
             modifier = Modifier

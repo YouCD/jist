@@ -28,6 +28,11 @@ class JistNotificationListenerService : NotificationListenerService() {
         if (shouldIgnore(sbn)) return
         
         try {
+            // Skip group summary notifications (e.g. Telegram's "X messages from Y chats")
+            if (sbn.notification.flags and android.app.Notification.FLAG_GROUP_SUMMARY != 0) {
+                return
+            }
+
             val appInfo = NotificationParser.extractAppInfo(sbn, this)
             
             if (appInfo.title.isNullOrBlank() || appInfo.content.isNullOrBlank()) {

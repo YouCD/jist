@@ -89,6 +89,7 @@ import dev.rcht.jist.ui.screens.onboarding.OnboardingStepIndicator
 import dev.rcht.jist.ui.screens.onboarding.PermissionToggleCard
 import dev.rcht.jist.ui.screens.onboarding.WritingStyleCard
 import dev.rcht.jist.ui.components.GlassScaffold
+import dev.rcht.jist.ui.components.JistSnackbarHost
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import dev.rcht.jist.ui.theme.JistCyan
@@ -240,7 +241,7 @@ fun OnboardingScreen(
     }
 
     GlassScaffold(
-        snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
+        snackbarHost = { JistSnackbarHost(hostState = snackbarHostState) },
         topBar = {
             OnboardingStepIndicator(
                 currentStep = step,

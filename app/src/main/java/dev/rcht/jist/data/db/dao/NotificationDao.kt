@@ -54,7 +54,7 @@ interface NotificationDao {
     @Query("SELECT * FROM notifications WHERE packageName = :packageName ORDER BY timestamp DESC")
     suspend fun getByApp(packageName: String): List<NotificationEntity>
 
-    @Query("SELECT * FROM notifications WHERE packageName = :pkg AND notificationTag = :tag AND notificationId = :nid LIMIT 1")
+    @Query("SELECT * FROM notifications WHERE packageName = :pkg AND ((:tag IS NULL AND notificationTag IS NULL) OR notificationTag = :tag) AND notificationId = :nid LIMIT 1")
     suspend fun findByNotificationKey(pkg: String, tag: String?, nid: Int): NotificationEntity?
 
     @Query("SELECT * FROM notifications WHERE packageName = :pkg AND title = :title AND content = :content AND ABS(timestamp - :now) < :windowMs LIMIT 1")

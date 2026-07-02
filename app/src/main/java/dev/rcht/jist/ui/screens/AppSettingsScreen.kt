@@ -1,6 +1,7 @@
 package dev.rcht.jist.ui.screens
 
 import dev.rcht.jist.R
+import dev.rcht.jist.ui.components.JistSnackbarHost
 import android.graphics.Bitmap
 import android.graphics.drawable.Drawable
 import androidx.compose.animation.AnimatedVisibility
@@ -33,7 +34,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -84,16 +87,7 @@ fun AppSettingsScreen(
     }
 
     GlassScaffold(
-        snackbarHost = {
-            SnackbarHost(hostState = snackbarHostState) { data ->
-                Snackbar(
-                    snackbarData = data,
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.85f),
-                    contentColor = MaterialTheme.colorScheme.onSurface,
-                    shape = RoundedCornerShape(16.dp)
-                )
-            }
-        },
+        snackbarHost = { JistSnackbarHost(hostState = snackbarHostState) },
         topBar = {
             CenterAlignedTopAppBar(
                 title = { Text(stringResource(R.string.app_settings_title), fontWeight = FontWeight.SemiBold) },
@@ -243,6 +237,8 @@ fun AppItem(app: AppRuleEntity, onToggle: (Boolean) -> Unit, onUpdateCustomPromp
     val hasPrompt = app.customPrompt != null && app.customPrompt.isNotBlank()
     var minMessagesText by remember(app.id, app.minMessagesForSummary) { mutableStateOf(app.minMessagesForSummary.toString()) }
     val isDefault = promptText == dev.rcht.jist.llm.getDefaultSystemPrompt()
+    var focused by remember { mutableStateOf(false) }
+    val focusManager = LocalFocusManager.current
 
     Column {
         Row(
@@ -310,7 +306,9 @@ fun AppItem(app: AppRuleEntity, onToggle: (Boolean) -> Unit, onUpdateCustomPromp
                 OutlinedTextField(
                     value = promptText,
                     onValueChange = { promptText = it },
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .onFocusChanged { focused = it.isFocused },
                     label = { Text(stringResource(R.string.app_settings_custom_prompt)) },
                     minLines = 2,
                     maxLines = 8,
@@ -331,7 +329,9 @@ fun AppItem(app: AppRuleEntity, onToggle: (Boolean) -> Unit, onUpdateCustomPromp
                 OutlinedTextField(
                     value = minMessagesText,
                     onValueChange = { minMessagesText = it.filter { c -> c.isDigit() } },
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .onFocusChanged { focused = it.isFocused },
                     placeholder = { Text("5") },
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
@@ -343,31 +343,35 @@ fun AppItem(app: AppRuleEntity, onToggle: (Boolean) -> Unit, onUpdateCustomPromp
                         unfocusedBorderColor = Color.Transparent
                     )
                 )
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
-                    horizontalArrangement = Arrangement.End
-                ) {
-                    if (!isDefault) {
-                        TextButton(onClick = {
-                            onUpdateCustomPrompt(dev.rcht.jist.llm.getDefaultSystemPrompt())
-                            promptText = dev.rcht.jist.llm.getDefaultSystemPrompt()
-                        }) {
-                            Text(stringResource(R.string.app_settings_reset_to_default), color = MaterialTheme.colorScheme.error)
-                        }
-                        Spacer(modifier = Modifier.width(8.dp))
-                    }
-                    Button(
-                        onClick = {
-                            val count = minMessagesText.toIntOrNull()
-                            if (onSavePromptAndMinMessages != null && count != null && count > 0) {
-                                onSavePromptAndMinMessages(promptText, count)
-                            } else {
-                                onUpdateCustomPrompt(promptText)
-                            }
-                        },
-                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp)
+                AnimatedVisibility(visible = focused) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                        horizontalArrangement = Arrangement.End
                     ) {
-                        Text(stringResource(R.string.save))
+                        if (!isDefault) {
+                            TextButton(onClick = {
+                                onUpdateCustomPrompt(dev.rcht.jist.llm.getDefaultSystemPrompt())
+                                promptText = dev.rcht.jist.llm.getDefaultSystemPrompt()
+                                focusManager.clearFocus()
+                            }) {
+                                Text(stringResource(R.string.app_settings_reset_to_default), color = MaterialTheme.colorScheme.error)
+                            }
+                            Spacer(modifier = Modifier.width(8.dp))
+                        }
+                        Button(
+                            onClick = {
+                                val count = minMessagesText.toIntOrNull()
+                                if (onSavePromptAndMinMessages != null && count != null && count > 0) {
+                                    onSavePromptAndMinMessages(promptText, count)
+                                } else {
+                                    onUpdateCustomPrompt(promptText)
+                                }
+                                focusManager.clearFocus()
+                            },
+                            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp)
+                        ) {
+                            Text(stringResource(R.string.save))
+                        }
                     }
                 }
             }

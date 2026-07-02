@@ -36,6 +36,7 @@ import dev.rcht.jist.JistApplication
 import dev.rcht.jist.data.config.ConfigManager
 import dev.rcht.jist.ui.settings.SettingsViewModel
 import dev.rcht.jist.ui.components.GlassScaffold
+import dev.rcht.jist.ui.components.JistSnackbarHost
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -120,7 +121,7 @@ fun SettingsScreen(
     }
 
     GlassScaffold(
-        snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
+        snackbarHost = { JistSnackbarHost(hostState = snackbarHostState) },
         topBar = {
             CenterAlignedTopAppBar(
                 title = { Text(stringResource(R.string.settings_title), fontWeight = FontWeight.SemiBold) },
