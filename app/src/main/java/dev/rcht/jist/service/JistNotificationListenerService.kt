@@ -128,14 +128,33 @@ class JistNotificationListenerService : NotificationListenerService() {
                         return@launch
                     }
 
+                    /*
+                     * Notification dedup & storage logic:
+                     *
+                     * onNotificationPosted(sbn)
+                     *   │
+                     *   ├─ 1. findByNotificationKey(pkg, tag, id)
+                     *   │     按 (包名 + tag + notificationId) 查找是否已有
+                     *   │     日志: 群用固定 id (如微信 groupId=-993967727, tag=null)
+                     *   │          每次更新内容 → existing 命中
+                     *   │          Telegram 每条消息 id 不同 → existing = null
+                     *   │
+                     *   ├─ 2. existing == null ──┬─ 3s 内同内容 (Telegram 重复推送)
+                     *   │                       │    → SKIP (return@launch)
+                     *   │                       └─ 正常新通知 → INSERT 新行
+                     *   │
+                     *   └─ 3. existing != null ──┬─ 内容变了 (微信更新/Telegram 编辑)
+                     *                           │    → INSERT 新行保留历史快照
+                     *                           │    （积累多条后 AI 摘要才能触发）
+                     *                           └─ 内容没变 (重复推送/刷新时间戳)
+                     *                                → UPDATE 时间戳, 不产生冗余行
+                     */
                     val newContent = notificationWithKey.content
-                    // Dedup by notificationTag + notificationId (app-level notification identity)
                     val existing = it.notificationRepository.findByNotificationKey(
                         notificationWithKey.packageName,
                         notificationWithKey.notificationTag,
                         notificationWithKey.notificationId
                     )
-                    // Dedup by same content within 3 seconds (Telegram resends updates)
                     if (existing == null) {
                         val dup = it.notificationRepository.findByContentDedup(
                             notificationWithKey.packageName,
@@ -151,14 +170,22 @@ class JistNotificationListenerService : NotificationListenerService() {
                     }
                     val savedNotification: NotificationEntity
                     if (existing != null) {
-                        // Notification update: same tag+id, update content/timestamp
-                        savedNotification = existing.copy(
-                            content = newContent,
-                            timestamp = notificationWithKey.timestamp,
-                            pendingIntentData = piData ?: existing.pendingIntentData
-                        )
-                        it.notificationRepository.update(savedNotification)
-                        Log.d(TAG, "Updated notification (tag+id match): $conversationKey")
+                        if (existing.content != newContent) {
+                            val savedId = it.notificationRepository.insert(
+                                notificationWithKey.copy(pendingIntentData = piData)
+                            )
+                            savedNotification = notificationWithKey.copy(
+                                id = savedId, pendingIntentData = piData
+                            )
+                            Log.d(TAG, "Notification history added (content changed): $conversationKey (id=$savedId)")
+                        } else {
+                            savedNotification = existing.copy(
+                                timestamp = notificationWithKey.timestamp,
+                                pendingIntentData = piData ?: existing.pendingIntentData
+                            )
+                            it.notificationRepository.update(savedNotification)
+                            Log.d(TAG, "Updated notification (tag+id match, content unchanged): $conversationKey")
+                        }
                     } else {
                         val savedId = it.notificationRepository.insert(
                             notificationWithKey.copy(pendingIntentData = piData)
