@@ -1,9 +1,18 @@
 package dev.rcht.jist.data.db.entity
 
 import androidx.room.Entity
+import androidx.room.Index
 import androidx.room.PrimaryKey
 
-@Entity(tableName = "notifications")
+@Entity(
+    tableName = "notifications",
+    indices = [
+        Index(
+            value = ["packageName", "notificationTag", "notificationId", "contentHash"],
+            unique = true
+        )
+    ]
+)
 data class NotificationEntity(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,
@@ -19,5 +28,6 @@ data class NotificationEntity(
     val pendingIntentData: String? = null,
     val notificationTag: String? = null,
     val notificationId: Int = 0,
-    val notificationKey: String? = null
+    val notificationKey: String? = null,
+    val contentHash: String? = null
 )

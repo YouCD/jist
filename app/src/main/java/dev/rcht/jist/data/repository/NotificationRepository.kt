@@ -8,6 +8,10 @@ class NotificationRepository(private val notificationDao: NotificationDao) {
     suspend fun insert(notification: NotificationEntity): Long {
         return notificationDao.insert(notification)
     }
+
+    suspend fun insertOrUpdate(notification: NotificationEntity): Long {
+        return notificationDao.insertOrUpdate(notification)
+    }
     
     suspend fun insertAll(notifications: List<NotificationEntity>) {
         notificationDao.insertAll(notifications)

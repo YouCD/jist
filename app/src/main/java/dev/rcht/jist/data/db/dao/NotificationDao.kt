@@ -1,9 +1,11 @@
 package dev.rcht.jist.data.db.dao
 
+import android.util.Log
 import androidx.room.Dao
 import androidx.room.Delete
 import androidx.room.Insert
 import androidx.room.Query
+import androidx.room.Transaction
 import androidx.room.Update
 import dev.rcht.jist.data.db.entity.NotificationEntity
 
@@ -18,6 +20,42 @@ interface NotificationDao {
 
     @Update
     suspend fun update(notification: NotificationEntity)
+
+    @Transaction
+    suspend fun insertOrUpdate(notification: NotificationEntity): Long {
+        val existing = findByNotificationKey(
+            notification.packageName,
+            notification.notificationTag,
+            notification.notificationId
+        )
+        if (existing == null) {
+            // 3秒内同内容去重（Telegram 不同 nid 的场景）
+            val dup = findByContentDedup(notification.packageName, notification.title, notification.content, notification.timestamp, 3000)
+            if (dup != null) {
+                Log.d(TAG, "content dedup hit id=${dup.id}, UPDATE timestamp")
+                update(dup.copy(timestamp = notification.timestamp))
+                return dup.id
+            }
+            Log.d(TAG, "INSERT new: pkg=${notification.packageName} id=${notification.notificationId}")
+            return try {
+                insert(notification)
+            } catch (e: android.database.sqlite.SQLiteConstraintException) {
+                Log.w(TAG, "UNIQUE collision on INSERT, falling back to query+update")
+                val row = findByNotificationKey(
+                    notification.packageName, notification.notificationTag, notification.notificationId
+                ) ?: throw e
+                update(row.copy(timestamp = notification.timestamp))
+                row.id
+            }
+        }
+        if (existing.contentHash != notification.contentHash) {
+            Log.d(TAG, "hash change, INSERT history: existing.id=${existing.id}")
+            return insert(notification)
+        }
+        Log.d(TAG, "same hash, UPDATE timestamp: id=${existing.id}")
+        update(existing.copy(timestamp = notification.timestamp))
+        return existing.id
+    }
     
     @Query("SELECT * FROM notifications WHERE conversationKey = :key AND isSummarized = 0 ORDER BY timestamp ASC")
     suspend fun getUnsummarizedForKey(key: String): List<NotificationEntity>
@@ -54,7 +92,7 @@ interface NotificationDao {
     @Query("SELECT * FROM notifications WHERE packageName = :packageName ORDER BY timestamp DESC")
     suspend fun getByApp(packageName: String): List<NotificationEntity>
 
-    @Query("SELECT * FROM notifications WHERE packageName = :pkg AND ((:tag IS NULL AND notificationTag IS NULL) OR notificationTag = :tag) AND notificationId = :nid LIMIT 1")
+    @Query("SELECT * FROM notifications WHERE packageName = :pkg AND notificationTag = :tag AND notificationId = :nid ORDER BY id DESC LIMIT 1")
     suspend fun findByNotificationKey(pkg: String, tag: String?, nid: Int): NotificationEntity?
 
     @Query("SELECT * FROM notifications WHERE packageName = :pkg AND title = :title AND content = :content AND ABS(timestamp - :now) < :windowMs LIMIT 1")
@@ -74,4 +112,8 @@ interface NotificationDao {
     
     @Delete
     suspend fun delete(notification: NotificationEntity)
+
+    companion object {
+        private const val TAG = "NotificationDao"
+    }
 }

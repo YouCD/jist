@@ -12,12 +12,24 @@ import dev.rcht.jist.notification.PendingIntentStore
 import dev.rcht.jist.util.ConversationKeyExtractor
 import dev.rcht.jist.util.NotificationParser
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import java.security.MessageDigest
+import java.util.concurrent.Executors
+import kotlinx.coroutines.asCoroutineDispatcher
 
 class JistNotificationListenerService : NotificationListenerService() {
     
-    private val scope = CoroutineScope(Dispatchers.IO)
+    private val notificationDispatcher = Executors.newSingleThreadExecutor().asCoroutineDispatcher()
+    private val scope = CoroutineScope(notificationDispatcher)
+    private val dedupMutex = Mutex()
+
+    private fun sha256(input: String): String {
+        val digest = MessageDigest.getInstance("SHA-256")
+        return digest.digest(input.toByteArray()).joinToString("") { "%02x".format(it) }
+    }
+
     
     override fun onNotificationPosted(sbn: StatusBarNotification?) {
         super.onNotificationPosted(sbn)
@@ -40,18 +52,21 @@ class JistNotificationListenerService : NotificationListenerService() {
             }
             
             // Create entity first
+            val rawContent = appInfo.content ?: ""
+            val contentHash = sha256(rawContent)
             val notification = NotificationEntity(
                 packageName = appInfo.packageName,
                 appName = appInfo.appName,
                 title = appInfo.title ?: "",
-                content = appInfo.content ?: "",
+                content = rawContent,
                 conversationKey = "",  // Will be set below
                 timestamp = System.currentTimeMillis(),
                 isSummarized = false,
                 senderName = appInfo.senderName,
-                notificationTag = sbn.tag,
+                notificationTag = sbn.tag ?: "",
                 notificationId = sbn.id,
-                notificationKey = sbn.key
+                notificationKey = sbn.key,
+                contentHash = contentHash
             )
             
             // Derive conversation key with app-specific extraction
@@ -129,72 +144,24 @@ class JistNotificationListenerService : NotificationListenerService() {
                     }
 
                     /*
-                     * Notification dedup & storage logic:
+                     * 原子化通知去重：由 NotificationDao.insertOrUpdate 在 @Transaction 内完成
+                     *   - 首次通知 → INSERT
+                     *   - 内容变了 → INSERT 历史快照（积累多条后 AI 摘要才能触发）
+                     *   - 内容没变 → UPDATE 时间戳（不产生冗余行）
+                     *   - 3s 内同内容 → 跳过
                      *
-                     * onNotificationPosted(sbn)
-                     *   │
-                     *   ├─ 1. findByNotificationKey(pkg, tag, id)
-                     *   │     按 (包名 + tag + notificationId) 查找是否已有
-                     *   │     日志: 群用固定 id (如微信 groupId=-993967727, tag=null)
-                     *   │          每次更新内容 → existing 命中
-                     *   │          Telegram 每条消息 id 不同 → existing = null
-                     *   │
-                     *   ├─ 2. existing == null ──┬─ 3s 内同内容 (Telegram 重复推送)
-                     *   │                       │    → SKIP (return@launch)
-                     *   │                       └─ 正常新通知 → INSERT 新行
-                     *   │
-                     *   └─ 3. existing != null ──┬─ 内容变了 (微信更新/Telegram 编辑)
-                     *                           │    → INSERT 新行保留历史快照
-                     *                           │    （积累多条后 AI 摘要才能触发）
-                     *                           └─ 内容没变 (重复推送/刷新时间戳)
-                     *                                → UPDATE 时间戳, 不产生冗余行
+                     * @Transaction 内部会切换到 Dispatchers.IO 执行 SQL，
+                     * 导致即使单个调度线程也无法防止并发插入。
+                     * Mutex 确保同一时间只有一个协程执行去重/写入逻辑。
                      */
-                    val newContent = notificationWithKey.content
-                    val existing = it.notificationRepository.findByNotificationKey(
-                        notificationWithKey.packageName,
-                        notificationWithKey.notificationTag,
-                        notificationWithKey.notificationId
-                    )
-                    if (existing == null) {
-                        val dup = it.notificationRepository.findByContentDedup(
-                            notificationWithKey.packageName,
-                            notificationWithKey.title,
-                            newContent,
-                            notificationWithKey.timestamp,
-                            3000
-                        )
-                        if (dup != null) {
-                            Log.d(TAG, "Skipping duplicate notification (same content within 3s): $conversationKey")
-                            return@launch
-                        }
-                    }
-                    val savedNotification: NotificationEntity
-                    if (existing != null) {
-                        if (existing.content != newContent) {
-                            val savedId = it.notificationRepository.insert(
-                                notificationWithKey.copy(pendingIntentData = piData)
-                            )
-                            savedNotification = notificationWithKey.copy(
-                                id = savedId, pendingIntentData = piData
-                            )
-                            Log.d(TAG, "Notification history added (content changed): $conversationKey (id=$savedId)")
-                        } else {
-                            savedNotification = existing.copy(
-                                timestamp = notificationWithKey.timestamp,
-                                pendingIntentData = piData ?: existing.pendingIntentData
-                            )
-                            it.notificationRepository.update(savedNotification)
-                            Log.d(TAG, "Updated notification (tag+id match, content unchanged): $conversationKey")
-                        }
-                    } else {
-                        val savedId = it.notificationRepository.insert(
+                    val savedId = dedupMutex.withLock {
+                        it.notificationRepository.insertOrUpdate(
                             notificationWithKey.copy(pendingIntentData = piData)
                         )
-                        savedNotification = notificationWithKey.copy(
-                            id = savedId, pendingIntentData = piData
-                        )
-                        Log.d(TAG, "Notification inserted: $conversationKey (id=$savedId)")
                     }
+                    val savedNotification = notificationWithKey.copy(
+                        id = savedId, pendingIntentData = piData
+                    )
 
                     // WatchEngine: 实时匹配关注（通知已保存，有正确的 id）
                     it.watchEngine.matchNewNotification(savedNotification)
