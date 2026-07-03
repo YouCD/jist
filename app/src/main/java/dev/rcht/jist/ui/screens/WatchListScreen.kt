@@ -49,23 +49,18 @@ fun WatchListScreen(
                 title = { Text(stringResource(R.string.watch_list_title), fontWeight = FontWeight.SemiBold) },
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
                     containerColor = Color.Transparent
-                ),
-                actions = {
-                    TextButton(onClick = onCreateClick) {
-                        Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
-                        Spacer(Modifier.width(4.dp))
-                        Text(stringResource(R.string.watch_new))
-                    }
-                }
+                )
             )
         },
         floatingActionButton = {
-            FloatingActionButton(
-                onClick = onCreateClick,
-                containerColor = JistCyan,
-                contentColor = Color.Black
-            ) {
-                Icon(Icons.Default.Add, contentDescription = stringResource(R.string.watch_new))
+            Box(modifier = Modifier.padding(bottom = 80.dp)) {
+                FloatingActionButton(
+                    onClick = onCreateClick,
+                    containerColor = JistCyan,
+                    contentColor = Color.Black
+                ) {
+                    Icon(Icons.Default.Add, contentDescription = stringResource(R.string.watch_new))
+                }
             }
         }
     ) { paddingValues ->
