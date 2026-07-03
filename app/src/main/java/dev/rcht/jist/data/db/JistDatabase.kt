@@ -33,7 +33,7 @@ import dev.rcht.jist.data.db.fts.SummaryFts
         WatchTopicEntity::class,
         WatchCollectedItemEntity::class
     ],
-    version = 10,
+    version = 12,
     exportSchema = false
 )
 abstract class JistDatabase : RoomDatabase() {
@@ -72,6 +72,19 @@ abstract class JistDatabase : RoomDatabase() {
             }
         }
         
+        private val MIGRATION_10_11 = object : Migration(10, 11) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE summaries ADD COLUMN isRead INTEGER NOT NULL DEFAULT 0")
+            }
+        }
+
+        private val MIGRATION_11_12 = object : Migration(11, 12) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE summaries ADD COLUMN notificationTimeFrom INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE summaries ADD COLUMN notificationTimeTo INTEGER NOT NULL DEFAULT 0")
+            }
+        }
+
         fun getInstance(context: Context): JistDatabase {
             if (instance == null) {
                 instance = Room.databaseBuilder(
@@ -79,7 +92,7 @@ abstract class JistDatabase : RoomDatabase() {
                     JistDatabase::class.java,
                     "jist.db"
                 )
-                    .addMigrations(MIGRATION_9_10)
+                    .addMigrations(MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12)
                     .allowMainThreadQueries()
                     .build()
             }

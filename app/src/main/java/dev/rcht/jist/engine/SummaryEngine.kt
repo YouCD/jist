@@ -111,6 +111,8 @@ class SummaryEngine(
                 is LlmResult.Success -> {
                     val summary = response.data
                     // Store summary in database
+                    val notificationTimeFrom = notifications.minOf { it.timestamp }
+                    val notificationTimeTo = notifications.maxOf { it.timestamp }
                     val summaryEntity = SummaryEntity(
                         packageName = packageName ?: "Unknown",
                         conversationKey = conversationKey,
@@ -120,7 +122,9 @@ class SummaryEngine(
                         messageCount = notifications.size,
                         modelUsed = summary.model,
                         tokenCount = summary.totalTokens,
-                        createdAt = System.currentTimeMillis()
+                        createdAt = System.currentTimeMillis(),
+                        notificationTimeFrom = notificationTimeFrom,
+                        notificationTimeTo = notificationTimeTo
                     )
 
                     val summaryId = summaryRepository.insert(summaryEntity)

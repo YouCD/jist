@@ -33,6 +33,7 @@ data class DashboardUiState(
     val totalNotificationsCount: Int = 0,
     val unsummarizedCount: Int = 0,
     val summariesTodayCount: Int = 0,
+    val unreadSummariesCount: Int = 0,
     val lastSummarizedTime: String = "Never",
     val isNotificationListenerActive: Boolean = false,
     val isLoading: Boolean = true,
@@ -103,6 +104,10 @@ class DashboardViewModel(
                 } ?: "Never"
                 Log.d(TAG, "Last summarized: $lastSummarizedTime")
 
+                // Get unread count
+                val unreadSummariesCount = summaryRepository.countUnread()
+                Log.d(TAG, "Unread summaries: $unreadSummariesCount")
+
                 // Get recent summaries for activity feed
                 val recentSummaries = summaryRepository.getRecent(limit = 5)
                 Log.d(TAG, "Got ${recentSummaries.size} recent summaries for feed")
@@ -147,6 +152,7 @@ class DashboardViewModel(
                     totalNotificationsCount = notificationRepository.count(),
                     unsummarizedCount = unsummarizedCount,
                     summariesTodayCount = summariesTodayCount,
+                    unreadSummariesCount = unreadSummariesCount,
                     lastSummarizedTime = lastSummarizedTime,
                     isNotificationListenerActive = isListenerActive,
                     isLoading = false,

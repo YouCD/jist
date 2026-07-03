@@ -15,5 +15,8 @@ data class SummaryEntity(
     val messageCount: Int,
     val modelUsed: String,
     val tokenCount: Int? = null,
-    val createdAt: Long
+    val createdAt: Long,
+    val isRead: Boolean = false,
+    val notificationTimeFrom: Long = 0,
+    val notificationTimeTo: Long = 0
 )

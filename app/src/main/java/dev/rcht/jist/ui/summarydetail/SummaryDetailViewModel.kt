@@ -14,7 +14,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
 data class SummaryDetailUiState(
-    val summary: SummaryEntity? = null,
+    val summaries: List<SummaryEntity> = emptyList(),
+    val currentIndex: Int = 0,
     val notifications: List<NotificationEntity> = emptyList(),
     val isLoading: Boolean = true,
     val isReSummarizing: Boolean = false,
@@ -31,19 +32,24 @@ class SummaryDetailViewModel(
     private val _uiState = MutableStateFlow(SummaryDetailUiState())
     val uiState: StateFlow<SummaryDetailUiState> = _uiState
 
-    fun loadSummary(summaryId: Long) {
+    fun loadAll(summaryId: Long) {
         viewModelScope.launch(Dispatchers.IO) {
             _uiState.value = _uiState.value.copy(isLoading = true)
             try {
-                val summary = summaryRepository.getById(summaryId)
+                val all = summaryRepository.getAll().sortedByDescending { it.createdAt }
+                val index = all.indexOfFirst { it.id == summaryId }.coerceAtLeast(0)
+                val summary = all.getOrNull(index)
+                if (summary != null && !summary.isRead) {
+                    summaryRepository.markAsRead(summary.id)
+                }
                 val notifications = if (summary != null) {
                     notificationRepository.getByConversationKey(summary.conversationKey)
                 } else {
                     emptyList()
                 }
-                
-                _uiState.value = _uiState.value.copy(
-                    summary = summary,
+                _uiState.value = SummaryDetailUiState(
+                    summaries = all,
+                    currentIndex = index,
                     notifications = notifications.sortedByDescending { it.timestamp },
                     isLoading = false,
                     error = null
@@ -57,23 +63,31 @@ class SummaryDetailViewModel(
         }
     }
 
-    fun reSummarize() {
-        Log.d(TAG, "reSummarize called")
-        val summary = _uiState.value.summary
-        if (summary == null) {
-            Log.w(TAG, "reSummarize: no summary in state")
-            return
+    fun onPageChanged(index: Int) {
+        if (index == _uiState.value.currentIndex) return
+        viewModelScope.launch(Dispatchers.IO) {
+            val summary = _uiState.value.summaries.getOrNull(index) ?: return@launch
+            if (!summary.isRead) {
+                summaryRepository.markAsRead(summary.id)
+            }
+            val notifications = notificationRepository.getByConversationKey(summary.conversationKey)
+            _uiState.value = _uiState.value.copy(
+                currentIndex = index,
+                notifications = notifications.sortedByDescending { it.timestamp },
+                error = null
+            )
         }
-        Log.d(TAG, "reSummarize: conversationKey=${summary.conversationKey}")
-        
+    }
+
+    fun reSummarize() {
+        val summary = _uiState.value.summaries.getOrNull(_uiState.value.currentIndex) ?: return
         viewModelScope.launch(Dispatchers.IO) {
             _uiState.value = _uiState.value.copy(isReSummarizing = true)
             try {
                 val result = summaryEngine.summarizeConversation(summary.conversationKey, includeSummarized = true)
-                Log.d(TAG, "reSummarize result: $result")
                 when (result) {
                     is dev.rcht.jist.engine.SummaryResult.Success -> {
-                        loadSummary(result.summaryId)
+                        reloadAllAfterResummarize(result.summaryId)
                         _uiState.value = _uiState.value.copy(
                             isReSummarizing = false,
                             reSummarizeSuccess = true,
@@ -96,6 +110,20 @@ class SummaryDetailViewModel(
                 )
             }
         }
+    }
+
+    private suspend fun reloadAllAfterResummarize(newSummaryId: Long) {
+        val all = summaryRepository.getAll().sortedByDescending { it.createdAt }
+        val index = all.indexOfFirst { it.id == newSummaryId }.coerceAtLeast(0)
+        val summary = all[index]
+        val notifications = notificationRepository.getByConversationKey(summary.conversationKey)
+        _uiState.value = SummaryDetailUiState(
+            summaries = all,
+            currentIndex = index,
+            notifications = notifications.sortedByDescending { it.timestamp },
+            isReSummarizing = false,
+            error = null
+        )
     }
 
     fun clearReSummarizeStatus() {

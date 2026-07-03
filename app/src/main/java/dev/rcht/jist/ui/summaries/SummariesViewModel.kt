@@ -17,6 +17,7 @@ data class SummariesUiState(
     val filteredSummaries: List<SummaryEntity> = emptyList(),
     val groupedSummaries: List<SummaryGroup> = emptyList(),
     val isLoading: Boolean = true,
+    val isRefreshing: Boolean = false,
     val error: String? = null,
     val searchQuery: String = "",
     val selectedAppFilter: String? = null
@@ -31,6 +32,12 @@ class SummariesViewModel(
 
     init {
         loadSummaries()
+    }
+
+    private fun sortSummaries(summaries: List<SummaryEntity>): List<SummaryEntity> {
+        val (unread, read) = summaries.partition { !it.isRead }
+        return unread.sortedBy { if (it.notificationTimeFrom != 0L) it.notificationTimeFrom else it.createdAt } +
+            read.sortedByDescending { it.createdAt }
     }
 
     private fun groupByDate(summaries: List<SummaryEntity>): List<SummaryGroup> {
@@ -55,7 +62,7 @@ class SummariesViewModel(
         viewModelScope.launch(Dispatchers.IO) {
             _uiState.value = _uiState.value.copy(isLoading = true)
             try {
-                val summaries = summaryRepository.getAll().sortedByDescending { it.createdAt }
+                val summaries = sortSummaries(summaryRepository.getAll())
                 _uiState.value = _uiState.value.copy(
                     summaries = summaries,
                     filteredSummaries = summaries,
@@ -100,15 +107,34 @@ class SummariesViewModel(
                 }
             }
             
+            val sorted = sortSummaries(filtered)
             _uiState.value = _uiState.value.copy(
-                filteredSummaries = filtered,
-                groupedSummaries = groupByDate(filtered)
+                filteredSummaries = sorted,
+                groupedSummaries = groupByDate(sorted)
             )
         }
     }
 
     fun refreshSummaries() {
-        loadSummaries()
+        if (_uiState.value.isRefreshing) return
+        viewModelScope.launch(Dispatchers.IO) {
+            _uiState.value = _uiState.value.copy(isRefreshing = true)
+            try {
+                val summaries = sortSummaries(summaryRepository.getAll())
+                _uiState.value = _uiState.value.copy(
+                    summaries = summaries,
+                    filteredSummaries = summaries,
+                    groupedSummaries = groupByDate(summaries),
+                    isRefreshing = false,
+                    error = null
+                )
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(
+                    isRefreshing = false,
+                    error = "Error loading summaries: ${e.message}"
+                )
+            }
+        }
     }
 
     fun deleteSummaries(ids: List<Long>) {

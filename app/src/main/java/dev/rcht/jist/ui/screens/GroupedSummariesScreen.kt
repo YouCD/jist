@@ -1,6 +1,7 @@
 package dev.rcht.jist.ui.screens
 
 import dev.rcht.jist.R
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -11,6 +12,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Search
@@ -22,6 +26,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import dev.rcht.jist.ui.components.GlassScaffold
+import dev.rcht.jist.ui.components.SummaryCard
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -120,14 +125,10 @@ fun GroupedSummariesScreen(
                                 items(group.summaries.size) { index ->
                                     val summary = group.summaries[index]
                                     SummaryCard(
-                                        appName = summary.appName,
-                                        contactOrGroup = summary.contactOrGroup,
-                                        summaryText = summary.summaryText,
-                                        messageCount = summary.messageCount,
-                                        createdAt = summary.createdAt,
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .clickable { onSummaryClick(summary.id) }
+                                        summary = summary,
+                                        onClick = { onSummaryClick(summary.id) },
+                                        useMarkdown = false,
+                                        modifier = Modifier.fillMaxWidth()
                                     )
                                 }
 
@@ -142,69 +143,6 @@ fun GroupedSummariesScreen(
                     }
                 }
             }
-        }
-    }
-}
-
-@Composable
-private fun SummaryCard(
-    appName: String,
-    contactOrGroup: String,
-    summaryText: String,
-    messageCount: Int,
-    createdAt: Long,
-    modifier: Modifier = Modifier,
-    formatDate: (Long) -> String = { timeMs ->
-        java.text.SimpleDateFormat("MMM dd, HH:mm", java.util.Locale.getDefault())
-            .format(java.util.Date(timeMs))
-    }
-) {
-    Card(modifier = modifier) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            // Header with app and contact info
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = appName,
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                    Text(
-                        text = contactOrGroup,
-                        style = MaterialTheme.typography.titleSmall
-                    )
-                }
-                Text(
-                    text = "$messageCount msg",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-
-            // Summary text (preview)
-            Text(
-                text = summaryText,
-                style = MaterialTheme.typography.bodyMedium,
-                maxLines = 3,
-                overflow = TextOverflow.Ellipsis,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-
-            // Timestamp
-            Text(
-                text = formatDate(createdAt),
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
         }
     }
 }

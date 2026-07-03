@@ -83,6 +83,7 @@ import androidx.core.graphics.drawable.toBitmap
 import dev.rcht.jist.data.db.entity.SummaryEntity
 import dev.rcht.jist.ui.components.GlassCard
 import dev.rcht.jist.ui.components.GlassScaffold
+import dev.rcht.jist.ui.components.SummaryCard
 import dev.rcht.jist.ui.dashboard.DashboardUiState
 import dev.rcht.jist.ui.dashboard.WatchRecentMatch
 import dev.rcht.jist.ui.theme.JistCyan
@@ -438,12 +439,29 @@ fun DashboardScreen(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        text = stringResource(R.string.dashboard_recent_activity),
-                        style = MaterialTheme.typography.titleMedium,
-                        color = Color.White,
-                        fontWeight = FontWeight.SemiBold
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = stringResource(R.string.dashboard_recent_activity),
+                            style = MaterialTheme.typography.titleMedium,
+                            color = Color.White,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        if (uiState.unreadSummariesCount > 0) {
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Box(
+                                modifier = Modifier
+                                    .background(JistCyan.copy(alpha = 0.2f), RoundedCornerShape(10.dp))
+                                    .padding(horizontal = 8.dp, vertical = 2.dp)
+                            ) {
+                                Text(
+                                    text = "${uiState.unreadSummariesCount}",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = JistCyan,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+                    }
                     Text(
                         text = stringResource(R.string.dashboard_view_all),
                         style = MaterialTheme.typography.labelMedium,
@@ -478,14 +496,12 @@ fun DashboardScreen(
                     }
                 } else {
                     uiState.recentSummaries.forEach { summary ->
-                        ActivityItem(
-                            packageName = summary.packageName,
-                            title = summary.contactOrGroup,
-                            description = summary.summaryText,
-                            time = formatRelativeTime(summary.createdAt),
-                            accentColor = getAppAccentColor(summary.appName),
-                            hazeState = hazeState,
-                            onClick = { onSummaryClick(summary.id) }
+                        SummaryCard(
+                            summary = summary,
+                            onClick = { onSummaryClick(summary.id) },
+                            useMarkdown = false,
+                            glassHazeState = hazeState,
+                            modifier = Modifier.fillMaxWidth()
                         )
                     }
                 }
@@ -567,100 +583,6 @@ private fun WatchMatchItem(
     }
 }
 
-@Composable
-fun ActivityItem(
-    packageName: String = "",
-    title: String,
-    description: String,
-    time: String,
-    accentColor: Color,
-    hazeState: HazeState?,
-    onClick: () -> Unit = {}
-) {
-    val context = LocalContext.current
-
-    GlassCard(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick),
-        hazeState = hazeState
-    ) {
-        Row(
-            modifier = Modifier.padding(16.dp),
-            verticalAlignment = Alignment.Top
-        ) {
-            // App Icon
-            val appIcon: Drawable? = remember(packageName) {
-                try {
-                    context.packageManager.getApplicationIcon(packageName)
-                } catch (e: Exception) {
-                    null
-                }
-            }
-            if (appIcon != null) {
-                Image(
-                    bitmap = appIcon.toBitmap(48, 48).asImageBitmap(),
-                    contentDescription = title,
-                    modifier = Modifier
-                        .size(36.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                )
-            } else {
-                // Fallback colored circle with first letter
-                Box(
-                    modifier = Modifier
-                        .size(36.dp)
-                        .background(accentColor.copy(alpha = 0.3f), RoundedCornerShape(8.dp)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = title.take(1).uppercase(),
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.Bold,
-                        color = accentColor
-                    )
-                }
-            }
-            
-            Spacer(modifier = Modifier.width(12.dp))
-            
-            Column(modifier = Modifier.weight(1f)) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = title,
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White,
-                        modifier = Modifier.weight(1f),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                    Text(
-                        text = time,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = Color.White.copy(alpha = 0.5f)
-                    )
-                }
-                
-                Spacer(modifier = Modifier.height(6.dp))
-                
-                Text(
-                    text = description,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = Color.White.copy(alpha = 0.8f),
-                    lineHeight = 20.sp,
-                    maxLines = 3,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
-        }
-    }
-}
-
 // Helper: Dynamic greeting based on time of day
 @Composable
 private fun getGreeting(): String {
@@ -675,37 +597,6 @@ private fun getGreeting(): String {
         time < 18*60 -> stringResource(R.string.dashboard_good_afternoon)
         time < 19*60 + 30 -> stringResource(R.string.dashboard_good_evening)
         else -> stringResource(R.string.dashboard_good_night)
-    }
-}
-
-// Helper: Format timestamp as relative time
-@Composable
-private fun formatRelativeTime(timeMs: Long): String {
-    val now = System.currentTimeMillis()
-    val diffMs = now - timeMs
-    return when {
-        diffMs < 60_000 -> stringResource(R.string.dashboard_just_now)
-        diffMs < 3_600_000 -> "${diffMs / 60_000}m ago"
-        diffMs < 86_400_000 -> "${diffMs / 3_600_000}h ago"
-        diffMs < 604_800_000 -> "${diffMs / 86_400_000}d ago"
-        else -> java.text.SimpleDateFormat("MMM dd", java.util.Locale.getDefault())
-            .format(java.util.Date(timeMs))
-    }
-}
-
-// Helper: Accent color per app name
-private fun getAppAccentColor(appName: String): Color {
-    return when (appName.lowercase()) {
-        "whatsapp" -> Color(0xFF25D366)
-        "telegram" -> Color(0xFF0088CC)
-        "slack" -> Color(0xFF4A154B)
-        "gmail" -> Color(0xFFFF5252)
-        "instagram" -> Color(0xFFE1306C)
-        "twitter", "x" -> Color(0xFF1DA1F2)
-        "discord" -> Color(0xFF5865F2)
-        "messenger" -> Color(0xFF006AFF)
-        "signal" -> Color(0xFF3A76F0)
-        else -> Color(0xFF6C63FF) // Default purple
     }
 }
 

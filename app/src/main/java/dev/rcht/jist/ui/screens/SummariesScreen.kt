@@ -2,8 +2,10 @@ package dev.rcht.jist.ui.screens
 
 import dev.rcht.jist.R
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
@@ -21,7 +23,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import dev.rcht.jist.ui.components.GlassScaffold
-import dev.rcht.jist.ui.components.MarkdownText
+import dev.rcht.jist.ui.components.SummaryCard
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -55,6 +59,8 @@ fun SummariesScreen(
     onAppFilterChange: (String?) -> Unit = {},
     onSummaryClick: (Long) -> Unit = {},
     onDeleteSummaries: (List<Long>) -> Unit = {},
+    onRefresh: () -> Unit = {},
+    isRefreshing: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     var isSelecting by remember { mutableStateOf(false) }
@@ -106,23 +112,27 @@ fun SummariesScreen(
             )
         }
     ) { paddingValues ->
-        if (uiState.isLoading) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues),
-                contentAlignment = Alignment.Center
-            ) {
-                CircularProgressIndicator()
-            }
-        } else {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues)
-                    .padding(16.dp)
-            ) {
-                if (!isSelecting) {
+        PullToRefreshBox(
+            isRefreshing = isRefreshing,
+            onRefresh = onRefresh,
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+        ) {
+            if (uiState.isLoading) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator()
+                }
+            } else {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(16.dp)
+                ) {
+                    if (!isSelecting) {
                     OutlinedTextField(
                         value = uiState.searchQuery,
                         onValueChange = onSearchChange,
@@ -175,66 +185,16 @@ fun SummariesScreen(
                             group.summaries.forEach { summary ->
                                 val selected = summary.id in selectedIds
                                 item {
-                                    val ctx = LocalContext.current
-                                    val icon = remember(summary.packageName) {
-                                        try {
-                                            val d = ctx.packageManager.getApplicationIcon(summary.packageName)
-                                            val b = android.graphics.Bitmap.createBitmap(48, 48, android.graphics.Bitmap.Config.ARGB_8888)
-                                            val c = android.graphics.Canvas(b)
-                                            d.setBounds(0, 0, 48, 48)
-                                            d.draw(c)
-                                            b.asImageBitmap()
-                                        } catch (e: Exception) { null }
-                                    }
-                                    Card(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .clickable {
-                                                if (isSelecting) {
-                                                    selectedIds = if (selected) selectedIds - summary.id else selectedIds + summary.id
-                                                } else {
-                                                    onSummaryClick(summary.id)
-                                                }
-                                            },
-                                        colors = CardDefaults.cardColors(
-                                            containerColor = if (selected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
-                                            else MaterialTheme.colorScheme.surface
-                                        )
-                                    ) {
-                                        Row(
-                                            modifier = Modifier.padding(16.dp),
-                                            verticalAlignment = Alignment.Top
-                                        ) {
-                                            if (isSelecting) {
-                                                Checkbox(checked = selected, onCheckedChange = {
-                                                    selectedIds = if (selected) selectedIds - summary.id else selectedIds + summary.id
-                                                }, modifier = Modifier.padding(end = 8.dp))
-                                            } else if (icon != null) {
-                                                Image(bitmap = icon, contentDescription = null,
-                                                    modifier = Modifier.size(32.dp).clip(RoundedCornerShape(6.dp)).padding(end = 10.dp))
-                                            }
-                                            Column(modifier = Modifier.weight(1f)) {
-                                                Row(
-                                                    modifier = Modifier.fillMaxWidth(),
-                                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                                    verticalAlignment = Alignment.CenterVertically
-                                                ) {
-                                                    Column(modifier = Modifier.weight(1f)) {
-                                                        Text(summary.appName, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
-                                                        Text(summary.contactOrGroup, style = MaterialTheme.typography.titleSmall)
-                                                    }
-                                                    Text("${summary.messageCount} msg", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                                }
-                                                Spacer(modifier = Modifier.height(8.dp))
-                                                MarkdownText(markdown = summary.summaryText, maxLines = 3)
-                                                Spacer(modifier = Modifier.height(4.dp))
-                                                Text(
-                                                    java.text.SimpleDateFormat("MMM dd, HH:mm", java.util.Locale.getDefault()).format(java.util.Date(summary.createdAt)),
-                                                    style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant
-                                                )
-                                            }
-                                        }
-                                    }
+                                    SummaryCard(
+                                        summary = summary,
+                                        onClick = { onSummaryClick(summary.id) },
+                                        selected = selected,
+                                        isSelecting = isSelecting,
+                                        onSelectChange = { checked ->
+                                            selectedIds = if (checked) selectedIds + summary.id else selectedIds - summary.id
+                                        },
+                                        modifier = Modifier.fillMaxWidth()
+                                    )
                                 }
                             }
                         }
@@ -243,6 +203,7 @@ fun SummariesScreen(
                 }
             }
         }
+    }
     }
 
     if (showDeleteConfirm) {
@@ -266,73 +227,6 @@ fun SummariesScreen(
                 }
             }
         )
-    }
-}
-
-@Composable
-private fun SummaryCard(
-    packageName: String = "",
-    appName: String,
-    contactOrGroup: String,
-    summaryText: String,
-    messageCount: Int,
-    createdAt: Long,
-    modifier: Modifier = Modifier,
-    formatDate: (Long) -> String = { timeMs ->
-        java.text.SimpleDateFormat("MMM dd, HH:mm", java.util.Locale.getDefault())
-            .format(java.util.Date(timeMs))
-    }
-) {
-    val context = LocalContext.current
-    val appIcon: androidx.compose.ui.graphics.ImageBitmap? = remember(packageName) {
-        try {
-            val drawable = context.packageManager.getApplicationIcon(packageName)
-            val bitmap = (drawable as? android.graphics.drawable.BitmapDrawable)?.bitmap
-                ?: android.graphics.Bitmap.createBitmap(48, 48, android.graphics.Bitmap.Config.ARGB_8888).also {
-                    val canvas = android.graphics.Canvas(it)
-                    drawable.setBounds(0, 0, 48, 48)
-                    drawable.draw(canvas)
-                }
-            bitmap.asImageBitmap()
-        } catch (e: Exception) { null }
-    }
-
-    Card(modifier = modifier) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Row(
-                    modifier = Modifier.weight(1f),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    if (appIcon != null) {
-                        Image(
-                            bitmap = appIcon,
-                            contentDescription = null,
-                            modifier = Modifier
-                                .size(32.dp)
-                                .clip(RoundedCornerShape(6.dp))
-                        )
-                        Spacer(modifier = Modifier.width(10.dp))
-                    }
-                    Column {
-                        Text(appName, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
-                        Text(contactOrGroup, style = MaterialTheme.typography.titleSmall)
-                    }
-                }
-                Text("$messageCount msg", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-            MarkdownText(summaryText, maxLines = 3)
-            Text(formatDate(createdAt), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
     }
 }
 

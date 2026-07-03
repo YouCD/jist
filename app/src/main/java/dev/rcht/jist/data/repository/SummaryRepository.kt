@@ -41,6 +41,14 @@ class SummaryRepository(private val summaryDao: SummaryDao) {
         return summaryDao.getById(id)
     }
 
+    suspend fun markAsRead(id: Long) {
+        summaryDao.markAsRead(id)
+    }
+
+    suspend fun countUnread(): Int {
+        return summaryDao.countUnread()
+    }
+
     suspend fun deleteByIds(ids: List<Long>) {
         summaryDao.deleteByIds(ids)
     }

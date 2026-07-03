@@ -1,6 +1,5 @@
 package dev.rcht.jist.ui.components
 
-import android.text.method.LinkMovementMethod
 import android.widget.TextView
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
@@ -24,7 +23,6 @@ fun MarkdownText(
     AndroidView(
         factory = { ctx ->
             TextView(ctx).apply {
-                movementMethod = LinkMovementMethod.getInstance()
                 setTextColor(textColor.toArgb())
                 textSize = 14f
                 setLineSpacing(4f, 1f)

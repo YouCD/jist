@@ -6,14 +6,17 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -198,6 +201,12 @@ fun JistNavHost(
                     }
                 }
             )
+            val lifecycleOwner = LocalLifecycleOwner.current
+            LaunchedEffect(lifecycleOwner) {
+                lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+                    viewModel.refreshSummaries()
+                }
+            }
             val uiState by viewModel.uiState.collectAsState()
             SummariesScreen(
                 uiState = uiState,
@@ -206,7 +215,9 @@ fun JistNavHost(
                 onSummaryClick = { summaryId ->
                     navController.navigate("summary_detail/$summaryId")
                 },
-                onDeleteSummaries = { ids -> viewModel.deleteSummaries(ids) }
+                onDeleteSummaries = { ids -> viewModel.deleteSummaries(ids) },
+                onRefresh = { viewModel.refreshSummaries() },
+                isRefreshing = uiState.isRefreshing
             )
         }
         composable("summary_detail/{summaryId}") { backStackEntry ->
@@ -225,27 +236,20 @@ fun JistNavHost(
                     }
                 }
             )
-            
-            androidx.compose.runtime.LaunchedEffect(summaryId) {
-                viewModel.loadSummary(summaryId)
-            }
-            
+
             val uiState by viewModel.uiState.collectAsState()
-            val summary = uiState.summary
-            
-            if (summary != null) {
-                SummaryDetailScreen(
-                    summaryText = summary.summaryText,
-                    appName = summary.appName,
-                    contactOrGroup = summary.contactOrGroup,
-                    messageCount = summary.messageCount,
-                    createdAt = summary.createdAt,
-                    notifications = uiState.notifications,
-                    onNavigateBack = { navController.popBackStack() },
-                    onReSummarize = { viewModel.reSummarize() },
-                    isReSummarizing = uiState.isReSummarizing
-                )
+
+            LaunchedEffect(summaryId) {
+                viewModel.loadAll(summaryId)
             }
+
+            SummaryDetailScreen(
+                uiState = uiState,
+                onNavigateBack = { navController.popBackStack() },
+                onReSummarize = { viewModel.reSummarize() },
+                onPageChanged = { index -> viewModel.onPageChanged(index) },
+                isReSummarizing = uiState.isReSummarizing
+            )
         }
         composable(Screen.Settings.route) {
             val viewModel: dev.rcht.jist.ui.settings.SettingsViewModel = viewModel(
