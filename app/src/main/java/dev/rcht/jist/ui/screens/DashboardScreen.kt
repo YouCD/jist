@@ -5,7 +5,6 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.drawable.Drawable
-import androidx.compose.animation.core.animateIntAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -58,7 +57,6 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -83,6 +81,7 @@ import androidx.core.graphics.drawable.toBitmap
 import dev.rcht.jist.data.db.entity.SummaryEntity
 import dev.rcht.jist.ui.components.GlassCard
 import dev.rcht.jist.ui.components.GlassScaffold
+import dev.rcht.jist.ui.components.StatPanelCard
 import dev.rcht.jist.ui.components.SummaryCard
 import dev.rcht.jist.ui.dashboard.DashboardUiState
 import dev.rcht.jist.ui.dashboard.WatchRecentMatch
@@ -214,42 +213,15 @@ fun DashboardScreen(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    // Intercepted Card
-                    GlassCard(
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(160.dp),
-                        hazeState = hazeState
-                    ) {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .padding(16.dp),
-                            verticalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(
-                                    imageVector = Icons.Outlined.Security,
-                                    contentDescription = null,
-                                    tint = JistCyan,
-                                    modifier = Modifier.size(16.dp)
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(
-                                    text = stringResource(R.string.dashboard_intercepted),
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = JistCyan,
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
-                            
-                            Column {
-                                AnimatedCounter(
-                                    target = uiState.totalNotificationsCount,
-                                    suffix = stringResource(R.string.dashboard_notifications)
-                                )
-                            }
-
+                    StatPanelCard(
+                        icon = Icons.Outlined.Security,
+                        iconTint = JistCyan,
+                        title = stringResource(R.string.dashboard_intercepted),
+                        counter = uiState.totalNotificationsCount,
+                        suffix = stringResource(R.string.dashboard_notifications),
+                        hazeState = hazeState,
+                        modifier = Modifier.weight(1f),
+                        bottomContent = {
                             LinearProgressIndicator(
                                 progress = {
                                     if (uiState.totalNotificationsCount > 0) {
@@ -261,44 +233,18 @@ fun DashboardScreen(
                                 trackColor = JistCyan.copy(alpha = 0.2f),
                             )
                         }
-                    }
+                    )
 
-                    // Summarized Card
-                    GlassCard(
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(160.dp),
-                        hazeState = hazeState
-                    ) {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .padding(16.dp),
-                            verticalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(
-                                    imageVector = Icons.Outlined.AutoAwesome,
-                                    contentDescription = null,
-                                    tint = JistPurple,
-                                    modifier = Modifier.size(16.dp)
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(
-                                    text = stringResource(R.string.dashboard_summarized),
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = JistPurple,
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
-
-                            Column {
-                                AnimatedCounter(
-                                    target = uiState.summariesTodayCount,
-                                    suffix = stringResource(R.string.dashboard_digests)
-                                )
-                            }
-                            // Dashed progress based on real ratio
+                    StatPanelCard(
+                        icon = Icons.Outlined.AutoAwesome,
+                        iconTint = JistPurple,
+                        title = stringResource(R.string.dashboard_summarized),
+                        counter = uiState.summariesTodayCount,
+                        suffix = stringResource(R.string.dashboard_digests),
+                        hazeState = hazeState,
+                        modifier = Modifier.weight(1f),
+                        unreadCount = uiState.unreadSummariesCount,
+                        bottomContent = {
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.spacedBy(4.dp)
@@ -320,7 +266,7 @@ fun DashboardScreen(
                                 }
                             }
                         }
-                    }
+                    )
                 }
 
                 // Battery optimization banner if not disabled
@@ -338,69 +284,29 @@ fun DashboardScreen(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    GlassCard(
-                        modifier = Modifier.weight(1f).height(120.dp).clickable { onWatchListClick() },
-                        hazeState = hazeState
-                    ) {
-                        Column(
-                            modifier = Modifier.fillMaxSize().padding(16.dp),
-                            verticalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(
-                                    imageVector = Icons.Filled.Visibility,
-                                    contentDescription = null,
-                                    tint = JistCyan,
-                                    modifier = Modifier.size(16.dp)
-                                )
-                                Spacer(Modifier.width(8.dp))
-                                Text(
-                                    stringResource(R.string.watch_list_title),
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = JistCyan,
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
-                            Column {
-                                AnimatedCounter(
-                                    target = uiState.watchActiveCount,
-                                    suffix = stringResource(R.string.dashboard_watching)
-                                )
-                            }
-                        }
-                    }
+                    StatPanelCard(
+                        icon = Icons.Filled.Visibility,
+                        iconTint = JistCyan,
+                        title = stringResource(R.string.watch_list_title),
+                        counter = uiState.watchActiveCount,
+                        suffix = stringResource(R.string.dashboard_watching),
+                        hazeState = hazeState,
+                        modifier = Modifier.weight(1f),
+                        height = 120.dp,
+                        onClick = onWatchListClick
+                    )
 
-                    GlassCard(
-                        modifier = Modifier.weight(1f).height(120.dp).clickable { onWatchListClick() },
-                        hazeState = hazeState
-                    ) {
-                        Column(
-                            modifier = Modifier.fillMaxSize().padding(16.dp),
-                            verticalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(
-                                    imageVector = Icons.Filled.Info,
-                                    contentDescription = null,
-                                    tint = JistPurple,
-                                    modifier = Modifier.size(16.dp)
-                                )
-                                Spacer(Modifier.width(8.dp))
-                                Text(
-                                    stringResource(R.string.dashboard_collected),
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = JistPurple,
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
-                            Column {
-                                AnimatedCounter(
-                                    target = uiState.watchCollectedCount,
-                                    suffix = stringResource(R.string.dashboard_items)
-                                )
-                            }
-                        }
-                    }
+                    StatPanelCard(
+                        icon = Icons.Filled.Info,
+                        iconTint = JistPurple,
+                        title = stringResource(R.string.dashboard_collected),
+                        counter = uiState.watchCollectedCount,
+                        suffix = stringResource(R.string.dashboard_items),
+                        hazeState = hazeState,
+                        modifier = Modifier.weight(1f),
+                        height = 120.dp,
+                        onClick = onWatchListClick
+                    )
                 }
 
                 // Recent Watch Matches
@@ -598,36 +504,6 @@ private fun getGreeting(): String {
         time < 19*60 + 30 -> stringResource(R.string.dashboard_good_evening)
         else -> stringResource(R.string.dashboard_good_night)
     }
-}
-
-@Composable
-private fun AnimatedCounter(
-    target: Int,
-    suffix: String,
-    modifier: Modifier = Modifier,
-    color: Color = Color.White
-) {
-    val animatedState = remember { mutableIntStateOf(0) }
-    LaunchedEffect(target) {
-        val frames = 20
-        for (i in 1..frames) {
-            delay(40)
-            animatedState.intValue = target * i / frames
-        }
-        animatedState.intValue = target
-    }
-    Text(
-        buildAnnotatedString {
-            withStyle(SpanStyle(fontSize = 32.sp, fontWeight = FontWeight.Bold)) {
-                append(animatedState.intValue.toString())
-            }
-            withStyle(SpanStyle(fontSize = 12.sp, color = color.copy(alpha = 0.6f))) {
-                append("\n$suffix")
-            }
-        },
-        color = color,
-        modifier = modifier
-    )
 }
 
 @androidx.compose.ui.tooling.preview.Preview
