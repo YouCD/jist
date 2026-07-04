@@ -8,14 +8,10 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 
 data class SummariesUiState(
     val summaries: List<SummaryEntity> = emptyList(),
     val filteredSummaries: List<SummaryEntity> = emptyList(),
-    val groupedSummaries: List<SummaryGroup> = emptyList(),
     val isLoading: Boolean = true,
     val isRefreshing: Boolean = false,
     val error: String? = null,
@@ -36,26 +32,8 @@ class SummariesViewModel(
 
     private fun sortSummaries(summaries: List<SummaryEntity>): List<SummaryEntity> {
         val (unread, read) = summaries.partition { !it.isRead }
-        return unread.sortedBy { if (it.notificationTimeFrom != 0L) it.notificationTimeFrom else it.createdAt } +
+        return unread.sortedBy { it.createdAt } +
             read.sortedByDescending { it.createdAt }
-    }
-
-    private fun groupByDate(summaries: List<SummaryEntity>): List<SummaryGroup> {
-        val calendar = java.util.Calendar.getInstance()
-        val today = calendar.apply { set(java.util.Calendar.HOUR_OF_DAY, 0); set(java.util.Calendar.MINUTE, 0); set(java.util.Calendar.SECOND, 0); set(java.util.Calendar.MILLISECOND, 0) }.timeInMillis
-        val yesterday = today - 86400000L
-        val dateFormat = SimpleDateFormat("MMM dd, EEEE", Locale.getDefault())
-
-        return summaries
-            .groupBy { summary ->
-                when {
-                    summary.createdAt >= today -> "Today"
-                    summary.createdAt >= yesterday -> "Yesterday"
-                    else -> dateFormat.format(Date(summary.createdAt))
-                }
-            }
-            .map { (label, items) -> SummaryGroup(label, items) }
-            .sortedByDescending { it.summaries.firstOrNull()?.createdAt ?: 0L }
     }
 
     private fun loadSummaries() {
@@ -66,7 +44,6 @@ class SummariesViewModel(
                 _uiState.value = _uiState.value.copy(
                     summaries = summaries,
                     filteredSummaries = summaries,
-                    groupedSummaries = groupByDate(summaries),
                     isLoading = false,
                     error = null
                 )
@@ -109,8 +86,7 @@ class SummariesViewModel(
             
             val sorted = sortSummaries(filtered)
             _uiState.value = _uiState.value.copy(
-                filteredSummaries = sorted,
-                groupedSummaries = groupByDate(sorted)
+                filteredSummaries = sorted
             )
         }
     }
@@ -124,7 +100,6 @@ class SummariesViewModel(
                 _uiState.value = _uiState.value.copy(
                     summaries = summaries,
                     filteredSummaries = summaries,
-                    groupedSummaries = groupByDate(summaries),
                     isRefreshing = false,
                     error = null
                 )
@@ -142,9 +117,5 @@ class SummariesViewModel(
             summaryRepository.deleteByIds(ids)
             loadSummaries()
         }
-    }
-
-    fun formatDate(timeMs: Long): String {
-        return SimpleDateFormat("MMM dd, HH:mm", Locale.getDefault()).format(Date(timeMs))
     }
 }

@@ -328,4 +328,8 @@
     <string name="watch_delete_confirm">Delete</string>
     <string name="watch_delete_cancel">Cancel</string>
     <string name="watch_item_count">records</string>
+
+    <!-- Silent Notification Channel -->
+    <string name="silent_channel_name">Monitored app notifications</string>
+    <string name="silent_channel_description">Silent notifications forwarded from monitored apps</string>
 </resources>

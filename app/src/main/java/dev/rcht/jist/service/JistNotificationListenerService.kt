@@ -1,6 +1,7 @@
 package dev.rcht.jist.service
 
 import android.app.Notification
+import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
 import android.service.notification.NotificationListenerService
@@ -24,6 +25,23 @@ class JistNotificationListenerService : NotificationListenerService() {
     private val notificationDispatcher = Executors.newSingleThreadExecutor().asCoroutineDispatcher()
     private val scope = CoroutineScope(notificationDispatcher)
     private val dedupMutex = Mutex()
+    private var silentNotificationManager: NotificationManager? = null
+
+    override fun onCreate() {
+        super.onCreate()
+        val nm = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        val channel = NotificationChannel(
+            SILENT_CHANNEL_ID,
+            applicationContext.getString(dev.rcht.jist.R.string.silent_channel_name),
+            NotificationManager.IMPORTANCE_LOW
+        )
+        channel.description = applicationContext.getString(dev.rcht.jist.R.string.silent_channel_description)
+        channel.setSound(null, null)
+        channel.enableVibration(false)
+        channel.enableLights(false)
+        nm.createNotificationChannel(channel)
+        silentNotificationManager = nm
+    }
 
     private fun sha256(input: String): String {
         val digest = MessageDigest.getInstance("SHA-256")
@@ -165,6 +183,27 @@ class JistNotificationListenerService : NotificationListenerService() {
 
                     // WatchEngine: 实时匹配关注（通知已保存，有正确的 id）
                     it.watchEngine.matchNewNotification(savedNotification)
+
+                    // 静音处理: 取消原通知声音，改用 Jist 静音通道重发
+                    val nm = silentNotificationManager
+                    if (nm != null) {
+                        cancelNotification(sbn.key)
+                        val silentBuilder = Notification.Builder(this@JistNotificationListenerService, SILENT_CHANNEL_ID)
+                            .setContentTitle(notificationWithKey.title)
+                            .setContentText(rawContent)
+                            .setSmallIcon(sbn.notification.smallIcon)
+                            .setAutoCancel(true)
+                            .setCategory(sbn.notification.category)
+                            .setShowWhen(true)
+                            .setWhen(notificationWithKey.timestamp)
+                            .setSubText(appInfo.appName)
+                        val pi = PendingIntentStore.get(notificationWithKey.conversationKey)
+                        if (pi != null) {
+                            silentBuilder.setContentIntent(pi)
+                        }
+                        sbn.notification.getLargeIcon()?.let { silentBuilder.setLargeIcon(it) }
+                        nm.notify(sbn.tag, sbn.id, silentBuilder.build())
+                    }
                 }
             }
         } catch (e: Exception) {
@@ -199,5 +238,6 @@ class JistNotificationListenerService : NotificationListenerService() {
     
     companion object {
         private const val TAG = "JistNotificationListener"
+        private const val SILENT_CHANNEL_ID = "muted_monitored_app"
     }
 }

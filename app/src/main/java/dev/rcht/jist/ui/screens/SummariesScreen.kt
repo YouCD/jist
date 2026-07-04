@@ -44,9 +44,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import dev.rcht.jist.ui.summaries.SummariesUiState
-import dev.rcht.jist.ui.summaries.SummaryGroup
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.ui.text.font.FontWeight
@@ -170,30 +170,26 @@ fun SummariesScreen(
                         }
                     }
                 } else {
-                    LazyColumn(
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        uiState.groupedSummaries.forEach { group ->
-                            item {
-                                Text(
-                                    text = if (isSelecting) "" else group.label,
-                                    style = MaterialTheme.typography.labelMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                                    modifier = Modifier.padding(top = 12.dp, bottom = 4.dp)
+                    LazyColumn {
+                        uiState.filteredSummaries.forEachIndexed { index, summary ->
+                            val selected = summary.id in selectedIds
+                            item(key = summary.id) {
+                                SummaryCard(
+                                    summary = summary,
+                                    onClick = { onSummaryClick(summary.id) },
+                                    selected = selected,
+                                    isSelecting = isSelecting,
+                                    onSelectChange = { checked ->
+                                        selectedIds = if (checked) selectedIds + summary.id else selectedIds - summary.id
+                                    },
+                                    modifier = Modifier.fillMaxWidth()
                                 )
                             }
-                            group.summaries.forEach { summary ->
-                                val selected = summary.id in selectedIds
-                                item {
-                                    SummaryCard(
-                                        summary = summary,
-                                        onClick = { onSummaryClick(summary.id) },
-                                        selected = selected,
-                                        isSelecting = isSelecting,
-                                        onSelectChange = { checked ->
-                                            selectedIds = if (checked) selectedIds + summary.id else selectedIds - summary.id
-                                        },
-                                        modifier = Modifier.fillMaxWidth()
+                            if (index < uiState.filteredSummaries.lastIndex) {
+                                item(key = "divider_${summary.id}") {
+                                    HorizontalDivider(
+                                        modifier = Modifier.padding(horizontal = 16.dp),
+                                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
                                     )
                                 }
                             }

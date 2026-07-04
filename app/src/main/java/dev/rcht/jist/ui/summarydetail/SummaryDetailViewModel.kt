@@ -32,11 +32,16 @@ class SummaryDetailViewModel(
     private val _uiState = MutableStateFlow(SummaryDetailUiState())
     val uiState: StateFlow<SummaryDetailUiState> = _uiState
 
+    private fun sortSummaries(summaries: List<SummaryEntity>): List<SummaryEntity> {
+        val (unread, read) = summaries.partition { !it.isRead }
+        return unread.sortedBy { it.createdAt } + read.sortedByDescending { it.createdAt }
+    }
+
     fun loadAll(summaryId: Long) {
         viewModelScope.launch(Dispatchers.IO) {
             _uiState.value = _uiState.value.copy(isLoading = true)
             try {
-                val all = summaryRepository.getAll().sortedByDescending { it.createdAt }
+                val all = sortSummaries(summaryRepository.getAll())
                 val index = all.indexOfFirst { it.id == summaryId }.coerceAtLeast(0)
                 val summary = all.getOrNull(index)
                 if (summary != null && !summary.isRead) {
@@ -113,7 +118,7 @@ class SummaryDetailViewModel(
     }
 
     private suspend fun reloadAllAfterResummarize(newSummaryId: Long) {
-        val all = summaryRepository.getAll().sortedByDescending { it.createdAt }
+        val all = sortSummaries(summaryRepository.getAll())
         val index = all.indexOfFirst { it.id == newSummaryId }.coerceAtLeast(0)
         val summary = all[index]
         val notifications = notificationRepository.getByConversationKey(summary.conversationKey)

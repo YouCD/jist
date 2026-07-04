@@ -328,4 +328,8 @@
     <string name="watch_delete_confirm">删除</string>
     <string name="watch_delete_cancel">取消</string>
     <string name="watch_item_count">条记录</string>
+
+    <!-- Silent Notification Channel -->
+    <string name="silent_channel_name">已监控应用通知</string>
+    <string name="silent_channel_description">来自已监控应用的静音通知</string>
 </resources>
