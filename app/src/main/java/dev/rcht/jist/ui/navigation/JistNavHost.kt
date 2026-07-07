@@ -45,6 +45,12 @@ import dev.rcht.jist.ui.summaries.SummariesViewModel
 import dev.rcht.jist.ui.watchlist.WatchListViewModel
 import dev.rcht.jist.ui.watchedit.WatchEditViewModel
 import dev.rcht.jist.ui.watchdetail.WatchDetailViewModel
+import dev.rcht.jist.ui.screens.XposedChatsScreen
+import dev.rcht.jist.ui.screens.XposedChatDetailScreen
+import dev.rcht.jist.ui.xposedchats.XposedChatsViewModel
+import dev.rcht.jist.ui.xposedchats.XposedChatDetailViewModel
+import dev.rcht.jist.llm.LlmClientFactory
+import dev.rcht.jist.llm.PromptBuilder
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
@@ -494,6 +500,89 @@ fun JistNavHost(
                     navController.navigate(Screen.WatchEdit.createRoute(watchId))
                 },
                 onDelete = { viewModel.delete { navController.popBackStack() } }
+            )
+        }
+        composable(Screen.XposedChats.route) {
+            val viewModel: XposedChatsViewModel = viewModel(
+                factory = object : ViewModelProvider.Factory {
+                    override fun <T : ViewModel> create(modelClass: Class<T>): T {
+                        @Suppress("UNCHECKED_CAST")
+                        return XposedChatsViewModel(
+                            jistApp.watchedChatRepository,
+                            jistApp.chatMessageRepository,
+                            jistApp.chatSourceRepository
+                        ) as T
+                    }
+                }
+            )
+            val uiState by viewModel.uiState.collectAsState()
+            val isRefreshing = remember { mutableStateOf(false) }
+            val lifecycleOwner = LocalLifecycleOwner.current
+            DisposableEffect(lifecycleOwner) {
+                val observer = LifecycleEventObserver { _, event ->
+                    if (event == Lifecycle.Event.ON_RESUME) {
+                        viewModel.loadData()
+                    }
+                }
+                lifecycleOwner.lifecycle.addObserver(observer)
+                onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+            }
+            XposedChatsScreen(
+                groups = uiState.groups,
+                isLoading = uiState.isLoading,
+                isEmpty = uiState.isEmpty,
+                onChatClick = { chatId ->
+                    navController.navigate(Screen.XposedChatDetail.createRoute(chatId))
+                },
+                onDeleteChats = { ids -> viewModel.deleteChats(ids) },
+                onToggleSummarized = { id, v -> viewModel.toggleSummarized(id, v) },
+                onSavePrompt = { id, prompt, min -> viewModel.updateCustomPrompt(id, prompt); viewModel.updateMinMessages(id, min) },
+                onRefresh = {
+                    isRefreshing.value = true
+                    viewModel.loadData()
+                    isRefreshing.value = false
+                },
+                isRefreshing = isRefreshing.value
+            )
+        }
+        composable(
+            route = Screen.XposedChatDetail.route,
+            arguments = listOf(
+                navArgument("chatId") { type = NavType.LongType }
+            )
+        ) { backStackEntry ->
+            val chatId = backStackEntry.arguments?.getLong("chatId") ?: return@composable
+            val viewModel: XposedChatDetailViewModel = viewModel(
+                factory = object : ViewModelProvider.Factory {
+                    override fun <T : ViewModel> create(modelClass: Class<T>): T {
+                        @Suppress("UNCHECKED_CAST")
+                        return XposedChatDetailViewModel(
+                            jistApp.watchedChatRepository,
+                            jistApp.chatMessageRepository,
+                            jistApp.summaryRepository,
+                            jistApp.llmConfigRepository,
+                            jistApp.chatSourceRepository,
+                            jistApp.httpClient,
+                            chatId
+                        ) as T
+                    }
+                }
+            )
+            val uiState by viewModel.uiState.collectAsState()
+            val detailRefreshing = remember { mutableStateOf(false) }
+            XposedChatDetailScreen(
+                uiState = uiState,
+                onNavigateBack = { navController.popBackStack() },
+                onDeleteMessages = { ids -> viewModel.deleteMessages(ids) },
+                onSummarize = { viewModel.summarize() },
+                isSummarizing = uiState.isSummarizing,
+                summarizeError = uiState.summarizeError,
+                onRefresh = {
+                    detailRefreshing.value = true
+                    viewModel.loadData()
+                    detailRefreshing.value = false
+                },
+                isRefreshing = detailRefreshing.value
             )
         }
     }

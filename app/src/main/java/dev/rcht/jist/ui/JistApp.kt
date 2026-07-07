@@ -1,11 +1,14 @@
 package dev.rcht.jist.ui
 
+import dev.rcht.jist.BuildConfig
 import dev.rcht.jist.R
 import android.app.Application
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Chat
+import androidx.compose.material.icons.outlined.Chat
 import androidx.compose.material.icons.filled.Dashboard
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Settings
@@ -50,12 +53,18 @@ data class BottomNavItem(
 )
 
 @Composable
-fun bottomNavItems(): List<BottomNavItem> = listOf(
-    BottomNavItem(stringResource(R.string.nav_dashboard), Screen.Dashboard.route, Icons.Filled.Dashboard, Icons.Outlined.Dashboard),
-    BottomNavItem(stringResource(R.string.nav_summaries), Screen.Summaries.route, Icons.Filled.Summarize, Icons.Outlined.Summarize),
-    BottomNavItem(stringResource(R.string.nav_alerts), Screen.NotificationLog.route, Icons.Filled.Notifications, Icons.Outlined.Notifications),
-    BottomNavItem(stringResource(R.string.watch_bottom_nav), Screen.WatchList.route, Icons.Filled.Visibility, Icons.Outlined.Visibility)
-)
+fun bottomNavItems(): List<BottomNavItem> {
+    val items = mutableListOf(
+        BottomNavItem(stringResource(R.string.nav_dashboard), Screen.Dashboard.route, Icons.Filled.Dashboard, Icons.Outlined.Dashboard),
+        BottomNavItem(stringResource(R.string.nav_summaries), Screen.Summaries.route, Icons.Filled.Summarize, Icons.Outlined.Summarize),
+        BottomNavItem(stringResource(R.string.nav_alerts), Screen.NotificationLog.route, Icons.Filled.Notifications, Icons.Outlined.Notifications),
+        BottomNavItem(stringResource(R.string.watch_bottom_nav), Screen.WatchList.route, Icons.Filled.Visibility, Icons.Outlined.Visibility)
+    )
+    if (BuildConfig.isXposedFlavor) {
+        items.add(1, BottomNavItem(stringResource(R.string.nav_xposed_chats), Screen.XposedChats.route, Icons.Filled.Chat, Icons.Outlined.Chat))
+    }
+    return items
+}
 
 val mainTabRoutes = setOf(Screen.Dashboard.route, Screen.Summaries.route, Screen.NotificationLog.route, Screen.WatchList.route)
 

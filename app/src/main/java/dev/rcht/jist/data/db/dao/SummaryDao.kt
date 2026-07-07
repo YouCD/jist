@@ -42,6 +42,9 @@ interface SummaryDao {
     @Query("SELECT * FROM summaries WHERE id = :id")
     suspend fun getById(id: Long): SummaryEntity?
 
+    @Query("SELECT * FROM summaries WHERE conversationKey = :key ORDER BY createdAt DESC LIMIT 1")
+    suspend fun getByConversationKey(key: String): SummaryEntity?
+
     @Query("UPDATE summaries SET isRead = 1 WHERE id = :id")
     suspend fun markAsRead(id: Long)
 

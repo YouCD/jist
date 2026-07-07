@@ -332,4 +332,10 @@
     <!-- Silent Notification Channel -->
     <string name="silent_channel_name">Monitored app notifications</string>
     <string name="silent_channel_description">Silent notifications forwarded from monitored apps</string>
+
+    <!-- Xposed Chat Views -->
+    <string name="xposed_chats_title">消息</string>
+    <string name="xposed_chats_empty">还没有捕获到任何消息</string>
+    <string name="xposed_chats_no_messages">暂无消息</string>
+    <string name="nav_xposed_chats">消息</string>
 </resources>

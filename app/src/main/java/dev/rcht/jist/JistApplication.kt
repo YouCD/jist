@@ -8,9 +8,12 @@ import dev.rcht.jist.data.db.JistDatabase
 import dev.rcht.jist.data.db.seeding.DatabaseSeeder
 import dev.rcht.jist.data.preferences.PreferencesRepository
 import dev.rcht.jist.data.repository.AppRuleRepository
+import dev.rcht.jist.data.repository.ChatMessageRepository
+import dev.rcht.jist.data.repository.ChatSourceRepository
 import dev.rcht.jist.data.repository.LlmConfigRepository
 import dev.rcht.jist.data.repository.NotificationRepository
 import dev.rcht.jist.data.repository.SummaryRepository
+import dev.rcht.jist.data.repository.WatchedChatRepository
 import dev.rcht.jist.data.repository.WatchCollectedItemRepository
 import dev.rcht.jist.data.repository.WatchTopicRepository
 import dev.rcht.jist.engine.SummaryEngine
@@ -42,6 +45,11 @@ class JistApplication : Application() {
     lateinit var watchTopicRepository: WatchTopicRepository
     lateinit var watchCollectedItemRepository: WatchCollectedItemRepository
 
+    // Chat message repositories
+    lateinit var chatSourceRepository: ChatSourceRepository
+    lateinit var watchedChatRepository: WatchedChatRepository
+    lateinit var chatMessageRepository: ChatMessageRepository
+
     // Engines
     lateinit var summaryEngine: SummaryEngine
     lateinit var watchEngine: WatchEngine
@@ -72,6 +80,9 @@ class JistApplication : Application() {
         customPromptRepository = dev.rcht.jist.data.repository.CustomPromptRepository(database.customPromptDao())
         watchTopicRepository = WatchTopicRepository(database.watchTopicDao())
         watchCollectedItemRepository = WatchCollectedItemRepository(database.watchCollectedItemDao())
+        chatSourceRepository = ChatSourceRepository(database.chatSourceDao())
+        watchedChatRepository = WatchedChatRepository(database.watchedChatDao())
+        chatMessageRepository = ChatMessageRepository(database.chatMessageDao())
         preferencesRepository = PreferencesRepository(this)
 
         // Ensure onboarding is shown when DB has no app rules even if preferences say complete (first-run recovery)

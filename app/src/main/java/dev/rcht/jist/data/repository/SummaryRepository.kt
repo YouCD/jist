@@ -41,6 +41,10 @@ class SummaryRepository(private val summaryDao: SummaryDao) {
         return summaryDao.getById(id)
     }
 
+    suspend fun getByConversationKey(key: String): SummaryEntity? {
+        return summaryDao.getByConversationKey(key)
+    }
+
     suspend fun markAsRead(id: Long) {
         summaryDao.markAsRead(id)
     }

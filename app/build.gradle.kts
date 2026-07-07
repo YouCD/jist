@@ -21,6 +21,22 @@ android {
     namespace = "dev.rcht.jist"
     compileSdk = 36
 
+    flavorDimensions += "channel"
+    productFlavors {
+        create("normal") {
+            dimension = "channel"
+            applicationId = "dev.rcht.jist"
+            versionNameSuffix = ""
+            buildConfigField("boolean", "isXposedFlavor", "false")
+        }
+        create("xposed") {
+            dimension = "channel"
+            applicationId = "dev.rcht.jist"
+            versionNameSuffix = "-xposed"
+            buildConfigField("boolean", "isXposedFlavor", "true")
+        }
+    }
+
     defaultConfig {
         applicationId = "dev.rcht.jist"
         minSdk = 29
@@ -29,6 +45,14 @@ android {
         versionName = gitTag
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    sourceSets {
+        getByName("xposed") {
+            java.srcDirs("src/xposed/java")
+            kotlin.srcDirs("src/xposed/java")
+            assets.srcDirs("src/xposed/assets")
+        }
     }
 
     buildTypes {
@@ -54,6 +78,7 @@ android {
     buildFeatures {
         viewBinding = false
         compose = true
+        buildConfig = true
     }
 }
 
@@ -104,6 +129,9 @@ dependencies {
     implementation("io.noties.markwon:core:4.6.2")
     debugImplementation(libs.androidx.compose.ui.tooling)
     
+    // Xposed API (local jar, only for xposed flavor)
+    "xposedCompileOnly"(files("libs/api-82.jar"))
+
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

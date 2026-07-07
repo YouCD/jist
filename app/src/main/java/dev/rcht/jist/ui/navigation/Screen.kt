@@ -19,6 +19,10 @@ sealed class Screen(val route: String) {
     data object WatchDetail : Screen("watch_detail/{watchId}") {
         fun createRoute(watchId: Long) = "watch_detail/$watchId"
     }
+    data object XposedChats : Screen("xposed_chats")
+    data object XposedChatDetail : Screen("xposed_chat_detail/{chatId}") {
+        fun createRoute(chatId: Long) = "xposed_chat_detail/$chatId"
+    }
     
     companion object {
         val allScreens = listOf(Dashboard, Summaries, Settings, AppSettings, NotificationLog, About, LlmConfig, WatchList)

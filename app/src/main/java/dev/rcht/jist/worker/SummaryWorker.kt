@@ -10,6 +10,12 @@ import androidx.work.WorkerParameters
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.ExistingPeriodicWorkPolicy
 import dev.rcht.jist.JistApplication
+import dev.rcht.jist.data.db.entity.SummaryEntity
+import dev.rcht.jist.llm.LlmClientFactory
+import dev.rcht.jist.llm.LlmRequestConfig
+import dev.rcht.jist.llm.LlmResult
+import dev.rcht.jist.llm.NotificationForSummary
+import dev.rcht.jist.llm.PromptBuilder
 import dev.rcht.jist.notification.SummaryNotificationManager
 import dev.rcht.jist.engine.SummaryResult
 import java.util.concurrent.TimeUnit
@@ -24,33 +30,27 @@ class SummaryWorker(context: Context, params: WorkerParameters) :
         return try {
             Log.d(TAG, "Starting periodic summarization work")
 
-            // Get all pending conversations and summarize them
+            // Existing notification summaries
             val results = app.summaryEngine.summarizeAllPending()
-
-            // Collect all successful summaries
-            val summaries = mutableListOf<dev.rcht.jist.data.db.entity.SummaryEntity>()
-            
+            val summaries = mutableListOf<SummaryEntity>()
             results.forEach { result ->
                 when (result) {
                     is SummaryResult.Success -> {
-                        // Get the summary to extract metadata
                         val summary = app.summaryRepository.getById(result.summaryId)
-                        if (summary != null) {
-                            summaries.add(summary)
-                        }
+                        if (summary != null) summaries.add(summary)
                     }
-                    is SummaryResult.Error -> {
-                        Log.w(TAG, "Summarization error: ${result.message}")
-                    }
+                    is SummaryResult.Error -> Log.w(TAG, "Summarization error: ${result.message}")
                 }
             }
-            
-            // Post grouped notifications for all summaries
+
+            // Xposed chat summaries
+            val xposedSummaries = summarizeXposedChats()
+            summaries.addAll(xposedSummaries)
+
             if (summaries.isNotEmpty()) {
                 notificationManager.postGroupedSummaryNotifications(summaries)
             }
 
-            // Refresh widget
             try {
                 dev.rcht.jist.widget.SummaryWidgetProvider.refreshWidget(applicationContext)
             } catch (e: Exception) {
@@ -61,44 +61,90 @@ class SummaryWorker(context: Context, params: WorkerParameters) :
             Result.success()
         } catch (e: Exception) {
             Log.e(TAG, "Error during periodic summarization", e)
-            // Retry with exponential backoff
             Result.retry()
         }
+    }
+
+    private suspend fun summarizeXposedChats(): List<SummaryEntity> {
+        val config = app.llmConfigRepository.getDefault() ?: return emptyList()
+        val chats = app.watchedChatRepository.getAll().filter { it.isSummarized }
+        if (chats.isEmpty()) return emptyList()
+
+        val client = LlmClientFactory.createClient(config, app.httpClient)
+        val llmConfig = LlmRequestConfig(
+            model = config.modelId, maxTokens = config.maxTokens,
+            temperature = config.temperature, apiKey = config.apiKey,
+            baseUrl = config.baseUrl
+        )
+        val results = mutableListOf<SummaryEntity>()
+
+        for (chat in chats) {
+            try {
+                val convKey = "xposed_${chat.chatId}"
+                val existing = app.summaryRepository.getByConversationKey(convKey)
+                val lastTime = existing?.createdAt ?: 0L
+
+                val messages = app.chatMessageRepository.getByWatchedChat(chat.id)
+                    .filter { it.timestamp > lastTime }
+                if (messages.size < chat.minMessagesForSummary) continue
+
+                val source = app.chatSourceRepository.getEnabled().find { it.id == chat.sourceId }
+                val appName = source?.displayName ?: "微信"
+
+                val notifications = messages.map { msg ->
+                    NotificationForSummary(text = msg.content, timestamp = msg.timestamp,
+                        sender = msg.senderName.ifBlank { "" }, appName = appName)
+                }
+
+                val llmMessages = PromptBuilder().buildMessages(notifications = notifications,
+                    appName = appName, contactOrGroup = chat.chatName,
+                    customPrompt = chat.customPrompt)
+
+                when (val result = client.complete(llmMessages, llmConfig)) {
+                    is LlmResult.Success -> {
+                        val summary = SummaryEntity(
+                            packageName = "com.tencent.mm", conversationKey = convKey,
+                            appName = appName, contactOrGroup = chat.chatName,
+                            summaryText = result.data.text,
+                            messageCount = messages.size,
+                            modelUsed = result.data.model,
+                            tokenCount = result.data.totalTokens,
+                            createdAt = System.currentTimeMillis(),
+                            notificationTimeFrom = messages.minOf { it.timestamp },
+                            notificationTimeTo = messages.maxOf { it.timestamp }
+                        )
+                        val id = app.summaryRepository.insert(summary)
+                        results.add(summary.copy(id = id))
+                        Log.i(TAG, "Xposed summary: ${chat.chatName} (${messages.size} msgs)")
+                    }
+                    is LlmResult.Error -> Log.w(TAG, "Xposed summary error ${chat.chatName}: ${result.error.message}")
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "Xposed summary error for ${chat.chatName}", e)
+            }
+        }
+        return results
     }
 
     companion object {
         private const val TAG = "SummaryWorker"
         const val WORK_NAME = "jist_summary_periodic"
 
-        /**
-         * Schedule periodic summarization work
-         */
         fun schedule(context: Context) {
             val summarizationWork = PeriodicWorkRequestBuilder<SummaryWorker>(
-                15, // interval
-                TimeUnit.MINUTES
+                15, TimeUnit.MINUTES
             ).build()
-
             WorkManager.getInstance(context).enqueueUniquePeriodicWork(
-                WORK_NAME,
-                ExistingPeriodicWorkPolicy.KEEP,
-                summarizationWork
+                WORK_NAME, ExistingPeriodicWorkPolicy.KEEP, summarizationWork
             )
-
             Log.d(TAG, "Periodic summarization work scheduled (15 min interval)")
         }
 
-        /**
-         * Cancel periodic summarization work
-         */
         fun cancel(context: Context) {
             WorkManager.getInstance(context).cancelUniqueWork(WORK_NAME)
             Log.d(TAG, "Periodic summarization work cancelled")
         }
 
-        /**
-         * Trigger one-time immediate summarization
-         */
         fun scheduleImmediate(context: Context) {
             val immediateWork = OneTimeWorkRequestBuilder<SummaryWorker>().build()
             WorkManager.getInstance(context).enqueue(immediateWork)
