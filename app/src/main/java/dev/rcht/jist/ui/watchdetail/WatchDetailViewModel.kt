@@ -190,6 +190,13 @@ class WatchDetailViewModel(
         }
     }
 
+    fun deleteItems(itemIds: List<Long>) {
+        viewModelScope.launch(Dispatchers.IO) {
+            watchCollectedItemRepository.deleteItems(itemIds)
+            loadData()
+        }
+    }
+
     companion object {
         private const val TAG = "WatchDetailViewModel"
     }

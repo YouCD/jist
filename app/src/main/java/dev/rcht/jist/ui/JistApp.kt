@@ -7,8 +7,8 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Chat
-import androidx.compose.material.icons.outlined.Chat
+import androidx.compose.material.icons.automirrored.filled.Chat
+import androidx.compose.material.icons.automirrored.outlined.Chat
 import androidx.compose.material.icons.filled.Dashboard
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Settings
@@ -61,7 +61,7 @@ fun bottomNavItems(): List<BottomNavItem> {
         BottomNavItem(stringResource(R.string.watch_bottom_nav), Screen.WatchList.route, Icons.Filled.Visibility, Icons.Outlined.Visibility)
     )
     if (BuildConfig.isXposedFlavor) {
-        items.add(1, BottomNavItem(stringResource(R.string.nav_xposed_chats), Screen.XposedChats.route, Icons.Filled.Chat, Icons.Outlined.Chat))
+        items.add(1, BottomNavItem(stringResource(R.string.nav_xposed_chats), Screen.XposedChats.route, Icons.AutoMirrored.Filled.Chat, Icons.AutoMirrored.Outlined.Chat))
     }
     return items
 }

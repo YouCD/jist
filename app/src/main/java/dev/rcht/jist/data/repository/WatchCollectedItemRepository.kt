@@ -11,6 +11,7 @@ class WatchCollectedItemRepository(private val dao: WatchCollectedItemDao) {
     suspend fun getRecentItemsForTopic(topicId: Long, limit: Int = 5) = dao.getRecentItemsForTopic(topicId, limit)
     suspend fun countForTopic(topicId: Long) = dao.countForTopic(topicId)
     suspend fun deleteForTopic(topicId: Long) = dao.deleteForTopic(topicId)
+    suspend fun deleteItems(ids: List<Long>) = dao.deleteByIds(ids)
     suspend fun markAllRead(topicId: Long) = dao.markAllRead(topicId)
     suspend fun countUnread(topicId: Long) = dao.countUnread(topicId)
 }

@@ -42,6 +42,9 @@ fun WatchListScreen(
     onDeleteClick: (WatchListItem) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    var showDeleteConfirm by remember { mutableStateOf(false) }
+    var itemToDelete by remember { mutableStateOf<WatchListItem?>(null) }
+
     GlassScaffold(
         modifier = modifier.fillMaxSize(),
         topBar = {
@@ -89,7 +92,7 @@ fun WatchListScreen(
                                 item = item,
                                 onClick = { onItemClick(item.topic.id) },
                                 onToggleEnabled = { onToggleEnabled(item) },
-                                onDelete = { onDeleteClick(item) }
+                                onDelete = { itemToDelete = item; showDeleteConfirm = true }
                             )
                         }
                         item { Spacer(Modifier.height(80.dp)) }
@@ -97,6 +100,29 @@ fun WatchListScreen(
                 }
             }
         }
+    }
+
+    if (showDeleteConfirm && itemToDelete != null) {
+        AlertDialog(
+            onDismissRequest = { showDeleteConfirm = false; itemToDelete = null },
+            title = { Text(stringResource(R.string.watch_delete_title)) },
+            text = { Text(stringResource(R.string.watch_delete_message)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    showDeleteConfirm = false
+                    itemToDelete?.let { onDeleteClick(it) }
+                    itemToDelete = null
+                }) {
+                    Text(stringResource(R.string.watch_delete_confirm),
+                        color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteConfirm = false; itemToDelete = null }) {
+                    Text(stringResource(R.string.watch_delete_cancel))
+                }
+            }
+        )
     }
 }
 

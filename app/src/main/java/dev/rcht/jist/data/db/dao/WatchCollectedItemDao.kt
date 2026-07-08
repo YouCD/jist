@@ -39,6 +39,9 @@ interface WatchCollectedItemDao {
     @Query("DELETE FROM watch_collected_items WHERE topicId = :topicId")
     suspend fun deleteForTopic(topicId: Long)
 
+    @Query("DELETE FROM watch_collected_items WHERE id IN (:ids)")
+    suspend fun deleteByIds(ids: List<Long>)
+
     @Query("UPDATE watch_collected_items SET isRead = 1 WHERE topicId = :topicId")
     suspend fun markAllRead(topicId: Long)
 

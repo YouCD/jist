@@ -3,7 +3,9 @@ package dev.rcht.jist.ui.screens
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -12,6 +14,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ArrowDropUp
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
@@ -49,24 +52,48 @@ fun WatchDetailScreen(
     onToggleEnabled: () -> Unit,
     onEdit: () -> Unit,
     onDelete: () -> Unit,
+    onDeleteItems: (List<Long>) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val topic = uiState.topic
+    var selecting by remember { mutableStateOf(false) }
+    var selectedIds by remember { mutableStateOf(setOf<Long>()) }
     var showDeleteConfirm by remember { mutableStateOf(false) }
+    var showDeleteItemsConfirm by remember { mutableStateOf(false) }
 
     GlassScaffold(
         modifier = modifier.fillMaxSize(),
         topBar = {
             CenterAlignedTopAppBar(
-                title = { Text(topic?.title ?: "", fontWeight = FontWeight.SemiBold) },
+                title = {
+                    Text(
+                        if (selecting) "已选择 ${selectedIds.size} 项"
+                        else topic?.title ?: "",
+                        fontWeight = FontWeight.SemiBold
+                    )
+                },
                 navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(R.string.watch_content_desc_back))
+                    if (selecting) {
+                        IconButton(onClick = { selecting = false; selectedIds = emptySet() }) {
+                            Icon(Icons.Default.Close, contentDescription = "退出选择")
+                        }
+                    } else {
+                        IconButton(onClick = onNavigateBack) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = stringResource(R.string.watch_content_desc_back))
+                        }
                     }
                 },
                 actions = {
-                    if (topic != null) {
+                    if (selecting) {
+                        if (selectedIds.isNotEmpty()) {
+                            IconButton(onClick = { showDeleteItemsConfirm = true }) {
+                                Icon(Icons.Default.Delete,
+                                    contentDescription = "删除",
+                                    tint = MaterialTheme.colorScheme.error)
+                            }
+                        }
+                    } else if (topic != null) {
                         IconButton(onClick = onToggleEnabled) {
                             Icon(
                                 if (topic.isEnabled) Icons.Outlined.Visibility
@@ -145,7 +172,22 @@ fun WatchDetailScreen(
                                     group.timeGroups.forEach { timeGroup ->
                                         TimeSubHeader(label = timeGroup.label)
                                         timeGroup.items.forEach { item ->
-                                            CollectedItemCard(item = item)
+                                            CollectedItemCard(
+                                                item = item,
+                                                selecting = selecting,
+                                                selected = item.id in selectedIds,
+                                                onClick = {
+                                                    if (selecting) {
+                                                        selectedIds = if (item.id in selectedIds)
+                                                            selectedIds - item.id
+                                                        else selectedIds + item.id
+                                                    }
+                                                },
+                                                onLongClick = {
+                                                    selecting = true
+                                                    selectedIds = setOf(item.id)
+                                                }
+                                            )
                                         }
                                     }
                                 }
@@ -177,6 +219,29 @@ fun WatchDetailScreen(
             dismissButton = {
                 TextButton(onClick = { showDeleteConfirm = false }) {
                     Text(stringResource(R.string.watch_delete_cancel))
+                }
+            }
+        )
+    }
+
+    if (showDeleteItemsConfirm && selectedIds.isNotEmpty()) {
+        AlertDialog(
+            onDismissRequest = { showDeleteItemsConfirm = false },
+            title = { Text("确认删除") },
+            text = { Text("确定删除选中的 ${selectedIds.size} 条通知？此操作不可撤销。") },
+            confirmButton = {
+                TextButton(onClick = {
+                    showDeleteItemsConfirm = false
+                    onDeleteItems(selectedIds.toList())
+                    selectedIds = emptySet()
+                    selecting = false
+                }) {
+                    Text("删除", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteItemsConfirm = false }) {
+                    Text("取消")
                 }
             }
         )
@@ -296,73 +361,92 @@ private fun TimeSubHeader(label: String) {
     )
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun CollectedItemCard(item: CollectedItemDisplay) {
+private fun CollectedItemCard(item: CollectedItemDisplay, selecting: Boolean, selected: Boolean, onClick: () -> Unit, onLongClick: () -> Unit) {
     Surface(
         modifier = Modifier
             .fillMaxWidth()
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = { if (!selecting) onLongClick() }
+            )
             .padding(horizontal = 12.dp, vertical = 4.dp),
         shape = RoundedCornerShape(8.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.15f)
+        color = if (selected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
+                else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.15f)
     ) {
-        Column(modifier = Modifier.padding(12.dp)) {
-            Row(verticalAlignment = Alignment.Top) {
-                Column(modifier = Modifier.weight(1f)) {
-                    if (item.notificationTitle.isNotBlank()) {
-                        Text(
-                            item.notificationTitle,
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = FontWeight.SemiBold,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
+        Row(
+            modifier = Modifier.padding(start = if (selecting) 4.dp else 12.dp, end = 12.dp, top = 12.dp, bottom = 12.dp),
+            verticalAlignment = Alignment.Top
+        ) {
+            if (selecting) {
+                Checkbox(
+                    checked = selected,
+                    onCheckedChange = { onClick() },
+                    modifier = Modifier.size(24.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+            }
+            Column(modifier = Modifier.weight(1f)) {
+                Row(verticalAlignment = Alignment.Top) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        if (item.notificationTitle.isNotBlank()) {
+                            Text(
+                                item.notificationTitle,
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.SemiBold,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
                     }
-                }
-                Spacer(Modifier.width(8.dp))
-                Text(
-                    item.formattedTime,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
-                )
-            }
-            if (item.notificationContent.isNotBlank()) {
-                Spacer(Modifier.height(4.dp))
-                MarkdownText(
-                    markdown = item.notificationContent,
-                    maxLines = Int.MAX_VALUE
-                )
-            }
-
-            Spacer(Modifier.height(6.dp))
-
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Surface(
-                    shape = RoundedCornerShape(8.dp),
-                    color = JistPurple.copy(alpha = 0.1f)
-                ) {
+                    Spacer(Modifier.width(8.dp))
                     Text(
-                        stringResource(R.string.watch_item_match, item.matchedKeyword),
+                        item.formattedTime,
                         style = MaterialTheme.typography.labelSmall,
-                        color = JistPurple,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
                     )
                 }
-                if (item.aiExtractedInfo != null && item.matchType == "AI_SEMANTIC") {
-                    Spacer(Modifier.width(6.dp))
+                if (item.notificationContent.isNotBlank()) {
+                    Spacer(Modifier.height(4.dp))
+                    MarkdownText(
+                        markdown = item.notificationContent,
+                        maxLines = Int.MAX_VALUE
+                    )
+                }
+
+                Spacer(Modifier.height(6.dp))
+
+                Row(verticalAlignment = Alignment.CenterVertically) {
                     Surface(
                         shape = RoundedCornerShape(8.dp),
-                        color = JistCyan.copy(alpha = 0.1f)
+                        color = JistPurple.copy(alpha = 0.1f)
                     ) {
                         Text(
-                            item.aiExtractedInfo,
+                            stringResource(R.string.watch_item_match, item.matchedKeyword),
                             style = MaterialTheme.typography.labelSmall,
-                            color = JistCyan,
+                            color = JistPurple,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                             modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                         )
+                    }
+                    if (item.aiExtractedInfo != null && item.matchType == "AI_SEMANTIC") {
+                        Spacer(Modifier.width(6.dp))
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = JistCyan.copy(alpha = 0.1f)
+                        ) {
+                            Text(
+                                item.aiExtractedInfo,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = JistCyan,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                            )
+                        }
                     }
                 }
             }

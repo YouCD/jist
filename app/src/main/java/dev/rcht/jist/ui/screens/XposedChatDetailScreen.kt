@@ -1,6 +1,8 @@
 package dev.rcht.jist.ui.screens
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -25,6 +27,7 @@ import dev.rcht.jist.data.db.entity.ChatMessageEntity
 import dev.rcht.jist.ui.components.GlassCard
 import dev.rcht.jist.ui.components.GlassScaffold
 import dev.rcht.jist.ui.xposedchats.XposedChatDetailState
+import dev.rcht.jist.util.displayContent
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -78,22 +81,17 @@ fun XposedChatDetailScreen(
                                 Icon(Icons.Default.Delete, contentDescription = "删除", tint = MaterialTheme.colorScheme.error)
                             }
                         }
-                    } else {
+                    } else if (uiState.chat?.isSummarized == true) {
                         Row {
-                            if (uiState.chat?.isSummarized == true) {
-                                IconButton(
-                                    onClick = onSummarize,
-                                    enabled = !isSummarizing
-                                ) {
-                                    if (isSummarizing) {
-                                        CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
-                                    } else {
-                                        Icon(Icons.Outlined.AutoAwesome, contentDescription = "AI摘要", tint = MaterialTheme.colorScheme.primary)
-                                    }
+                            IconButton(
+                                onClick = onSummarize,
+                                enabled = !isSummarizing
+                            ) {
+                                if (isSummarizing) {
+                                    CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                                } else {
+                                    Icon(Icons.Outlined.AutoAwesome, contentDescription = "AI摘要", tint = MaterialTheme.colorScheme.primary)
                                 }
-                            }
-                            if (uiState.messages.isNotEmpty()) {
-                                TextButton(onClick = { selecting = true }) { Text("选择") }
                             }
                         }
                     }
@@ -148,6 +146,10 @@ fun XposedChatDetailScreen(
                                                     selectedIds - msg.id
                                                 else selectedIds + msg.id
                                             }
+                                        },
+                                        onLongClick = {
+                                            selecting = true
+                                            selectedIds = setOf(msg.id)
                                         }
                                     )
                                 }
@@ -170,6 +172,10 @@ fun XposedChatDetailScreen(
                                                     selectedIds - msg.id
                                                 else selectedIds + msg.id
                                             }
+                                        },
+                                        onLongClick = {
+                                            selecting = true
+                                            selectedIds = setOf(msg.id)
                                         }
                                     )
                                 }
@@ -238,11 +244,17 @@ private fun SectionSubHeader(title: String, count: Int, expanded: Boolean, onCli
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun MessageBubble(msg: ChatMessageEntity, selecting: Boolean, selected: Boolean, onClick: () -> Unit) {
+private fun MessageBubble(msg: ChatMessageEntity, selecting: Boolean, selected: Boolean, onClick: () -> Unit, onLongClick: () -> Unit = {}) {
     GlassCard(
         shape = RoundedCornerShape(8.dp),
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier
+            .fillMaxWidth()
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = { if (!selecting) onLongClick() }
+            )
     ) {
         Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.Top) {
             if (selecting) {
@@ -287,25 +299,3 @@ private fun formatMessageTime(timestamp: Long): String {
     return sdf.format(Date(timestamp))
 }
 
-private fun displayContent(content: String): String {
-    if (!content.startsWith("<?xml") && !content.startsWith("<msg")) return content
-    val title = extractTag(content, "title")
-    val des = extractTag(content, "des")
-    return when {
-        title != null && des != null -> "[卡片] $title - $des"
-        title != null -> "[卡片] $title"
-        else -> "[分享]"
-    }
-}
-
-private fun extractTag(text: String, tag: String): String? {
-    val open = "<$tag>"
-    val close = "</$tag>"
-    val start = text.indexOf(open)
-    if (start < 0) return null
-    val cs = start + open.length
-    val end = text.indexOf(close, cs)
-    if (end < 0) return null
-    val v = text.substring(cs, end).trim()
-    return v.ifBlank { null }
-}
