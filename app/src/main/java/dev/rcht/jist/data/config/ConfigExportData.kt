@@ -1,8 +1,10 @@
 package dev.rcht.jist.data.config
 
 import dev.rcht.jist.data.db.entity.AppRuleEntity
+import dev.rcht.jist.data.db.entity.ChatSourceEntity
 import dev.rcht.jist.data.db.entity.CustomPromptEntity
 import dev.rcht.jist.data.db.entity.LlmConfigEntity
+import dev.rcht.jist.data.db.entity.WatchedChatEntity
 import dev.rcht.jist.data.db.entity.WatchTopicEntity
 import dev.rcht.jist.data.preferences.JistPreferences
 import kotlinx.serialization.Serializable
@@ -15,7 +17,9 @@ data class ConfigExportData(
     val llmConfigs: List<LlmConfigDto> = emptyList(),
     val appRules: List<AppRuleDto> = emptyList(),
     val customPrompts: List<CustomPromptDto> = emptyList(),
-    val watchTopics: List<WatchTopicDto> = emptyList()
+    val watchTopics: List<WatchTopicDto> = emptyList(),
+    val chatSources: List<ChatSourceDto> = emptyList(),
+    val watchedChats: List<WatchedChatDto> = emptyList()
 )
 
 @Serializable
@@ -58,6 +62,56 @@ data class WatchTopicDto(
     val keywords: String = "[]",
     val matchMode: String = "KEYWORD_ONLY",
     val isEnabled: Boolean = true
+)
+
+@Serializable
+data class ChatSourceDto(
+    val packageName: String,
+    val displayName: String,
+    val isEnabled: Boolean = true
+)
+
+@Serializable
+data class WatchedChatDto(
+    val sourcePkg: String,
+    val chatId: String,
+    val chatName: String,
+    val isEnabled: Boolean = true,
+    val isSummarized: Boolean = false,
+    val customPrompt: String? = null,
+    val minMessagesForSummary: Int = 5
+)
+
+fun ChatSourceEntity.toDto() = ChatSourceDto(
+    packageName = packageName,
+    displayName = displayName,
+    isEnabled = isEnabled
+)
+
+fun ChatSourceDto.toEntity() = ChatSourceEntity(
+    packageName = packageName,
+    displayName = displayName,
+    isEnabled = isEnabled
+)
+
+fun WatchedChatEntity.toDto(sourcePkg: String) = WatchedChatDto(
+    sourcePkg = sourcePkg,
+    chatId = chatId,
+    chatName = chatName,
+    isEnabled = isEnabled,
+    isSummarized = isSummarized,
+    customPrompt = customPrompt,
+    minMessagesForSummary = minMessagesForSummary
+)
+
+fun WatchedChatDto.toEntity(sourceId: Long) = WatchedChatEntity(
+    sourceId = sourceId,
+    chatId = chatId,
+    chatName = chatName,
+    isEnabled = isEnabled,
+    isSummarized = isSummarized,
+    customPrompt = customPrompt,
+    minMessagesForSummary = minMessagesForSummary
 )
 
 fun LlmConfigEntity.toDto() = LlmConfigDto(

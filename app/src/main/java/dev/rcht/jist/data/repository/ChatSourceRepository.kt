@@ -23,4 +23,9 @@ class ChatSourceRepository(private val dao: ChatSourceDao) {
         val id = dao.insert(ChatSourceEntity(packageName = pkg, displayName = displayName))
         return ChatSourceEntity(id = id, packageName = pkg, displayName = displayName)
     }
+
+    suspend fun replaceAll(sources: List<ChatSourceEntity>) {
+        dao.deleteAll()
+        sources.forEach { dao.insert(it) }
+    }
 }

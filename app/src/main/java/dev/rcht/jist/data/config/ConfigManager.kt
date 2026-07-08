@@ -5,8 +5,10 @@ import android.net.Uri
 import dev.rcht.jist.data.preferences.JistPreferences
 import dev.rcht.jist.data.preferences.PreferencesRepository
 import dev.rcht.jist.data.repository.AppRuleRepository
+import dev.rcht.jist.data.repository.ChatSourceRepository
 import dev.rcht.jist.data.repository.CustomPromptRepository
 import dev.rcht.jist.data.repository.LlmConfigRepository
+import dev.rcht.jist.data.repository.WatchedChatRepository
 import dev.rcht.jist.data.repository.WatchTopicRepository
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
@@ -20,7 +22,9 @@ class ConfigManager(
     private val llmConfigRepository: LlmConfigRepository,
     private val appRuleRepository: AppRuleRepository,
     private val customPromptRepository: CustomPromptRepository,
-    private val watchTopicRepository: WatchTopicRepository
+    private val watchTopicRepository: WatchTopicRepository,
+    private val chatSourceRepository: ChatSourceRepository,
+    private val watchedChatRepository: WatchedChatRepository
 ) {
     private val json = Json {
         prettyPrint = true
@@ -33,13 +37,20 @@ class ConfigManager(
         val appRules = appRuleRepository.getAll().map { it.toDto() }
         val customPrompts = customPromptRepository.getAll().map { it.toDto() }
         val watchTopics = watchTopicRepository.getAll().map { it.toDto() }
+        val chatSources = chatSourceRepository.getAll().map { it.toDto() }
+        val watchedChats = watchedChatRepository.getAll().map { wc ->
+            val src = chatSourceRepository.getAll().find { it.id == wc.sourceId }
+            wc.toDto(src?.packageName ?: "")
+        }
 
         val data = ConfigExportData(
             preferences = prefs,
             llmConfigs = llmConfigs,
             appRules = appRules,
             customPrompts = customPrompts,
-            watchTopics = watchTopics
+            watchTopics = watchTopics,
+            chatSources = chatSources,
+            watchedChats = watchedChats
         )
         return json.encodeToString(ConfigExportData.serializer(), data)
     }
@@ -99,6 +110,33 @@ class ConfigManager(
 
         if (data.watchTopics.isNotEmpty()) {
             watchTopicRepository.replaceAll(data.watchTopics.map { it.toEntity() })
+        }
+
+        if (data.chatSources.isNotEmpty()) {
+            chatSourceRepository.replaceAll(data.chatSources.map { it.toEntity() })
+        }
+
+        // Import chat sources (getOrCreate to avoid deleting existing)
+        for (dto in data.chatSources) {
+            chatSourceRepository.getOrCreate(dto.packageName, dto.displayName)
+        }
+
+        // Import watched chats (update existing or insert new)
+        for (wc in data.watchedChats) {
+            val pkg = wc.sourcePkg.ifBlank { continue }
+            val src = chatSourceRepository.getByPackageName(pkg) ?: continue
+            val existing = watchedChatRepository.getByChatKey(src.id, wc.chatId)
+            if (existing != null) {
+                watchedChatRepository.update(existing.copy(
+                    chatName = wc.chatName,
+                    isEnabled = wc.isEnabled,
+                    isSummarized = wc.isSummarized,
+                    customPrompt = wc.customPrompt,
+                    minMessagesForSummary = wc.minMessagesForSummary
+                ))
+            } else {
+                watchedChatRepository.insert(wc.toEntity(src.id))
+            }
         }
     }
 }

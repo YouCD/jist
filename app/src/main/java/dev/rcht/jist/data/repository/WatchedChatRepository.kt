@@ -7,6 +7,11 @@ class WatchedChatRepository(private val dao: WatchedChatDao) {
 
     suspend fun insert(chat: WatchedChatEntity): Long = dao.insert(chat)
 
+    suspend fun replaceAll(chats: List<WatchedChatEntity>) {
+        dao.deleteAll()
+        chats.forEach { dao.insert(it) }
+    }
+
     suspend fun getByChatKey(sourceId: Long, chatId: String): WatchedChatEntity? =
         dao.getByChatKey(sourceId, chatId)
 

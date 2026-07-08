@@ -100,11 +100,11 @@ class SummaryNotificationManager(private val context: Context) {
                 Log.d(TAG, "✓ Large icon set from app: $packageName")
             } else {
                 Log.d(TAG, "✗ No app icon available for: $packageName")
-                notificationBuilder.setSmallIcon(R.mipmap.ic_launcher)
+                notificationBuilder.setSmallIcon(R.drawable.ic_notification)
             }
 
             // Always set small icon (required by Android)
-            notificationBuilder.setSmallIcon(R.mipmap.ic_launcher)
+            notificationBuilder.setSmallIcon(R.drawable.ic_notification)
 
             val notification = notificationBuilder.build()
 
@@ -159,7 +159,7 @@ class SummaryNotificationManager(private val context: Context) {
                 context,
                 JistApplication.CHANNEL_SUMMARIZE_PROMPT
             )
-                .setSmallIcon(R.mipmap.ic_launcher)
+                .setSmallIcon(R.drawable.ic_notification)
                 .setContentTitle(title)
                 .setContentText(content)
                 .setAutoCancel(true)
@@ -274,7 +274,7 @@ class SummaryNotificationManager(private val context: Context) {
                         .setContentIntent(childPendingIntent)
                     
                     if (appBitmap != null) childBuilder.setLargeIcon(appBitmap)
-                    childBuilder.setSmallIcon(R.mipmap.ic_launcher)
+                    childBuilder.setSmallIcon(R.drawable.ic_notification)
                     
                     val childId = summary.conversationKey.hashCode()
                     notificationManager.notify(childId, childBuilder.build())
@@ -306,7 +306,7 @@ class SummaryNotificationManager(private val context: Context) {
             }
             
             // Set small icon
-            notificationBuilder.setSmallIcon(R.mipmap.ic_launcher)
+            notificationBuilder.setSmallIcon(R.drawable.ic_notification)
             
             // Create content intent - open main app launch intent for the app
             val tapIntent = dev.rcht.jist.util.ChatIntentBuilder.buildChatIntent(

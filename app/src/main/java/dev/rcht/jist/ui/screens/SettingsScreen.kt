@@ -63,7 +63,7 @@ fun SettingsScreen(
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
     val configManager = remember {
-        ConfigManager(context, app.preferencesRepository, app.llmConfigRepository, app.appRuleRepository, app.customPromptRepository, app.watchTopicRepository)
+        ConfigManager(context, app.preferencesRepository, app.llmConfigRepository, app.appRuleRepository, app.customPromptRepository, app.watchTopicRepository, app.chatSourceRepository, app.watchedChatRepository)
     }
 
     var showStyleDialog by remember { mutableStateOf(false) }

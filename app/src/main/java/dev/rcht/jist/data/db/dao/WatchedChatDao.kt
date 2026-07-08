@@ -36,4 +36,10 @@ interface WatchedChatDao {
 
     @Query("DELETE FROM watched_chats WHERE id = :id")
     suspend fun deleteById(id: Long)
+
+    @Query("DELETE FROM watched_chats")
+    suspend fun deleteAll()
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertAll(chats: List<WatchedChatEntity>)
 }

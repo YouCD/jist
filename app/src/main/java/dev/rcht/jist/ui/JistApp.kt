@@ -66,7 +66,7 @@ fun bottomNavItems(): List<BottomNavItem> {
     return items
 }
 
-val mainTabRoutes = setOf(Screen.Dashboard.route, Screen.Summaries.route, Screen.NotificationLog.route, Screen.WatchList.route)
+val mainTabRoutes = setOf(Screen.Dashboard.route, Screen.Summaries.route, Screen.NotificationLog.route, Screen.WatchList.route, Screen.XposedChats.route)
 
 @Composable
 fun JistApp(deepLinkSummaryId: String? = null) {

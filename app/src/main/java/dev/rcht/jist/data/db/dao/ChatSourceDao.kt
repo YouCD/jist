@@ -27,4 +27,10 @@ interface ChatSourceDao {
 
     @Query("UPDATE chat_sources SET isEnabled = :enabled WHERE packageName = :pkg")
     suspend fun setEnabled(pkg: String, enabled: Boolean)
+
+    @Query("DELETE FROM chat_sources")
+    suspend fun deleteAll()
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertAll(sources: List<ChatSourceEntity>)
 }

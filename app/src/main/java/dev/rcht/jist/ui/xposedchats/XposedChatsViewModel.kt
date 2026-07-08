@@ -59,8 +59,7 @@ class XposedChatsViewModel(
                                 latestMessage = messages.maxByOrNull { it.timestamp }
                             )
                         }
-                        .filter { it.latestMessage != null }
-                        .sortedByDescending { it.latestMessage!!.timestamp }
+                        .sortedByDescending { it.latestMessage?.timestamp ?: 0L }
                     XposedSourceGroup(source = source, chats = chats)
                 }.filter { it.chats.isNotEmpty() }
 

@@ -21,6 +21,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -28,7 +29,9 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.platform.LocalContext
 import dev.rcht.jist.R
+import dev.rcht.jist.util.DrawableUtil
 import dev.rcht.jist.ui.components.GlassCard
 import dev.rcht.jist.ui.components.GlassScaffold
 import dev.rcht.jist.ui.xposedchats.XposedChatItem
@@ -119,6 +122,7 @@ fun XposedChatsScreen(
                                 val isExpanded = group.source.packageName in expandedGroups
                                 item(key = "${group.source.packageName}_header") {
                                     SourceSectionHeader(
+                                        packageName = group.source.packageName,
                                         appName = group.source.displayName,
                                         count = group.chats.size,
                                         isExpanded = isExpanded,
@@ -180,7 +184,14 @@ fun XposedChatsScreen(
 }
 
 @Composable
-private fun SourceSectionHeader(appName: String, count: Int, isExpanded: Boolean, onToggle: () -> Unit) {
+private fun SourceSectionHeader(packageName: String, appName: String, count: Int, isExpanded: Boolean, onToggle: () -> Unit) {
+    val context = LocalContext.current
+    val appIcon = remember(packageName) {
+        try {
+            val drawable = context.packageManager.getApplicationIcon(packageName)
+            DrawableUtil.drawableToBitmap(drawable).asImageBitmap()
+        } catch (_: Exception) { null }
+    }
     Row(
         modifier = Modifier.fillMaxWidth().clickable(onClick = onToggle).padding(start = 4.dp, top = 4.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -192,6 +203,15 @@ private fun SourceSectionHeader(appName: String, count: Int, isExpanded: Boolean
             modifier = Modifier.size(20.dp)
         )
         Spacer(modifier = Modifier.width(4.dp))
+        if (appIcon != null) {
+            Icon(
+                bitmap = appIcon,
+                contentDescription = appName,
+                modifier = Modifier.size(20.dp),
+                tint = Color.Unspecified
+            )
+            Spacer(modifier = Modifier.width(4.dp))
+        }
         Text(text = appName, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold,
             color = MaterialTheme.colorScheme.primary)
         Spacer(modifier = Modifier.width(8.dp))
