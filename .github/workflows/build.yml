@@ -58,7 +58,7 @@ jobs:
       - name: Copy APK to build/Jist/
         run: |
           mkdir -p build/Jist
-          cp app/build/outputs/apk/debug/app-debug.apk build/Jist/Jist.apk
+          cp app/build/outputs/apk/normal/debug/app-normal-debug.apk build/Jist/Jist.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
