@@ -32,6 +32,7 @@ fun MarkdownText(
         update = { textView ->
             markwon.setMarkdown(textView, markdown)
             textView.maxLines = maxLines
+            textView.movementMethod = null
         }
     )
 }
