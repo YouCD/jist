@@ -1,13 +1,21 @@
 package dev.rcht.jist.ui.screens
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -21,6 +29,7 @@ import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalFocusManager
@@ -30,6 +39,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.platform.LocalContext
 import dev.rcht.jist.R
 import dev.rcht.jist.util.DrawableUtil
@@ -67,6 +77,16 @@ fun XposedChatsScreen(
     }
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
+    val lazyListState = rememberLazyListState()
+    val stickyHeaderKeys by remember {
+        derivedStateOf {
+            lazyListState.layoutInfo.visibleItemsInfo
+                .filter { it.key is String && (it.key as String).endsWith("_header") }
+                .filter { it.offset == lazyListState.layoutInfo.viewportStartOffset }
+                .map { it.key as String }
+                .toSet()
+        }
+    }
 
     GlassScaffold(
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
@@ -121,47 +141,69 @@ fun XposedChatsScreen(
                     }
                     else -> {
                         LazyColumn(
+                            state = lazyListState,
                             modifier = Modifier.fillMaxSize(),
                             contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                            verticalArrangement = Arrangement.spacedBy(0.dp)
                         ) {
                             groups.forEach { group ->
                                 val isExpanded = group.source.packageName in expandedGroups
-                                item(key = "${group.source.packageName}_header") {
+                                val headerKey = "${group.source.packageName}_header"
+                                stickyHeader(key = headerKey) {
                                     SourceSectionHeader(
                                         packageName = group.source.packageName,
                                         appName = group.source.displayName,
                                         count = group.chats.size,
+                                        totalUnread = group.chats.sumOf { it.messageCount },
+                                        latestTimestamp = group.chats.maxOfOrNull { chat ->
+                                            chat.latestMessage?.timestamp ?: 0L
+                                        } ?: 0L,
                                         isExpanded = isExpanded,
                                         onToggle = {
                                             expandedGroups = if (isExpanded) expandedGroups - group.source.packageName
                                             else expandedGroups + group.source.packageName
-                                        }
+                                        },
+                                        isSticky = headerKey in stickyHeaderKeys
                                     )
                                 }
-                                if (isExpanded) {
-                                    items(group.chats, key = { it.chat.id }) { item ->
-                                        XposedChatCard(
-                                            item = item,
-                                            selecting = selecting,
-                                            selected = item.chat.id in selectedIds,
-                                            onClick = {
-                                                if (selecting) {
-                                                    selectedIds = if (item.chat.id in selectedIds)
-                                                        selectedIds - item.chat.id
-                                                    else selectedIds + item.chat.id
-                                                } else {
-                                                    onChatClick(item.chat.id)
+                                item(key = "${group.source.packageName}_chats") {
+                                    AnimatedVisibility(
+                                        visible = isExpanded,
+                                        enter = expandVertically(tween(300)) + fadeIn(tween(300)),
+                                        exit = shrinkVertically(tween(300)) + fadeOut(tween(300))
+                                    ) {
+                                        Column(modifier = Modifier.padding(bottom = 8.dp)) {
+                                            group.chats.forEachIndexed { index, chatItem ->
+                                                XposedChatCard(
+                                                    item = chatItem,
+                                                    selecting = selecting,
+                                                    selected = chatItem.chat.id in selectedIds,
+                                                    onClick = {
+                                                        if (selecting) {
+                                                            selectedIds = if (chatItem.chat.id in selectedIds)
+                                                                selectedIds - chatItem.chat.id
+                                                            else selectedIds + chatItem.chat.id
+                                                        } else {
+                                                            onChatClick(chatItem.chat.id)
+                                                        }
+                                                    },
+                                                    onLongClick = {
+                                                        selecting = true
+                                                        selectedIds = setOf(chatItem.chat.id)
+                                                    },
+                                                    onToggleSummarized = { v -> onToggleSummarized(chatItem.chat.id, v) },
+                                                    onSavePrompt = { prompt, min -> onSavePrompt(chatItem.chat.id, prompt, min) },
+                                                    snackbarHostState = snackbarHostState
+                                                )
+                                                if (index < group.chats.lastIndex) {
+                                                    HorizontalDivider(
+                                                        modifier = Modifier.padding(horizontal = 4.dp),
+                                                        thickness = 1.dp,
+                                                        color = Color(0xFF1A1A1A)
+                                                    )
                                                 }
-                                            },
-                                            onLongClick = {
-                                                selecting = true
-                                                selectedIds = setOf(item.chat.id)
-                                            },
-                                            onToggleSummarized = { v -> onToggleSummarized(item.chat.id, v) },
-                                            onSavePrompt = { prompt, min -> onSavePrompt(item.chat.id, prompt, min) },
-                                            snackbarHostState = snackbarHostState
-                                        )
+                                            }
+                                        }
                                     }
                                 }
                             }
@@ -196,7 +238,16 @@ fun XposedChatsScreen(
 }
 
 @Composable
-private fun SourceSectionHeader(packageName: String, appName: String, count: Int, isExpanded: Boolean, onToggle: () -> Unit) {
+private fun SourceSectionHeader(
+    packageName: String,
+    appName: String,
+    count: Int,
+    totalUnread: Int = 0,
+    latestTimestamp: Long = 0L,
+    isExpanded: Boolean,
+    onToggle: () -> Unit,
+    isSticky: Boolean = false
+) {
     val context = LocalContext.current
     val appIcon = remember(packageName) {
         try {
@@ -204,31 +255,80 @@ private fun SourceSectionHeader(packageName: String, appName: String, count: Int
             DrawableUtil.drawableToBitmap(drawable).asImageBitmap()
         } catch (_: Exception) { null }
     }
-    Row(
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onToggle).padding(start = 4.dp, top = 4.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Icon(
-            imageVector = if (isExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
-            contentDescription = if (isExpanded) "收起" else "展开",
-            tint = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.size(20.dp)
-        )
-        Spacer(modifier = Modifier.width(4.dp))
-        if (appIcon != null) {
-            Icon(
-                bitmap = appIcon,
-                contentDescription = appName,
-                modifier = Modifier.size(20.dp),
-                tint = Color.Unspecified
+    val rotation by animateFloatAsState(
+        targetValue = if (isExpanded) 180f else 0f,
+        animationSpec = tween(200)
+    )
+    var showMenu by remember { mutableStateOf(false) }
+
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+                    shape = RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp)
+                )
+                .combinedClickable(
+                    onClick = onToggle,
+                    onLongClick = { showMenu = true }
+                )
+                .padding(start = 14.dp, end = 8.dp, top = 14.dp, bottom = 14.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            if (appIcon != null) {
+                Icon(
+                    bitmap = appIcon,
+                    contentDescription = appName,
+                    modifier = Modifier.size(28.dp),
+                    tint = Color.Unspecified
+                )
+            }
+            Spacer(Modifier.width(14.dp))
+            Text(
+                text = appName,
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.weight(1f),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
-            Spacer(modifier = Modifier.width(4.dp))
+            Text(
+                text = "${count}个会话",
+                fontSize = 12.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            if (totalUnread > 0) {
+                Spacer(Modifier.width(4.dp))
+                Text(
+                    text = "· ${formatNumber(totalUnread)}",
+                    fontSize = 12.sp,
+                    color = Color(0xFFE53935)
+                )
+            }
+            if (latestTimestamp > 0) {
+                Spacer(Modifier.width(4.dp))
+                Text(
+                    text = "· ${formatTimestamp(latestTimestamp)}",
+                    fontSize = 12.sp,
+                    color = timestampColor(latestTimestamp)
+                )
+            }
+            Spacer(Modifier.width(2.dp))
+            Icon(
+                imageVector = Icons.Default.KeyboardArrowDown,
+                contentDescription = if (isExpanded) "收起" else "展开",
+                modifier = Modifier.size(16.dp).rotate(rotation),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
+            )
         }
-        Text(text = appName, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold,
-            color = MaterialTheme.colorScheme.primary)
-        Spacer(modifier = Modifier.width(8.dp))
-        Text(text = "$count 个会话", style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant)
+        DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
+            DropdownMenuItem(
+                text = { Text(if (isExpanded) "全部折叠" else "全部展开") },
+                onClick = { showMenu = false; onToggle() }
+            )
+        }
+        HorizontalDivider(thickness = 1.dp, color = Color(0xFF333333))
     }
 }
 
@@ -257,19 +357,27 @@ private fun XposedChatCard(item: XposedChatItem, selecting: Boolean, selected: B
         shape = RoundedCornerShape(12.dp)
     ) {
         Column {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(start = 12.dp, end = 8.dp, top = 8.dp, bottom = if (expanded) 0.dp else 8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 14.dp, end = 8.dp, top = 12.dp, bottom = if (expanded) 0.dp else 12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                 if (selecting) {
                     Checkbox(checked = selected, onCheckedChange = { onClick() }, modifier = Modifier.size(24.dp))
                     Spacer(modifier = Modifier.width(8.dp))
                 }
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(text = item.chat.chatName, style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        Text(text = item.chat.chatName, style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f))
+                        if (item.latestMessage != null) {
+                            Text(text = formatTimestamp(item.latestMessage.timestamp),
+                                style = MaterialTheme.typography.labelSmall.copy(fontSize = 12.sp),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f))
+                        }
+                    }
                     if (item.latestMessage != null) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(
@@ -284,19 +392,22 @@ private fun XposedChatCard(item: XposedChatItem, selecting: Boolean, selected: B
                                 maxLines = 1, overflow = TextOverflow.Ellipsis,
                                 modifier = Modifier.weight(1f)
                             )
-                            Text(text = formatTimestamp(item.latestMessage.timestamp),
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.padding(start = 4.dp))
+                            if (item.messageCount > 0) {
+                                Spacer(Modifier.width(6.dp))
+                                Box(
+                                    modifier = Modifier
+                                        .background(
+                                            color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
+                                            shape = RoundedCornerShape(14.dp)
+                                        )
+                                        .padding(horizontal = 8.dp, vertical = 2.dp)
+                                ) {
+                                    Text(text = item.messageCount.toString(),
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onPrimaryContainer)
+                                }
+                            }
                         }
-                    }
-                }
-                if (item.messageCount > 0) {
-                    Surface(shape = RoundedCornerShape(12.dp), color = MaterialTheme.colorScheme.primaryContainer) {
-                        Text(text = item.messageCount.toString(),
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer)
                     }
                 }
                 if (!selecting && item.chat.isSummarized) {
@@ -381,7 +492,25 @@ private fun XposedChatCard(item: XposedChatItem, selecting: Boolean, selected: B
     }
 }
 
-private fun formatTimestamp(timestamp: Long): String {
+internal fun formatNumber(n: Int): String {
+    return when {
+        n >= 10_000 -> "${n / 10_000}.${(n % 10_000) / 1_000}万"
+        n >= 1_000 -> "${n / 1_000}.${(n % 1_000) / 100}k"
+        else -> n.toString()
+    }
+}
+
+@Composable
+internal fun timestampColor(timestamp: Long): Color {
+    val diff = System.currentTimeMillis() - timestamp
+    return when {
+        diff < 60_000 -> MaterialTheme.colorScheme.primary.copy(alpha = 0.85f)
+        diff < 3_600_000 -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+        else -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
+    }
+}
+
+internal fun formatTimestamp(timestamp: Long): String {
     val now = System.currentTimeMillis()
     val diff = now - timestamp
     return when {

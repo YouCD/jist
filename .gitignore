@@ -12,3 +12,4 @@ local.properties
 !/build/Jist/
 /build/Jist/*
 !/build/Jist/Android.bp
+.idea

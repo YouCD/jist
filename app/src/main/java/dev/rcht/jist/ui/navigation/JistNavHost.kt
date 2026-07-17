@@ -336,7 +336,7 @@ fun JistNavHost(
             )
             val state by vm.uiState.collectAsState()
             NotificationLogScreen(
-                notifications = state.notifications,
+                appGroups = state.appGroups,
                 isLoading = state.isLoading,
                 onRefresh = { vm.refresh() },
                 onDelete = { ids -> vm.deleteNotifications(ids) }

@@ -9,8 +9,15 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
+data class AppNotificationGroup(
+    val packageName: String,
+    val appName: String,
+    val notifications: List<NotificationEntity>,
+    val count: Int
+)
+
 data class NotificationLogUiState(
-    val notifications: List<NotificationEntity> = emptyList(),
+    val appGroups: List<AppNotificationGroup> = emptyList(),
     val isLoading: Boolean = true,
     val error: String? = null
 )
@@ -31,8 +38,18 @@ class NotificationLogViewModel(
             _uiState.value = _uiState.value.copy(isLoading = true)
             try {
                 val all = notificationRepository.getAll()
+                val groups = all.groupBy { it.packageName }
+                    .map { (pkg, notifications) ->
+                        AppNotificationGroup(
+                            packageName = pkg,
+                            appName = notifications.firstOrNull()?.appName ?: pkg,
+                            notifications = notifications.sortedByDescending { it.timestamp },
+                            count = notifications.size
+                        )
+                    }
+                    .sortedByDescending { it.count }
                 _uiState.value = _uiState.value.copy(
-                    notifications = all,
+                    appGroups = groups,
                     isLoading = false,
                     error = null
                 )

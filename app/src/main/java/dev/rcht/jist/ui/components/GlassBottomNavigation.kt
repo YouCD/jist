@@ -7,17 +7,14 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
@@ -134,56 +131,45 @@ private fun GlassBottomNavItem(
     onClick: () -> Unit
 ) {
     val interactionSource = remember { MutableInteractionSource() }
-    
-    Column(
+    val pillShape = RoundedCornerShape(16.dp)
+    val itemColor = if (selected) JistCyan else Color.White.copy(alpha = 0.4f)
+
+    Box(
         modifier = Modifier
             .clickable(
                 interactionSource = interactionSource,
-                indication = null, // Disable ripple for cleaner look
+                indication = null,
                 onClick = onClick
             )
-            .padding(8.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
+            .padding(horizontal = 4.dp, vertical = 8.dp)
     ) {
-        // Glowing Indicator
         Box(
             modifier = Modifier
-                .height(3.dp)
-                .width(40.dp)
-                .offset(y = (-9).dp)
                 .background(
-                    color = if (selected) JistCyan else Color.Transparent,
-                    shape = RoundedCornerShape(2.dp)
+                    color = if (selected) JistCyan.copy(alpha = 0.15f) else Color.Transparent,
+                    shape = pillShape
                 )
-                .shadow(
-                    elevation = if (selected) 3.dp else 0.dp,
-                    shape = RoundedCornerShape(2.dp),
-                    spotColor = JistCyan,
-                    ambientColor = JistCyan
+                .padding(horizontal = 16.dp, vertical = 6.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(2.dp)
+            ) {
+                Icon(
+                    imageVector = if (selected) item.selectedIcon else item.unselectedIcon,
+                    contentDescription = item.label,
+                    tint = itemColor,
+                    modifier = Modifier.size(22.dp)
                 )
-        )
-        
-        Spacer(modifier = Modifier.height(8.dp))
-        
-        // Icon
-        Icon(
-            imageVector = if (selected) item.selectedIcon else item.unselectedIcon,
-            contentDescription = item.label,
-            tint = if (selected) JistCyan else Color.White.copy(alpha = 0.4f),
-            modifier = Modifier.size(24.dp)
-        )
-        
-        Spacer(modifier = Modifier.height(4.dp))
-        
-        // Label
-        Text(
-            text = item.label,
-            style = MaterialTheme.typography.labelSmall,
-            color = if (selected) JistCyan else Color.White.copy(alpha = 0.4f),
-            fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal
-        )
-        Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = item.label,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = itemColor,
+                    fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal
+                )
+            }
+        }
     }
 }
 
