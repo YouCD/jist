@@ -62,6 +62,7 @@ fun XposedChatsScreen(
     onDeleteChats: (List<Long>) -> Unit,
     onToggleSummarized: (chatId: Long, summarized: Boolean) -> Unit,
     onSavePrompt: (chatId: Long, customPrompt: String?, minMessages: Int) -> Unit,
+    onSaveRetentionDays: (chatId: Long, days: Int) -> Unit,
     onRefresh: () -> Unit,
     isRefreshing: Boolean = false,
     modifier: Modifier = Modifier
@@ -193,6 +194,7 @@ fun XposedChatsScreen(
                                                     },
                                                     onToggleSummarized = { v -> onToggleSummarized(chatItem.chat.id, v) },
                                                     onSavePrompt = { prompt, min -> onSavePrompt(chatItem.chat.id, prompt, min) },
+                                                    onSaveRetentionDays = { days -> onSaveRetentionDays(chatItem.chat.id, days) },
                                                     snackbarHostState = snackbarHostState
                                                 )
                                                 if (index < group.chats.lastIndex) {
@@ -334,14 +336,16 @@ private fun SourceSectionHeader(
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
-private fun XposedChatCard(item: XposedChatItem, selecting: Boolean, selected: Boolean, onClick: () -> Unit, onLongClick: () -> Unit, onToggleSummarized: (Boolean) -> Unit, onSavePrompt: (customPrompt: String?, minMessages: Int) -> Unit, snackbarHostState: SnackbarHostState? = null) {
+private fun XposedChatCard(item: XposedChatItem, selecting: Boolean, selected: Boolean, onClick: () -> Unit, onLongClick: () -> Unit, onToggleSummarized: (Boolean) -> Unit, onSavePrompt: (customPrompt: String?, minMessages: Int) -> Unit, onSaveRetentionDays: (days: Int) -> Unit = {}, snackbarHostState: SnackbarHostState? = null) {
     val defaultPrompt = remember { dev.rcht.jist.llm.getDefaultSystemPrompt() }
     var expanded by remember { mutableStateOf(false) }
     var promptText by remember(item.chat.id, item.chat.customPrompt) { mutableStateOf(item.chat.customPrompt ?: defaultPrompt) }
     var minMessagesText by remember(item.chat.id, item.chat.minMessagesForSummary) { mutableStateOf(item.chat.minMessagesForSummary.toString()) }
+    var retentionDaysText by remember(item.chat.id, item.chat.retentionDays) { mutableStateOf(item.chat.retentionDays.toString()) }
     val originalPrompt = item.chat.customPrompt ?: defaultPrompt
     val originalMinMessages = item.chat.minMessagesForSummary.toString()
-    val hasChanges = promptText != originalPrompt || minMessagesText != originalMinMessages
+    val originalRetentionDays = item.chat.retentionDays.toString()
+    val hasChanges = promptText != originalPrompt || minMessagesText != originalMinMessages || retentionDaysText != originalRetentionDays
     val isDefault = promptText == defaultPrompt
     val focusManager = LocalFocusManager.current
     val scope = rememberCoroutineScope()
@@ -462,6 +466,22 @@ private fun XposedChatCard(item: XposedChatItem, selecting: Boolean, selected: B
                             focusedBorderColor = MaterialTheme.colorScheme.primary, unfocusedBorderColor = Color.Transparent
                         )
                     )
+                    Spacer(Modifier.height(8.dp))
+                    Text("消息保留天数（0=永久）", style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f))
+                    OutlinedTextField(
+                        value = retentionDaysText,
+                        onValueChange = { retentionDaysText = it.filter { c -> c.isDigit() } },
+                        modifier = Modifier.fillMaxWidth(),
+                        placeholder = { Text("7") }, singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                            focusedBorderColor = MaterialTheme.colorScheme.primary, unfocusedBorderColor = Color.Transparent
+                        )
+                    )
                     Row(modifier = Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.End) {
                         if (!isDefault) {
                             TextButton(onClick = {
@@ -474,10 +494,14 @@ private fun XposedChatCard(item: XposedChatItem, selecting: Boolean, selected: B
                         Button(
                             onClick = {
                                 val count = minMessagesText.toIntOrNull()
+                                val days = retentionDaysText.toIntOrNull()
                                 if (count != null && count > 0) {
                                     onSavePrompt(promptText, count)
-                                    scope.launch { snackbarHostState?.showSnackbar("已保存") }
                                 }
+                                if (days != null) {
+                                    onSaveRetentionDays(days)
+                                }
+                                scope.launch { snackbarHostState?.showSnackbar("已保存") }
                                 focusManager.clearFocus()
                             },
                             enabled = hasChanges,

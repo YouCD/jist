@@ -112,6 +112,19 @@ class XposedChatsViewModel(
         }
     }
 
+    fun updateRetentionDays(chatId: Long, days: Int) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val chats = watchedChatRepository.getAll()
+                val chat = chats.find { it.id == chatId } ?: return@launch
+                watchedChatRepository.update(chat.copy(retentionDays = days))
+                loadData()
+            } catch (e: Exception) {
+                Log.e(TAG, "Error updating retention days", e)
+            }
+        }
+    }
+
     fun deleteChat(chatId: Long) = deleteChats(listOf(chatId))
 
     fun deleteChats(ids: List<Long>) {

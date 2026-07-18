@@ -42,7 +42,7 @@ import dev.rcht.jist.data.db.fts.SummaryFts
         WatchedChatEntity::class,
         ChatMessageEntity::class
     ],
-    version = 16,
+    version = 17,
     exportSchema = false
 )
 abstract class JistDatabase : RoomDatabase() {
@@ -160,6 +160,12 @@ abstract class JistDatabase : RoomDatabase() {
             }
         }
 
+        private val MIGRATION_16_17 = object : Migration(16, 17) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE watched_chats ADD COLUMN retentionDays INTEGER NOT NULL DEFAULT 7")
+            }
+        }
+
         fun getInstance(context: Context): JistDatabase {
             if (instance == null) {
                 instance = Room.databaseBuilder(
@@ -167,7 +173,7 @@ abstract class JistDatabase : RoomDatabase() {
                     JistDatabase::class.java,
                     "jist.db"
                 )
-                    .addMigrations(MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16)
+                    .addMigrations(MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17)
                     .allowMainThreadQueries()
                     .build()
             }

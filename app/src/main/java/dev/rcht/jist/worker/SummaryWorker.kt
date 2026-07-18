@@ -51,6 +51,9 @@ class SummaryWorker(context: Context, params: WorkerParameters) :
                 notificationManager.postGroupedSummaryNotifications(summaries)
             }
 
+            // Cleanup old messages for all chats with retentionDays > 0
+            cleanupOldMessages()
+
             try {
                 dev.rcht.jist.widget.SummaryWidgetProvider.refreshWidget(applicationContext)
             } catch (e: Exception) {
@@ -124,6 +127,18 @@ class SummaryWorker(context: Context, params: WorkerParameters) :
             }
         }
         return results
+    }
+
+    private suspend fun cleanupOldMessages() {
+        val chats = app.watchedChatRepository.getAll()
+        val now = System.currentTimeMillis()
+        for (chat in chats) {
+            if (chat.retentionDays > 0) {
+                val cutoff = now - chat.retentionDays * 86400_000L
+                app.chatMessageRepository.deleteOlderThan(cutoff)
+                Log.i(TAG, "Retention cleanup: ${chat.chatName} (${chat.retentionDays}d)")
+            }
+        }
     }
 
     companion object {

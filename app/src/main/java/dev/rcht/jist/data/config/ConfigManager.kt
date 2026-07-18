@@ -132,7 +132,8 @@ class ConfigManager(
                     isEnabled = wc.isEnabled,
                     isSummarized = wc.isSummarized,
                     customPrompt = wc.customPrompt,
-                    minMessagesForSummary = wc.minMessagesForSummary
+                    minMessagesForSummary = wc.minMessagesForSummary,
+                    retentionDays = wc.retentionDays
                 ))
             } else {
                 watchedChatRepository.insert(wc.toEntity(src.id))

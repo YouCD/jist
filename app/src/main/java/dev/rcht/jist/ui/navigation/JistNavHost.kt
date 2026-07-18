@@ -537,6 +537,7 @@ fun JistNavHost(
                 onDeleteChats = { ids -> viewModel.deleteChats(ids) },
                 onToggleSummarized = { id, v -> viewModel.toggleSummarized(id, v) },
                 onSavePrompt = { id, prompt, min -> viewModel.updateCustomPrompt(id, prompt); viewModel.updateMinMessages(id, min) },
+                onSaveRetentionDays = { id, days -> viewModel.updateRetentionDays(id, days) },
                 onRefresh = {
                     isRefreshing.value = true
                     viewModel.loadData()

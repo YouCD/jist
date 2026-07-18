@@ -79,7 +79,8 @@ data class WatchedChatDto(
     val isEnabled: Boolean = true,
     val isSummarized: Boolean = false,
     val customPrompt: String? = null,
-    val minMessagesForSummary: Int = 5
+    val minMessagesForSummary: Int = 5,
+    val retentionDays: Int = 7
 )
 
 fun ChatSourceEntity.toDto() = ChatSourceDto(
@@ -101,7 +102,8 @@ fun WatchedChatEntity.toDto(sourcePkg: String) = WatchedChatDto(
     isEnabled = isEnabled,
     isSummarized = isSummarized,
     customPrompt = customPrompt,
-    minMessagesForSummary = minMessagesForSummary
+    minMessagesForSummary = minMessagesForSummary,
+    retentionDays = retentionDays
 )
 
 fun WatchedChatDto.toEntity(sourceId: Long) = WatchedChatEntity(
@@ -111,7 +113,8 @@ fun WatchedChatDto.toEntity(sourceId: Long) = WatchedChatEntity(
     isEnabled = isEnabled,
     isSummarized = isSummarized,
     customPrompt = customPrompt,
-    minMessagesForSummary = minMessagesForSummary
+    minMessagesForSummary = minMessagesForSummary,
+    retentionDays = retentionDays
 )
 
 fun LlmConfigEntity.toDto() = LlmConfigDto(
