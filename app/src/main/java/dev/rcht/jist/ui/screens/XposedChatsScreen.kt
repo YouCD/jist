@@ -27,6 +27,7 @@ import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
@@ -61,8 +62,7 @@ fun XposedChatsScreen(
     onChatClick: (Long) -> Unit,
     onDeleteChats: (List<Long>) -> Unit,
     onToggleSummarized: (chatId: Long, summarized: Boolean) -> Unit,
-    onSavePrompt: (chatId: Long, customPrompt: String?, minMessages: Int) -> Unit,
-    onSaveRetentionDays: (chatId: Long, days: Int) -> Unit,
+    onSaveChatSettings: (chatId: Long, customPrompt: String?, minMessages: Int, retentionDays: Int) -> Unit,
     onRefresh: () -> Unit,
     isRefreshing: Boolean = false,
     modifier: Modifier = Modifier
@@ -70,11 +70,15 @@ fun XposedChatsScreen(
     var selecting by remember { mutableStateOf(false) }
     var selectedIds by remember { mutableStateOf(setOf<Long>()) }
     var showDeleteDialog by remember { mutableStateOf(false) }
-    var expandedGroups by remember { mutableStateOf(groups.map { it.source.packageName }.toSet()) }
+    var knownKeys: List<String> by rememberSaveable { mutableStateOf(ArrayList(groups.map { it.source.packageName })) }
+    var expandedGroups: List<String> by rememberSaveable { mutableStateOf(ArrayList(groups.map { it.source.packageName })) }
     val allKeys = groups.map { it.source.packageName }.toSet()
     LaunchedEffect(allKeys) {
-        val added = allKeys - expandedGroups
-        if (added.isNotEmpty()) expandedGroups = expandedGroups + added
+        val added = allKeys - knownKeys.toSet()
+        if (added.isNotEmpty()) {
+            knownKeys = knownKeys + added.toList()
+            expandedGroups = expandedGroups + added.toList()
+        }
     }
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
@@ -193,8 +197,7 @@ fun XposedChatsScreen(
                                                         selectedIds = setOf(chatItem.chat.id)
                                                     },
                                                     onToggleSummarized = { v -> onToggleSummarized(chatItem.chat.id, v) },
-                                                    onSavePrompt = { prompt, min -> onSavePrompt(chatItem.chat.id, prompt, min) },
-                                                    onSaveRetentionDays = { days -> onSaveRetentionDays(chatItem.chat.id, days) },
+                                                    onSaveChatSettings = { prompt, min, retention -> onSaveChatSettings(chatItem.chat.id, prompt, min, retention) },
                                                     snackbarHostState = snackbarHostState
                                                 )
                                                 if (index < group.chats.lastIndex) {
@@ -336,16 +339,16 @@ private fun SourceSectionHeader(
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
-private fun XposedChatCard(item: XposedChatItem, selecting: Boolean, selected: Boolean, onClick: () -> Unit, onLongClick: () -> Unit, onToggleSummarized: (Boolean) -> Unit, onSavePrompt: (customPrompt: String?, minMessages: Int) -> Unit, onSaveRetentionDays: (days: Int) -> Unit = {}, snackbarHostState: SnackbarHostState? = null) {
+private fun XposedChatCard(item: XposedChatItem, selecting: Boolean, selected: Boolean, onClick: () -> Unit, onLongClick: () -> Unit, onToggleSummarized: (Boolean) -> Unit, onSaveChatSettings: (customPrompt: String?, minMessages: Int, retentionDays: Int) -> Unit, snackbarHostState: SnackbarHostState? = null) {
     val defaultPrompt = remember { dev.rcht.jist.llm.getDefaultSystemPrompt() }
-    var expanded by remember { mutableStateOf(false) }
+    var expanded by remember(item.chat.id, item.chat.isSummarized) { mutableStateOf(false) }
     var promptText by remember(item.chat.id, item.chat.customPrompt) { mutableStateOf(item.chat.customPrompt ?: defaultPrompt) }
     var minMessagesText by remember(item.chat.id, item.chat.minMessagesForSummary) { mutableStateOf(item.chat.minMessagesForSummary.toString()) }
     var retentionDaysText by remember(item.chat.id, item.chat.retentionDays) { mutableStateOf(item.chat.retentionDays.toString()) }
-    val originalPrompt = item.chat.customPrompt ?: defaultPrompt
-    val originalMinMessages = item.chat.minMessagesForSummary.toString()
-    val originalRetentionDays = item.chat.retentionDays.toString()
-    val hasChanges = promptText != originalPrompt || minMessagesText != originalMinMessages || retentionDaysText != originalRetentionDays
+    var savedPrompt by remember(item.chat.id, item.chat.customPrompt) { mutableStateOf(item.chat.customPrompt ?: defaultPrompt) }
+    var savedMinMessages by remember(item.chat.id, item.chat.minMessagesForSummary) { mutableStateOf(item.chat.minMessagesForSummary.toString()) }
+    var savedRetentionDays by remember(item.chat.id, item.chat.retentionDays) { mutableStateOf(item.chat.retentionDays.toString()) }
+    val hasChanges = promptText != savedPrompt || minMessagesText != savedMinMessages || retentionDaysText != savedRetentionDays
     val isDefault = promptText == defaultPrompt
     val focusManager = LocalFocusManager.current
     val scope = rememberCoroutineScope()
@@ -486,21 +489,21 @@ private fun XposedChatCard(item: XposedChatItem, selecting: Boolean, selected: B
                         if (!isDefault) {
                             TextButton(onClick = {
                                 promptText = defaultPrompt
-                                onSavePrompt(null, item.chat.minMessagesForSummary)
+                                onSaveChatSettings(defaultPrompt, item.chat.minMessagesForSummary, item.chat.retentionDays)
                                 focusManager.clearFocus()
                             }) { Text("重置为默认", color = MaterialTheme.colorScheme.error) }
                             Spacer(modifier = Modifier.width(8.dp))
                         }
                         Button(
                             onClick = {
-                                val count = minMessagesText.toIntOrNull()
-                                val days = retentionDaysText.toIntOrNull()
-                                if (count != null && count > 0) {
-                                    onSavePrompt(promptText, count)
+                                val count = minMessagesText.toIntOrNull() ?: 5
+                                val days = retentionDaysText.toIntOrNull() ?: 0
+                                if (count > 0) {
+                                    onSaveChatSettings(promptText, count, days)
                                 }
-                                if (days != null) {
-                                    onSaveRetentionDays(days)
-                                }
+                                savedPrompt = promptText
+                                savedMinMessages = minMessagesText
+                                savedRetentionDays = retentionDaysText
                                 scope.launch { snackbarHostState?.showSnackbar("已保存") }
                                 focusManager.clearFocus()
                             },

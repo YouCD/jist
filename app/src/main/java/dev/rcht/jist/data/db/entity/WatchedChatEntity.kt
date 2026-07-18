@@ -30,6 +30,6 @@ data class WatchedChatEntity(
     val isSummarized: Boolean = false,
     val customPrompt: String? = null,
     val minMessagesForSummary: Int = 5,
-    val retentionDays: Int = 7,
+    val retentionDays: Int = 1,
     val createdAt: Long = System.currentTimeMillis()
 )

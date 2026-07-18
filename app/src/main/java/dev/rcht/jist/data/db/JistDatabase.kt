@@ -162,7 +162,7 @@ abstract class JistDatabase : RoomDatabase() {
 
         private val MIGRATION_16_17 = object : Migration(16, 17) {
             override fun migrate(db: SupportSQLiteDatabase) {
-                db.execSQL("ALTER TABLE watched_chats ADD COLUMN retentionDays INTEGER NOT NULL DEFAULT 7")
+                db.execSQL("ALTER TABLE watched_chats ADD COLUMN retentionDays INTEGER NOT NULL DEFAULT 1")
             }
         }
 

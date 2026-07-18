@@ -80,7 +80,7 @@ data class WatchedChatDto(
     val isSummarized: Boolean = false,
     val customPrompt: String? = null,
     val minMessagesForSummary: Int = 5,
-    val retentionDays: Int = 7
+    val retentionDays: Int = 1
 )
 
 fun ChatSourceEntity.toDto() = ChatSourceDto(

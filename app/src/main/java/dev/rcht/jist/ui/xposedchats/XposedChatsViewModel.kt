@@ -125,6 +125,23 @@ class XposedChatsViewModel(
         }
     }
 
+    fun updateChatSettings(chatId: Long, prompt: String?, minMessages: Int, retentionDays: Int) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val chats = watchedChatRepository.getAll()
+                val chat = chats.find { it.id == chatId } ?: return@launch
+                watchedChatRepository.update(chat.copy(
+                    customPrompt = prompt,
+                    minMessagesForSummary = minMessages,
+                    retentionDays = retentionDays
+                ))
+                loadData()
+            } catch (e: Exception) {
+                Log.e(TAG, "Error updating chat settings", e)
+            }
+        }
+    }
+
     fun deleteChat(chatId: Long) = deleteChats(listOf(chatId))
 
     fun deleteChats(ids: List<Long>) {
