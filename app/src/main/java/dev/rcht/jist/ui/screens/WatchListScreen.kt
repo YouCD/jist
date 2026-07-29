@@ -3,13 +3,15 @@ package dev.rcht.jist.ui.screens
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.outlined.VisibilityOff
@@ -44,12 +46,39 @@ fun WatchListScreen(
 ) {
     var showDeleteConfirm by remember { mutableStateOf(false) }
     var itemToDelete by remember { mutableStateOf<WatchListItem?>(null) }
+    var isSelecting by remember { mutableStateOf(false) }
+    var selectedIds by remember { mutableStateOf(setOf<Long>()) }
+    var showBatchDeleteConfirm by remember { mutableStateOf(false) }
 
     GlassScaffold(
         modifier = modifier.fillMaxSize(),
         topBar = {
             CenterAlignedTopAppBar(
-                title = { Text(stringResource(R.string.watch_list_title), fontWeight = FontWeight.SemiBold) },
+                title = {
+                    Text(
+                        if (isSelecting) stringResource(R.string.selection_count, selectedIds.size)
+                        else stringResource(R.string.watch_list_title),
+                        fontWeight = FontWeight.SemiBold
+                    )
+                },
+                navigationIcon = {
+                    if (isSelecting) {
+                        IconButton(onClick = { isSelecting = false; selectedIds = emptySet() }) {
+                            Icon(Icons.Default.Close, contentDescription = "退出选择")
+                        }
+                    }
+                },
+                actions = {
+                    if (isSelecting) {
+                        if (selectedIds.isNotEmpty()) {
+                            IconButton(onClick = { showBatchDeleteConfirm = true }) {
+                                Icon(Icons.Default.Delete,
+                                    contentDescription = "删除",
+                                    tint = MaterialTheme.colorScheme.error)
+                            }
+                        }
+                    }
+                },
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
                     containerColor = Color.Transparent
                 )
@@ -90,7 +119,23 @@ fun WatchListScreen(
                         items(items, key = { it.topic.id }) { item ->
                             WatchCard(
                                 item = item,
-                                onClick = { onItemClick(item.topic.id) },
+                                selecting = isSelecting,
+                                selected = item.topic.id in selectedIds,
+                                onClick = {
+                                    if (isSelecting) {
+                                        selectedIds = if (item.topic.id in selectedIds)
+                                            selectedIds - item.topic.id
+                                        else selectedIds + item.topic.id
+                                    } else {
+                                        onItemClick(item.topic.id)
+                                    }
+                                },
+                                onLongClick = {
+                                    if (!isSelecting) {
+                                        isSelecting = true
+                                        selectedIds = setOf(item.topic.id)
+                                    }
+                                },
                                 onToggleEnabled = { onToggleEnabled(item) },
                                 onDelete = { itemToDelete = item; showDeleteConfirm = true }
                             )
@@ -124,22 +169,60 @@ fun WatchListScreen(
             }
         )
     }
+
+    if (showBatchDeleteConfirm && selectedIds.isNotEmpty()) {
+        AlertDialog(
+            onDismissRequest = { showBatchDeleteConfirm = false },
+            title = { Text("批量删除") },
+            text = { Text("确定删除选中的 ${selectedIds.size} 个提醒话题？此操作不可撤销。") },
+            confirmButton = {
+                TextButton(onClick = {
+                    showBatchDeleteConfirm = false
+                    items.filter { it.topic.id in selectedIds }.forEach { onDeleteClick(it) }
+                    isSelecting = false
+                    selectedIds = emptySet()
+                }) {
+                    Text("删除", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showBatchDeleteConfirm = false }) {
+                    Text("取消")
+                }
+            }
+        )
+    }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun WatchCard(
     item: WatchListItem,
+    selecting: Boolean = false,
+    selected: Boolean = false,
     onClick: () -> Unit,
+    onLongClick: () -> Unit = {},
     onToggleEnabled: () -> Unit,
     onDelete: () -> Unit
 ) {
     GlassCard(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = onLongClick
+            )
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
+                if (selecting) {
+                    Checkbox(
+                        checked = selected,
+                        onCheckedChange = { onClick() },
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Spacer(Modifier.width(8.dp))
+                }
                 Text(
                     text = item.topic.title,
                     style = MaterialTheme.typography.titleMedium,
@@ -217,21 +300,23 @@ private fun WatchCard(
                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
                 )
                 Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    IconButton(onClick = onToggleEnabled, modifier = Modifier.size(28.dp)) {
-                        Icon(
-                            if (item.topic.isEnabled) Icons.Default.Visibility else Icons.Outlined.VisibilityOff,
-                            contentDescription = if (item.topic.isEnabled) stringResource(R.string.watch_content_desc_pause) else stringResource(R.string.watch_content_desc_enable),
-                            modifier = Modifier.size(18.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                    IconButton(onClick = onDelete, modifier = Modifier.size(28.dp)) {
-                        Icon(
-                            Icons.Default.Delete,
-                            contentDescription = stringResource(R.string.watch_content_desc_delete),
-                            modifier = Modifier.size(18.dp),
-                            tint = MaterialTheme.colorScheme.error
-                        )
+                    if (!selecting) {
+                        IconButton(onClick = onToggleEnabled, modifier = Modifier.size(28.dp)) {
+                            Icon(
+                                if (item.topic.isEnabled) Icons.Default.Visibility else Icons.Outlined.VisibilityOff,
+                                contentDescription = if (item.topic.isEnabled) stringResource(R.string.watch_content_desc_pause) else stringResource(R.string.watch_content_desc_enable),
+                                modifier = Modifier.size(18.dp),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        IconButton(onClick = onDelete, modifier = Modifier.size(28.dp)) {
+                            Icon(
+                                Icons.Default.Delete,
+                                contentDescription = stringResource(R.string.watch_content_desc_delete),
+                                modifier = Modifier.size(18.dp),
+                                tint = MaterialTheme.colorScheme.error
+                            )
+                        }
                     }
                 }
             }

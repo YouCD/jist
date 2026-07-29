@@ -100,7 +100,7 @@ fun XposedChatsScreen(
             CenterAlignedTopAppBar(
                 title = {
                     Text(
-                        if (selecting) "已选择 ${selectedIds.size} 项"
+                        if (selecting) stringResource(R.string.selection_count, selectedIds.size)
                         else stringResource(R.string.xposed_chats_title),
                         fontWeight = FontWeight.SemiBold
                     )

@@ -73,7 +73,7 @@ fun SummariesScreen(
             CenterAlignedTopAppBar(
                 title = {
                     if (isSelecting) {
-                        Text("${selectedIds.size} selected", fontWeight = FontWeight.SemiBold)
+                        Text("${stringResource(R.string.selection_count, selectedIds.size)}", fontWeight = FontWeight.SemiBold)
                     } else {
                         Text(stringResource(R.string.summaries_title), fontWeight = FontWeight.SemiBold)
                     }
@@ -89,13 +89,6 @@ fun SummariesScreen(
                     if (selectedIds.isNotEmpty()) {
                         IconButton(onClick = { showDeleteConfirm = true }) {
                             Icon(Icons.Filled.Delete, contentDescription = "Delete", tint = MaterialTheme.colorScheme.error)
-                        }
-                    } else if (!isSelecting && uiState.filteredSummaries.isNotEmpty()) {
-                        TextButton(onClick = {
-                            isSelecting = true
-                            selectedIds = emptySet()
-                        }) {
-                            Text(stringResource(R.string.summaries_select))
                         }
                     }
                     if (isSelecting && selectedIds.size < uiState.filteredSummaries.size) {
@@ -177,6 +170,12 @@ fun SummariesScreen(
                                 SummaryCard(
                                     summary = summary,
                                     onClick = { onSummaryClick(summary.id) },
+                                    onLongClick = {
+                                        if (!isSelecting) {
+                                            isSelecting = true
+                                            selectedIds = setOf(summary.id)
+                                        }
+                                    },
                                     selected = selected,
                                     isSelecting = isSelecting,
                                     onSelectChange = { checked ->

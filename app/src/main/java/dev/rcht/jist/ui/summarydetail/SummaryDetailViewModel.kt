@@ -131,6 +131,34 @@ class SummaryDetailViewModel(
         )
     }
 
+    fun markAllAsRead() {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                summaryRepository.markAllAsRead()
+                val all = sortSummaries(summaryRepository.getAll())
+                val currentSummaryId = _uiState.value.summaries.getOrNull(_uiState.value.currentIndex)?.id
+                val index = all.indexOfFirst { it.id == currentSummaryId }.coerceAtLeast(0)
+                val summary = all.getOrNull(index)
+                val notifications = if (summary != null) {
+                    notificationRepository.getByConversationKey(summary.conversationKey)
+                } else {
+                    emptyList()
+                }
+                _uiState.value = SummaryDetailUiState(
+                    summaries = all,
+                    currentIndex = index,
+                    notifications = notifications.sortedByDescending { it.timestamp },
+                    isReSummarizing = false,
+                    error = null
+                )
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(
+                    error = "Error marking all as read: ${e.message}"
+                )
+            }
+        }
+    }
+
     fun clearReSummarizeStatus() {
         _uiState.value = _uiState.value.copy(reSummarizeSuccess = null)
     }

@@ -254,6 +254,7 @@ fun JistNavHost(
                 onNavigateBack = { navController.popBackStack() },
                 onReSummarize = { viewModel.reSummarize() },
                 onPageChanged = { index -> viewModel.onPageChanged(index) },
+                onMarkAllRead = { viewModel.markAllAsRead() },
                 isReSummarizing = uiState.isReSummarizing
             )
         }

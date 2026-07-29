@@ -405,7 +405,7 @@ fun DashboardScreen(
                         SummaryCard(
                             summary = summary,
                             onClick = { onSummaryClick(summary.id) },
-                            useMarkdown = false,
+                            useMarkdown = true,
                             glassHazeState = hazeState,
                             modifier = Modifier.fillMaxWidth()
                         )

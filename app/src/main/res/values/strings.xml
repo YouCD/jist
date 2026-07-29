@@ -16,7 +16,7 @@
     <!-- Navigation -->
     <string name="nav_dashboard">Dashboard</string>
     <string name="nav_summaries">Summaries</string>
-    <string name="nav_alerts">Alerts</string>
+    <string name="nav_alerts">Notifications</string>
     <string name="nav_back">Back</string>
 
     <!-- Common -->
@@ -142,6 +142,7 @@
     <string name="summaries_empty_desc">Notifications will be summarized soon</string>
     <string name="summaries_msg_count">%d msg</string>
     <string name="summaries_select">Select</string>
+    <string name="selection_count">%d selected</string>
     <string name="summaries_delete_title">Delete summaries</string>
     <string name="summaries_delete_message">Are you sure you want to delete %d selected summaries?</string>
     <string name="summaries_delete_confirm">Delete</string>
@@ -155,6 +156,22 @@
 
     <!-- Notification Log -->
     <string name="notification_log_title">Notification Log</string>
+    <string name="notification_log_load_more">Load more (%d remaining)</string>
+    <string name="notification_log_cleanup">Cleanup</string>
+    <string name="notification_log_cleanup_title">Clean Up Notifications</string>
+    <string name="notification_log_cleanup_app">App</string>
+    <string name="notification_log_cleanup_all_apps">All Apps</string>
+    <string name="notification_log_cleanup_range">Time Range</string>
+    <string name="notification_log_cleanup_all">All</string>
+    <string name="notification_log_cleanup_days">%d days</string>
+    <string name="notification_log_cleanup_estimate_prefix">About</string>
+    <string name="notification_log_cleanup_estimate_suffix">records will be deleted</string>
+    <string name="notification_log_cleanup_no_records">No records to delete</string>
+    <string name="notification_log_cleanup_irreversible">This action cannot be undone.</string>
+    <string name="notification_log_cleanup_confirm">Delete</string>
+    <string name="notification_log_cleanup_secondary_title">Confirm Deletion</string>
+    <string name="notification_log_cleanup_secondary_message">Are you sure you want to delete %d records? This action cannot be undone.</string>
+    <string name="notification_log_cleanup_secondary_confirm">Delete</string>
 
     <!-- About -->
     <string name="about_title">About</string>

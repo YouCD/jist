@@ -2,9 +2,10 @@ package dev.rcht.jist.ui.components
 
 import android.graphics.Bitmap
 import android.graphics.Canvas
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -42,10 +43,12 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun SummaryCard(
     summary: SummaryEntity,
     onClick: () -> Unit = {},
+    onLongClick: () -> Unit = {},
     selected: Boolean = false,
     onSelectChange: ((Boolean) -> Unit)? = null,
     isSelecting: Boolean = false,
@@ -153,20 +156,26 @@ fun SummaryCard(
 
     if (glassHazeState != null) {
         GlassCard(
-            modifier = modifier.fillMaxWidth().clickable {
-                if (isSelecting && onSelectChange != null) onSelectChange(!selected)
-                else onClick()
-            },
+            modifier = modifier.fillMaxWidth().combinedClickable(
+                onClick = {
+                    if (isSelecting && onSelectChange != null) onSelectChange(!selected)
+                    else onClick()
+                },
+                onLongClick = onLongClick
+            ),
             hazeState = glassHazeState
         ) { card() }
     } else {
         Card(
             modifier = modifier
                 .fillMaxWidth()
-                .clickable {
-                    if (isSelecting && onSelectChange != null) onSelectChange(!selected)
-                    else onClick()
-                },
+                .combinedClickable(
+                    onClick = {
+                        if (isSelecting && onSelectChange != null) onSelectChange(!selected)
+                        else onClick()
+                    },
+                    onLongClick = onLongClick
+                ),
             colors = CardDefaults.cardColors(
                 containerColor = if (selected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
                 else containerColor

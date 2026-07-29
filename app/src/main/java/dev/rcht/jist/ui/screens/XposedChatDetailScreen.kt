@@ -24,10 +24,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import dev.rcht.jist.data.db.entity.ChatMessageEntity
+import dev.rcht.jist.R
 import dev.rcht.jist.ui.components.GlassCard
 import dev.rcht.jist.ui.components.GlassScaffold
 import dev.rcht.jist.ui.xposedchats.XposedChatDetailState
 import dev.rcht.jist.util.displayContent
+import androidx.compose.ui.res.stringResource
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -58,7 +60,7 @@ fun XposedChatDetailScreen(
             CenterAlignedTopAppBar(
                 title = {
                     Text(
-                        if (selecting) "已选择 ${selectedIds.size} 条"
+                        if (selecting) stringResource(R.string.selection_count, selectedIds.size)
                         else chatName,
                         fontWeight = FontWeight.SemiBold
                     )

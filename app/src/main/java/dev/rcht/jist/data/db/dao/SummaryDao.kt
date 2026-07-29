@@ -48,6 +48,9 @@ interface SummaryDao {
     @Query("UPDATE summaries SET isRead = 1 WHERE id = :id")
     suspend fun markAsRead(id: Long)
 
+    @Query("UPDATE summaries SET isRead = 1")
+    suspend fun markAllAsRead()
+
     @Query("SELECT COUNT(*) FROM summaries WHERE isRead = 0")
     suspend fun countUnread(): Int
     

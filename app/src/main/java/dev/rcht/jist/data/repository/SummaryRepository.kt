@@ -49,6 +49,10 @@ class SummaryRepository(private val summaryDao: SummaryDao) {
         summaryDao.markAsRead(id)
     }
 
+    suspend fun markAllAsRead() {
+        summaryDao.markAllAsRead()
+    }
+
     suspend fun countUnread(): Int {
         return summaryDao.countUnread()
     }

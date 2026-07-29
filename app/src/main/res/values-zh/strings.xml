@@ -16,7 +16,7 @@
     <!-- Navigation -->
     <string name="nav_dashboard">仪表盘</string>
     <string name="nav_summaries">摘要</string>
-    <string name="nav_alerts">提醒</string>
+    <string name="nav_alerts">通知</string>
     <string name="nav_back">返回</string>
 
     <!-- Common -->
@@ -142,6 +142,7 @@
     <string name="summaries_empty_desc">通知即将被摘要</string>
     <string name="summaries_msg_count">%d 条消息</string>
     <string name="summaries_select">选择</string>
+    <string name="selection_count">已选择 %d 项</string>
     <string name="summaries_delete_title">删除摘要</string>
     <string name="summaries_delete_message">确定要删除选中的 %d 条摘要吗？</string>
     <string name="summaries_delete_confirm">删除</string>
@@ -155,6 +156,22 @@
 
     <!-- Notification Log -->
     <string name="notification_log_title">通知日志</string>
+    <string name="notification_log_load_more">加载更多（剩余 %d 条）</string>
+    <string name="notification_log_cleanup">清理</string>
+    <string name="notification_log_cleanup_title">清理通知记录</string>
+    <string name="notification_log_cleanup_app">应用</string>
+    <string name="notification_log_cleanup_all_apps">所有应用</string>
+    <string name="notification_log_cleanup_range">时间范围</string>
+    <string name="notification_log_cleanup_all">全部</string>
+    <string name="notification_log_cleanup_days">%d 天</string>
+    <string name="notification_log_cleanup_estimate_prefix">约</string>
+    <string name="notification_log_cleanup_estimate_suffix">条记录将被删除</string>
+    <string name="notification_log_cleanup_no_records">没有可删除的记录</string>
+    <string name="notification_log_cleanup_irreversible">此操作无法撤销。</string>
+    <string name="notification_log_cleanup_confirm">删除</string>
+    <string name="notification_log_cleanup_secondary_title">确认删除</string>
+    <string name="notification_log_cleanup_secondary_message">确定要删除 %d 条记录吗？此操作无法撤销。</string>
+    <string name="notification_log_cleanup_secondary_confirm">删除</string>
 
     <!-- About -->
     <string name="about_title">关于</string>
