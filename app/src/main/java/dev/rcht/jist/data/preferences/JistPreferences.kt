@@ -17,5 +17,10 @@ data class JistPreferences(
     val writingStyle: String = "CONCISE", // CONCISE, BULLET_POINTS, DETAILED
     val summaryTone: String = "PROFESSIONAL", // PROFESSIONAL, CASUAL, WITTY, URGENT
     val summaryLength: String = "MEDIUM", // SHORT, MEDIUM, LONG
-    val notificationsEnabled: Boolean = true // User preference for notifications (local state)
+    val notificationsEnabled: Boolean = true, // User preference for notifications (local state)
+    val webhookEnabled: Boolean = false,
+    val webhookUrl: String = "",
+    val webhookHttpMethod: String = "POST",
+    val webhookMessageTemplate: String = "{\"app\":\"\${appName}\",\"contact\":\"\${contactOrGroup}\",\"summary\":\"\${summaryText}\",\"messages\":\"\${messageCount}\",\"model\":\"\${modelUsed}\",\"timestamp\":\"\${createdAt}\"}",
+    val webhookCustomHeaders: String = ""
 )

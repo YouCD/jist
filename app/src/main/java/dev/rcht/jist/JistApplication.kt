@@ -18,6 +18,7 @@ import dev.rcht.jist.data.repository.WatchCollectedItemRepository
 import dev.rcht.jist.data.repository.WatchTopicRepository
 import dev.rcht.jist.engine.SummaryEngine
 import dev.rcht.jist.engine.WatchEngine
+import dev.rcht.jist.webhook.WebhookService
 import dev.rcht.jist.worker.SummaryWorker
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -49,6 +50,9 @@ class JistApplication : Application() {
     lateinit var chatSourceRepository: ChatSourceRepository
     lateinit var watchedChatRepository: WatchedChatRepository
     lateinit var chatMessageRepository: ChatMessageRepository
+
+    // Webhook
+    lateinit var webhookService: WebhookService
 
     // Engines
     lateinit var summaryEngine: SummaryEngine
@@ -99,6 +103,9 @@ class JistApplication : Application() {
         }
 
 
+        // Initialize webhook service
+        webhookService = WebhookService(httpClient)
+
         // Initialize engines
         summaryEngine = SummaryEngine(
             this,
@@ -107,7 +114,8 @@ class JistApplication : Application() {
             llmConfigRepository,
             appRuleRepository,
             preferencesRepository,
-            httpClient
+            httpClient,
+            webhookService
         )
         watchEngine = WatchEngine(
             this,

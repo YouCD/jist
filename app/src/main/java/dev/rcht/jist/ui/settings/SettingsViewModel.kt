@@ -23,7 +23,12 @@ data class SettingsUiState(
     val notificationsEnabled: Boolean = false,
     val hasSystemNotificationPermission: Boolean = false,
     val dailyDigestTime: String = "08:00 AM",
-    val version: String = "1.0.0"
+    val version: String = "1.0.0",
+    val webhookEnabled: Boolean = false,
+    val webhookUrl: String = "",
+    val webhookHttpMethod: String = "POST",
+    val webhookMessageTemplate: String = "",
+    val webhookCustomHeaders: String = ""
 )
 
 class SettingsViewModel(
@@ -69,7 +74,12 @@ class SettingsViewModel(
                     summaryLength = prefs.summaryLength,
                     llmModelName = modelName,
                     notificationsEnabled = hasSystemPermission && prefs.notificationsEnabled,
-                    hasSystemNotificationPermission = hasSystemPermission
+                    hasSystemNotificationPermission = hasSystemPermission,
+                    webhookEnabled = prefs.webhookEnabled,
+                    webhookUrl = prefs.webhookUrl,
+                    webhookHttpMethod = prefs.webhookHttpMethod,
+                    webhookMessageTemplate = prefs.webhookMessageTemplate,
+                    webhookCustomHeaders = prefs.webhookCustomHeaders
                 )
             }
         }
@@ -151,6 +161,36 @@ class SettingsViewModel(
     fun setSummaryLength(length: String) {
         viewModelScope.launch {
             preferencesRepository.setSummaryLength(length)
+        }
+    }
+
+    fun setWebhookEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            preferencesRepository.setWebhookEnabled(enabled)
+        }
+    }
+
+    fun setWebhookUrl(url: String) {
+        viewModelScope.launch {
+            preferencesRepository.setWebhookUrl(url)
+        }
+    }
+
+    fun setWebhookHttpMethod(method: String) {
+        viewModelScope.launch {
+            preferencesRepository.setWebhookHttpMethod(method)
+        }
+    }
+
+    fun setWebhookMessageTemplate(template: String) {
+        viewModelScope.launch {
+            preferencesRepository.setWebhookMessageTemplate(template)
+        }
+    }
+
+    fun setWebhookCustomHeaders(headers: String) {
+        viewModelScope.launch {
+            preferencesRepository.setWebhookCustomHeaders(headers)
         }
     }
 }

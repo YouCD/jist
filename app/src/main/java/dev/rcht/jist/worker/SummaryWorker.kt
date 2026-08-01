@@ -106,7 +106,7 @@ class SummaryWorker(context: Context, params: WorkerParameters) :
                 when (val result = client.complete(llmMessages, llmConfig)) {
                     is LlmResult.Success -> {
                         val summary = SummaryEntity(
-                            packageName = "com.tencent.mm", conversationKey = convKey,
+                            packageName = source?.packageName ?: "com.tencent.mm", conversationKey = convKey,
                             appName = appName, contactOrGroup = chat.chatName,
                             summaryText = result.data.text,
                             messageCount = messages.size,

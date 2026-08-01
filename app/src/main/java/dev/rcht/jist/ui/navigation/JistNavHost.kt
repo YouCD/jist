@@ -237,6 +237,7 @@ fun JistNavHost(
                         return dev.rcht.jist.ui.summarydetail.SummaryDetailViewModel(
                             jistApp.summaryRepository,
                             jistApp.notificationRepository,
+                            jistApp.chatMessageRepository,
                             jistApp.summaryEngine
                         ) as T
                     }
@@ -254,7 +255,6 @@ fun JistNavHost(
                 onNavigateBack = { navController.popBackStack() },
                 onReSummarize = { viewModel.reSummarize() },
                 onPageChanged = { index -> viewModel.onPageChanged(index) },
-                onMarkAllRead = { viewModel.markAllAsRead() },
                 isReSummarizing = uiState.isReSummarizing
             )
         }

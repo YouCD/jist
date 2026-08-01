@@ -142,7 +142,7 @@ class XposedChatDetailViewModel(
                 when (result) {
                     is LlmResult.Success -> {
                         val summary = SummaryEntity(
-                            packageName = "com.tencent.mm",
+                            packageName = source?.packageName ?: "com.tencent.mm",
                             conversationKey = "xposed_${chat.chatId}",
                             appName = appName,
                             contactOrGroup = contactOrGroup,

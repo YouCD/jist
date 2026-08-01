@@ -36,7 +36,6 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Redo
-import androidx.compose.material.icons.filled.DoneAll
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FloatingActionButton
@@ -87,7 +86,6 @@ fun SummaryDetailScreen(
     onNavigateBack: () -> Unit = {},
     onReSummarize: () -> Unit = {},
     onPageChanged: (Int) -> Unit = {},
-    onMarkAllRead: () -> Unit = {},
     isReSummarizing: Boolean = false,
     modifier: Modifier = Modifier,
     formatDate: (Long) -> String = { timeMs ->
@@ -167,17 +165,6 @@ fun SummaryDetailScreen(
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.nav_back))
                     }
                 },
-                actions = {
-                    if (uiState.summaries.any { !it.isRead }) {
-                        IconButton(onClick = onMarkAllRead) {
-                            Icon(
-                                Icons.Filled.DoneAll,
-                                contentDescription = "全部标为已读",
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-                },
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
                     containerColor = Color.Transparent
                 )
@@ -211,6 +198,8 @@ fun SummaryDetailScreen(
                 ) { page ->
                     val summary = uiState.summaries[page]
                     val notifications = if (page == uiState.currentIndex) uiState.notifications else emptyList()
+                    val chatMessages = if (page == uiState.currentIndex) uiState.chatMessages else emptyList()
+                    val isXposedChat = page == uiState.currentIndex && uiState.isXposedChat
                     val innerLazyListState = rememberLazyListState()
 
                     LaunchedEffect(page) {
@@ -430,10 +419,14 @@ fun SummaryDetailScreen(
                                 color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
                             )
 
-                            if (notifications.isNotEmpty()) {
+                            if (notifications.isNotEmpty() || chatMessages.isNotEmpty()) {
                                 Spacer(modifier = Modifier.height(12.dp))
                                 Text(
-                                    text = "${stringResource(R.string.summary_original_notifications, notifications.size)}",
+                                    text = if (isXposedChat) {
+                                        stringResource(R.string.summary_original_messages, chatMessages.size)
+                                    } else {
+                                        stringResource(R.string.summary_original_notifications, notifications.size)
+                                    },
                                     style = MaterialTheme.typography.titleMedium,
                                     modifier = Modifier.padding(horizontal = 16.dp)
                                 )
@@ -470,6 +463,15 @@ fun SummaryDetailScreen(
                                                     context.startActivity(intent)
                                                 }
                                             }
+                                        )
+                                    }
+                                } else if (chatMessages.isNotEmpty()) {
+                                    items(chatMessages.size) { index ->
+                                        val message = chatMessages[index]
+                                        MessagePreviewCard(
+                                            sender = message.senderName,
+                                            text = message.content,
+                                            timestamp = formatDate(message.timestamp)
                                         )
                                     }
                                 }
@@ -547,6 +549,46 @@ private fun NotificationPreviewCard(
             .fillMaxWidth()
             .clickable(onClick = onClick)
     ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = sender,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Text(
+                    text = timestamp,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            Text(
+                text = text,
+                style = MaterialTheme.typography.bodySmall,
+                maxLines = 2,
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+            )
+        }
+    }
+}
+
+@Composable
+private fun MessagePreviewCard(
+    sender: String,
+    text: String,
+    timestamp: String,
+    modifier: Modifier = Modifier
+) {
+    androidx.compose.material3.Card(modifier = modifier.fillMaxWidth()) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()

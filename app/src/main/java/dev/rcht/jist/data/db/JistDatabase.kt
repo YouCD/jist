@@ -42,7 +42,7 @@ import dev.rcht.jist.data.db.fts.SummaryFts
         WatchedChatEntity::class,
         ChatMessageEntity::class
     ],
-    version = 17,
+    version = 18,
     exportSchema = false
 )
 abstract class JistDatabase : RoomDatabase() {
@@ -166,6 +166,23 @@ abstract class JistDatabase : RoomDatabase() {
             }
         }
 
+        private val MIGRATION_17_18 = object : Migration(17, 18) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    """
+                    UPDATE summaries
+                    SET packageName = COALESCE((
+                        SELECT cs.packageName
+                        FROM watched_chats wc
+                        INNER JOIN chat_sources cs ON cs.id = wc.sourceId
+                        WHERE wc.chatId = substr(summaries.conversationKey, 8)
+                    ), packageName)
+                    WHERE substr(conversationKey, 1, 7) = 'xposed_'
+                    """.trimIndent()
+                )
+            }
+        }
+
         fun getInstance(context: Context): JistDatabase {
             if (instance == null) {
                 instance = Room.databaseBuilder(
@@ -173,7 +190,7 @@ abstract class JistDatabase : RoomDatabase() {
                     JistDatabase::class.java,
                     "jist.db"
                 )
-                    .addMigrations(MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17)
+                    .addMigrations(MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18)
                     .allowMainThreadQueries()
                     .build()
             }

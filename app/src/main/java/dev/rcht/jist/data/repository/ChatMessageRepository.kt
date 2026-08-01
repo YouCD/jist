@@ -18,6 +18,9 @@ class ChatMessageRepository(private val dao: ChatMessageDao) {
     suspend fun findByMsgSeq(pkg: String, cid: String, seq: Long): ChatMessageEntity? =
         dao.findByMsgSeq(pkg, cid, seq)
 
+    suspend fun getByChatAndTimeRange(chatAppKey: String, chatId: String, timeFrom: Long, timeTo: Long): List<ChatMessageEntity> =
+        dao.getByChatAndTimeRange(chatAppKey, chatId, timeFrom, timeTo)
+
     suspend fun countByWatchedChat(chatId: Long): Int = dao.countByWatchedChat(chatId)
 
     suspend fun deleteByIds(vararg ids: Long) = dao.deleteByIds(*ids)

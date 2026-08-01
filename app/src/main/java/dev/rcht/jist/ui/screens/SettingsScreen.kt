@@ -37,6 +37,8 @@ import dev.rcht.jist.data.config.ConfigManager
 import dev.rcht.jist.ui.settings.SettingsViewModel
 import dev.rcht.jist.ui.components.GlassScaffold
 import dev.rcht.jist.ui.components.JistSnackbarHost
+import dev.rcht.jist.webhook.WebhookService
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -67,6 +69,7 @@ fun SettingsScreen(
     }
 
     var showStyleDialog by remember { mutableStateOf(false) }
+    var showWebhookDialog by remember { mutableStateOf(false) }
     var showImportConfirmDialog by remember { mutableStateOf(false) }
     var pendingImportJson by remember { mutableStateOf<String?>(null) }
 
@@ -227,6 +230,27 @@ fun SettingsScreen(
                 }
             }
 
+            // Webhook Section
+            item {
+                SettingsSection(title = stringResource(R.string.settings_webhook_section)) {
+                    SettingsSwitchItem(
+                        icon = Icons.Outlined.Http,
+                        title = stringResource(R.string.settings_webhook_enable),
+                        checked = uiState.webhookEnabled,
+                        onCheckedChange = { viewModel.setWebhookEnabled(it) }
+                    )
+                    if (uiState.webhookEnabled) {
+                        Divider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha=0.2f))
+                        SettingsItem(
+                            icon = Icons.Outlined.Settings,
+                            title = stringResource(R.string.settings_webhook_url),
+                            value = uiState.webhookUrl.ifBlank { stringResource(R.string.not_configured) },
+                            onClick = { showWebhookDialog = true }
+                        )
+                    }
+                }
+            }
+
             // About Section
             item {
                 SettingsSection(title = stringResource(R.string.settings_about_section)) {
@@ -275,6 +299,23 @@ fun SettingsScreen(
             onSelectTone = { tone -> viewModel.setSummaryTone(tone) },
             onSelectLength = { length -> viewModel.setSummaryLength(length) },
             onDismiss = { showStyleDialog = false }
+        )
+    }
+
+    if (showWebhookDialog) {
+        WebhookSettingsDialog(
+            currentUrl = uiState.webhookUrl,
+            currentHttpMethod = uiState.webhookHttpMethod,
+            currentTemplate = uiState.webhookMessageTemplate,
+            currentHeaders = uiState.webhookCustomHeaders,
+            webhookService = app.webhookService,
+            snackbarHostState = snackbarHostState,
+            scope = scope,
+            onUrlChange = { viewModel.setWebhookUrl(it) },
+            onHttpMethodChange = { viewModel.setWebhookHttpMethod(it) },
+            onTemplateChange = { viewModel.setWebhookMessageTemplate(it) },
+            onHeadersChange = { viewModel.setWebhookCustomHeaders(it) },
+            onDismiss = { showWebhookDialog = false }
         )
     }
 }
@@ -470,6 +511,144 @@ fun SettingsItem(
             )
         }
     }
+}
+
+@Composable
+fun WebhookSettingsDialog(
+    currentUrl: String,
+    currentHttpMethod: String,
+    currentTemplate: String,
+    currentHeaders: String,
+    webhookService: WebhookService,
+    snackbarHostState: SnackbarHostState,
+    scope: CoroutineScope,
+    onUrlChange: (String) -> Unit,
+    onHttpMethodChange: (String) -> Unit,
+    onTemplateChange: (String) -> Unit,
+    onHeadersChange: (String) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var url by remember { mutableStateOf(currentUrl) }
+    var httpMethod by remember { mutableStateOf(currentHttpMethod) }
+    var template by remember { mutableStateOf(currentTemplate) }
+    var headers by remember { mutableStateOf(currentHeaders) }
+    var expandedMethod by remember { mutableStateOf(false) }
+    var testing by remember { mutableStateOf(false) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.settings_webhook_section)) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                // URL
+                Text(stringResource(R.string.settings_webhook_url), style = MaterialTheme.typography.labelMedium)
+                OutlinedTextField(
+                    value = url,
+                    onValueChange = { url = it },
+                    placeholder = { Text(stringResource(R.string.settings_webhook_url_hint)) },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
+                )
+
+                // HTTP Method
+                Text(stringResource(R.string.settings_webhook_http_method), style = MaterialTheme.typography.labelMedium)
+                Box {
+                    OutlinedTextField(
+                        value = httpMethod,
+                        onValueChange = {},
+                        readOnly = true,
+                        modifier = Modifier.fillMaxWidth(),
+                        trailingIcon = { Icon(Icons.Filled.ArrowDropDown, null) }
+                    )
+                    if (!expandedMethod) {
+                        Box(modifier = Modifier.matchParentSize().clickable { expandedMethod = true })
+                    }
+                    DropdownMenu(expanded = expandedMethod, onDismissRequest = { expandedMethod = false }) {
+                        listOf("POST", "GET", "PUT").forEach { method ->
+                            DropdownMenuItem(
+                                text = { Text(method) },
+                                onClick = { httpMethod = method; expandedMethod = false }
+                            )
+                        }
+                    }
+                }
+
+                // Message Template
+                Text(stringResource(R.string.settings_webhook_message_template), style = MaterialTheme.typography.labelMedium)
+                OutlinedTextField(
+                    value = template,
+                    onValueChange = { template = it },
+                    placeholder = { Text(stringResource(R.string.settings_webhook_message_template_hint)) },
+                    modifier = Modifier.fillMaxWidth().height(120.dp),
+                    maxLines = 6
+                )
+                Text(
+                    stringResource(R.string.settings_webhook_variables_hint),
+                    fontSize = 10.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                )
+
+                // Custom Headers
+                Text(stringResource(R.string.settings_webhook_custom_headers), style = MaterialTheme.typography.labelMedium)
+                OutlinedTextField(
+                    value = headers,
+                    onValueChange = { headers = it },
+                    placeholder = { Text(stringResource(R.string.settings_webhook_custom_headers_hint)) },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
+                )
+                Text(
+                    stringResource(R.string.settings_webhook_custom_headers_hint),
+                    fontSize = 10.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                )
+
+                Spacer(Modifier.height(4.dp))
+                Button(
+                    onClick = {
+                        testing = true
+                        webhookService.sendTestAsync(url, httpMethod, template, headers) { result ->
+                            scope.launch {
+                                testing = false
+                                result.fold(
+                                    onSuccess = { msg ->
+                                        snackbarHostState.showSnackbar("✓ $msg")
+                                    },
+                                    onFailure = { err ->
+                                        snackbarHostState.showSnackbar("✗ ${err.message ?: "Unknown error"}")
+                                    }
+                                )
+                            }
+                        }
+                    },
+                    enabled = url.isNotBlank() && !testing,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    if (testing) {
+                        CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                        Spacer(Modifier.width(8.dp))
+                    }
+                    Text(if (testing) stringResource(R.string.testing) else stringResource(R.string.settings_webhook_test))
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = {
+                onUrlChange(url)
+                onHttpMethodChange(httpMethod)
+                onTemplateChange(template)
+                onHeadersChange(headers)
+                onDismiss()
+            }) {
+                Text(stringResource(R.string.save))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.settings_cancel))
+            }
+        }
+    )
 }
 
 @Composable

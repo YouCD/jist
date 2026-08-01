@@ -21,6 +21,12 @@ interface ChatMessageDao {
     @Query("SELECT * FROM chat_messages WHERE chatAppKey = :pkg AND chatId = :cid ORDER BY timestamp DESC LIMIT :limit")
     suspend fun getRecentByChat(pkg: String, cid: String, limit: Int): List<ChatMessageEntity>
 
+    @Query(
+        "SELECT * FROM chat_messages WHERE chatAppKey = :chatAppKey AND chatId = :chatId " +
+            "AND timestamp >= :timeFrom AND timestamp <= :timeTo ORDER BY timestamp DESC"
+    )
+    suspend fun getByChatAndTimeRange(chatAppKey: String, chatId: String, timeFrom: Long, timeTo: Long): List<ChatMessageEntity>
+
     @Query("SELECT * FROM chat_messages WHERE chatAppKey = :pkg AND chatId = :cid AND msgSeq = :seq LIMIT 1")
     suspend fun findByMsgSeq(pkg: String, cid: String, seq: Long): ChatMessageEntity?
 

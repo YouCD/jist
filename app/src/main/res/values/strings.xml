@@ -152,6 +152,7 @@
     <string name="summary_detail_title">Summary Details</string>
     <string name="summary_label">Summary</string>
     <string name="summary_original_notifications">Original Notifications (%d)</string>
+    <string name="summary_original_messages">Original Messages (%d)</string>
     <string name="summary_resummarize">Re-summarize</string>
 
     <!-- Notification Log -->
@@ -355,4 +356,20 @@
     <string name="xposed_chats_empty">还没有捕获到任何消息</string>
     <string name="xposed_chats_no_messages">暂无消息</string>
     <string name="nav_xposed_chats">消息</string>
+
+    <string name="not_configured">Not configured</string>
+
+    <!-- Webhook -->
+    <string name="settings_webhook_section">Webhook</string>
+    <string name="settings_webhook_enable">Enable Webhook</string>
+    <string name="settings_webhook_url">Webhook URL</string>
+    <string name="settings_webhook_url_hint">https://example.com/webhook</string>
+    <string name="settings_webhook_http_method">HTTP Method</string>
+    <string name="settings_webhook_message_template">Message Template</string>
+    <string name="settings_webhook_message_template_hint">{\"app\":\"${appName}\",\"summary\":\"${summaryText}\"}</string>
+    <string name="settings_webhook_custom_headers">Custom Headers</string>
+    <string name="settings_webhook_custom_headers_hint">[{\"key\":\"Authorization\",\"value\":\"Bearer xxx\"}]</string>
+    <string name="settings_webhook_test">Test Webhook</string>
+    <string name="settings_webhook_variables_hint">Available: ${summaryText}, ${appName}, ${contactOrGroup}, ${messageCount}, ${modelUsed}, ${tokenCount}, ${createdAt}, ${packageName}, ${summaryId}</string>
+    <string name="testing">Testing…</string>
 </resources>

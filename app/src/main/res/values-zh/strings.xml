@@ -152,6 +152,7 @@
     <string name="summary_detail_title">摘要详情</string>
     <string name="summary_label">摘要</string>
     <string name="summary_original_notifications">原始通知（%d）</string>
+    <string name="summary_original_messages">原始消息（%d）</string>
     <string name="summary_resummarize">重新摘要</string>
 
     <!-- Notification Log -->
@@ -355,4 +356,20 @@
     <string name="xposed_chats_empty">还没有捕获到任何消息</string>
     <string name="xposed_chats_no_messages">暂无消息</string>
     <string name="nav_xposed_chats">消息</string>
+
+    <string name="not_configured">未配置</string>
+
+    <!-- Webhook -->
+    <string name="settings_webhook_section">Webhook</string>
+    <string name="settings_webhook_enable">启用 Webhook</string>
+    <string name="settings_webhook_url">Webhook 地址</string>
+    <string name="settings_webhook_url_hint">https://example.com/webhook</string>
+    <string name="settings_webhook_http_method">请求方式</string>
+    <string name="settings_webhook_message_template">消息模板</string>
+    <string name="settings_webhook_message_template_hint">{\"app\":\"${appName}\",\"summary\":\"${summaryText}\"}</string>
+    <string name="settings_webhook_custom_headers">自定义请求头</string>
+    <string name="settings_webhook_custom_headers_hint">[{\"key\":\"Authorization\",\"value\":\"Bearer xxx\"}]</string>
+    <string name="settings_webhook_test">测试 Webhook</string>
+    <string name="settings_webhook_variables_hint">可用变量: ${summaryText}, ${appName}, ${contactOrGroup}, ${messageCount}, ${modelUsed}, ${tokenCount}, ${createdAt}, ${packageName}, ${summaryId}</string>
+    <string name="testing">测试中…</string>
 </resources>
