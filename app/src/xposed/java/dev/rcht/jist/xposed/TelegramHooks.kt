@@ -8,9 +8,7 @@ import android.content.Intent
 import android.database.Cursor
 import android.net.Uri
 import android.util.Log
-import de.robv.android.xposed.XC_MethodHook
-import de.robv.android.xposed.XposedHelpers
-import de.robv.android.xposed.callbacks.XC_LoadPackage
+import java.lang.ClassLoader
 
 object TelegramHooks {
     private var nagramDb: Any? = null
@@ -22,19 +20,19 @@ object TelegramHooks {
     private val pendingUid = mutableMapOf<Int, Long>()
     private var isQueryingDb = false
 
-    fun setupTelegramX(lpparam: XC_LoadPackage.LoadPackageParam) {
+    fun setupTelegramX(loader: ClassLoader, pkg: String) {
         Log.i(TAG, "Attempting Telegram X hooks")
         try {
             val resultHandlerClass = XposedHelpers.findClass(
-                "org.drinkless.td.libcore.telegram.Client\$ResultHandler", lpparam.classLoader)
+                "org.drinkless.td.libcore.telegram.Client\$ResultHandler", loader)
             XposedHelpers.findAndHookMethod(resultHandlerClass, "onResult",
-                XposedHelpers.findClass("org.drinkless.td.libcore.telegram.TdApi\$Object", lpparam.classLoader),
+                XposedHelpers.findClass("org.drinkless.td.libcore.telegram.TdApi\$Object", loader),
                 object : XC_MethodHook() {
                     override fun beforeHookedMethod(param: MethodHookParam) {
                         val obj = param.args[0] ?: return
                         val className = obj.javaClass.name
                         if (className.contains("UpdateNewMessage")) {
-                            handleTelegramXNewMessage(lpparam, obj)
+                            handleTelegramXNewMessage(pkg, obj)
                         } else if (className.contains("UpdateMessageContent")) {
                             Log.d(TAG, "TGX UpdateMessageContent received (not processed)")
                         }
@@ -46,7 +44,7 @@ object TelegramHooks {
         }
     }
 
-    private fun handleTelegramXNewMessage(lpparam: XC_LoadPackage.LoadPackageParam, updateObj: Any) {
+    private fun handleTelegramXNewMessage(pkg: String, updateObj: Any) {
         try {
             val msg = XposedHelpers.getObjectField(updateObj, "message")
             val chatId = XposedHelpers.getObjectField(msg, "chatId") as Long
@@ -54,7 +52,7 @@ object TelegramHooks {
             val date = XposedHelpers.getObjectField(msg, "date") as Int
             val isOutgoing = XposedHelpers.getObjectField(msg, "isOutgoing") as Boolean
             val content = XposedHelpers.getObjectField(msg, "content")
-            val contentClass = content.javaClass.name
+            val contentClass = content!!.javaClass.name
             val senderId = XposedHelpers.getObjectField(msg, "senderId")
 
             // TDLib chat ID convention: negative = group/channel
@@ -111,14 +109,11 @@ object TelegramHooks {
                 else -> "[空消息]"
             }
 
-            val context = XposedHelpers.callStaticMethod(
-                XposedHelpers.findClass("android.app.ActivityThread", null), "currentApplication"
-            ) as? Context ?: run {
+            val context = currentContext() ?: run {
                 Log.w(TAG, "  TGX: failed to get application context")
                 return
             }
 
-            val pkg = lpparam.packageName
             val timestamp = date * 1000L
 
             bgHandler.post {
@@ -174,14 +169,14 @@ object TelegramHooks {
         }
     }
 
-    fun setupNagram(lpparam: XC_LoadPackage.LoadPackageParam, displayName: String = "Nagram") {
+    fun setupNagram(loader: ClassLoader, pkg: String, displayName: String = "Nagram") {
         appDisplayName = displayName
-        lastClassLoader = lpparam.classLoader
+        lastClassLoader = loader
         Log.i(TAG, "Setting up $displayName message hooks")
         // Try WCDB first — many Telegram forks use it for cache4.db
         try {
             val wcdbClass = XposedHelpers.findClass(
-                "com.tencent.wcdb.database.SQLiteDatabase", lpparam.classLoader)
+                "com.tencent.wcdb.database.SQLiteDatabase", loader)
             Log.i(TAG, "Nagram uses WCDB! Wrapping WCDB hooks...")
 
             fun makeWcdbInsertHook(methodName: String) = object : XC_MethodHook() {
@@ -195,7 +190,7 @@ object TelegramHooks {
                     }
                     if (table == "messages_v2") {
                         val cv = param.args[2] as? ContentValues ?: return
-                        onNagramMessageRow(lpparam, cv)
+                        onNagramMessageRow(loader, pkg, cv)
                     }
                 }
             }
@@ -223,7 +218,7 @@ object TelegramHooks {
         // Try sqlcipher — Telegram uses encrypted DB via net.zetetic
         try {
             val cipherClass = XposedHelpers.findClass(
-                "net.sqlcipher.database.SQLiteDatabase", lpparam.classLoader)
+                "net.sqlcipher.database.SQLiteDatabase", loader)
             fun makeCipherHook(methodName: String) = object : XC_MethodHook() {
                 override fun beforeHookedMethod(param: MethodHookParam) {
                     val table = param.args[0] as? String ?: return
@@ -233,7 +228,7 @@ object TelegramHooks {
                     }
                     if (table == "messages_v2") {
                         val cv = param.args[2] as? ContentValues ?: return
-                        onNagramMessageRow(lpparam, cv)
+                        onNagramMessageRow(loader, pkg, cv)
                     }
                 }
             }
@@ -255,12 +250,12 @@ object TelegramHooks {
         // Try Telegram's own SQLiteDatabase wrapper (org.telegram.SQLite.SQLiteDatabase)
         try {
             val tgDbClass = XposedHelpers.findClass(
-                "org.telegram.SQLite.SQLiteDatabase", lpparam.classLoader)
+                "org.telegram.SQLite.SQLiteDatabase", loader)
 
 
             // Telegram uses executeFast(String) -> SQLitePreparedStatement -> bindXXX -> step()
             val prepClass = XposedHelpers.findClass(
-                "org.telegram.SQLite.SQLitePreparedStatement", lpparam.classLoader)
+                "org.telegram.SQLite.SQLitePreparedStatement", loader)
 
             // Track SQL + bound values per prepared statement (keyed by identity hash)
             val statementSql = mutableMapOf<Int, String>()
@@ -376,7 +371,7 @@ object TelegramHooks {
                                             cv.put("out", out)
                                             cv.put("media", media)
                                             if (data != null) cv.put("data", data)
-                                            onNagramMessageRow(lpparam, cv)
+                                            onNagramMessageRow(loader, pkg, cv)
                                         }
                                     }
                                 } catch (e: Exception) {
@@ -411,7 +406,7 @@ object TelegramHooks {
         // Fallback: standard android.database.sqlite.SQLiteDatabase
         try {
             val dbClass = XposedHelpers.findClass(
-                "android.database.sqlite.SQLiteDatabase", lpparam.classLoader)
+                "android.database.sqlite.SQLiteDatabase", loader)
 
             // Hook ALL SQLiteDatabase insert methods — log every table for debugging
             fun makeInsertHook(methodName: String) = object : XC_MethodHook() {
@@ -425,7 +420,7 @@ object TelegramHooks {
                         loadNagramCache()
                     }
                     if (table == "messages_v2") {
-                        onNagramMessageRow(lpparam, cv)
+                        onNagramMessageRow(loader, pkg, cv)
                     }
                 }
             }
@@ -553,9 +548,7 @@ object TelegramHooks {
 
             // Probe all databases — list files
             try {
-                val ctx = XposedHelpers.callStaticMethod(
-                    XposedHelpers.findClass("android.app.ActivityThread", null), "currentApplication"
-                ) as? Context
+                val ctx = currentContext()
                 if (ctx != null) {
                     val dbDir = ctx.getDatabasePath("dummy").parentFile
                     val files = dbDir?.list()?.joinToString(", ")
@@ -836,7 +829,7 @@ object TelegramHooks {
         }
     }
 
-    private fun onNagramMessageRow(lpparam: XC_LoadPackage.LoadPackageParam, cv: ContentValues) {
+    private fun onNagramMessageRow(loader: ClassLoader, pkg: String, cv: ContentValues) {
         try {
             val mid = cv.getAsLong("mid") ?: return
             val uid = cv.getAsLong("uid") ?: return
@@ -847,7 +840,7 @@ object TelegramHooks {
             // First try message/caption columns (old messages table), then extract from data BLOB
             var fullText = cv.getAsString("message") ?: cv.getAsString("caption")
             if (fullText.isNullOrBlank()) {
-                fullText = extractMessageTextFromData(lpparam, cv)
+                fullText = extractMessageTextFromData(loader, cv)
             }
 
             // Telegram DB uid convention: negative = group/channel
@@ -864,9 +857,9 @@ object TelegramHooks {
             val senderName: String
 
             if (isGroup) {
-                chatName = resolveChatName(uid, lpparam.classLoader)
+                chatName = resolveChatName(uid, loader)
                 // Try to extract actual sender from data blob for group messages
-                val fromSenderId = if (out == 1) null else extractSenderIdFromData(lpparam, cv)
+                val fromSenderId = if (out == 1) null else extractSenderIdFromData(loader, cv)
                 senderName = when {
                     out == 1 -> "我"
                     fromSenderId != null -> nagramUserCache[fromSenderId] ?: "用户$fromSenderId"
@@ -878,13 +871,10 @@ object TelegramHooks {
                 senderName = if (out == 1) "我" else userName
             }
 
-            val context = XposedHelpers.callStaticMethod(
-                XposedHelpers.findClass("android.app.ActivityThread", null), "currentApplication"
-            ) as? Context ?: run {
+            val context = currentContext() ?: run {
                 return
             }
 
-            val pkg = lpparam.packageName
             val timestamp = date * 1000L
             bgHandler.post {
                 saveNagramMessage(context, pkg, uid.toString(), senderName, chatName,
@@ -979,15 +969,15 @@ object TelegramHooks {
         return uid.toString()
     }
 
-    private fun extractSenderIdFromData(lpparam: XC_LoadPackage.LoadPackageParam, cv: ContentValues): Long? {
+    private fun extractSenderIdFromData(loader: ClassLoader, cv: ContentValues): Long? {
         try {
             val data = cv.getAsByteArray("data") ?: return null
             val serializedDataClass = XposedHelpers.findClass(
-                "org.telegram.tgnet.SerializedData", lpparam.classLoader)
+                "org.telegram.tgnet.SerializedData", loader)
             val serializedData = serializedDataClass.getConstructor(ByteArray::class.java).newInstance(data)
             val constructor = XposedHelpers.callMethod(serializedData, "readInt32", true) as Int
             val tlrpcMessageClass = XposedHelpers.findClass(
-                "org.telegram.tgnet.TLRPC\$Message", lpparam.classLoader)
+                "org.telegram.tgnet.TLRPC\$Message", loader)
             val msg = XposedHelpers.callStaticMethod(tlrpcMessageClass, "TLdeserialize",
                 serializedData, constructor, true) ?: return null
             // Try long first (newer versions), then int (older versions), then Peer object
@@ -1009,15 +999,15 @@ object TelegramHooks {
         }
     }
 
-    private fun extractMessageTextFromData(lpparam: XC_LoadPackage.LoadPackageParam, cv: ContentValues): String? {
+    private fun extractMessageTextFromData(loader: ClassLoader, cv: ContentValues): String? {
         try {
             val data = cv.getAsByteArray("data") ?: return null
             val serializedDataClass = XposedHelpers.findClass(
-                "org.telegram.tgnet.SerializedData", lpparam.classLoader)
+                "org.telegram.tgnet.SerializedData", loader)
             val serializedData = serializedDataClass.getConstructor(ByteArray::class.java).newInstance(data)
             val constructor = XposedHelpers.callMethod(serializedData, "readInt32", true) as Int
             val tlrpcMessageClass = XposedHelpers.findClass(
-                "org.telegram.tgnet.TLRPC\$Message", lpparam.classLoader)
+                "org.telegram.tgnet.TLRPC\$Message", loader)
             val msg = XposedHelpers.callStaticMethod(tlrpcMessageClass, "TLdeserialize",
                 serializedData, constructor, true) ?: return null
             // Extract message text (message field always exists; caption may not)

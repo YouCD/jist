@@ -7,26 +7,25 @@ import android.content.Context
 import android.database.Cursor
 import android.net.Uri
 import android.util.Log
-import de.robv.android.xposed.XC_MethodHook
-import de.robv.android.xposed.XposedHelpers
-import de.robv.android.xposed.callbacks.XC_LoadPackage
+import io.github.libxposed.api.XposedModule
+import java.lang.ClassLoader
 
 object WeChatHooks {
     private val contactCache = mutableMapOf<String, String>()
     private val chatNameCache = mutableMapOf<String, String>()
     private var weChatDb: Any? = null
 
-    fun setup(lpparam: XC_LoadPackage.LoadPackageParam) {
-        Log.i(TAG, "Attempting WeChat hooks for ${lpparam.packageName}")
-        hookWeChatAddMessage(lpparam)
+    fun setup(loader: ClassLoader, pkg: String) {
+        Log.i(TAG, "Attempting WeChat hooks for $pkg")
+        hookWeChatAddMessage(loader, pkg)
     }
 
-    private fun hookWeChatAddMessage(lpparam: XC_LoadPackage.LoadPackageParam) {
-        hookWeChatMsgInfoStorage(lpparam)
-        hookWeChatDbInsert(lpparam)
+    private fun hookWeChatAddMessage(loader: ClassLoader, pkg: String) {
+        hookWeChatMsgInfoStorage(loader, pkg)
+        hookWeChatDbInsert(loader, pkg)
     }
 
-    private fun hookWeChatMsgInfoStorage(lpparam: XC_LoadPackage.LoadPackageParam) {
+    private fun hookWeChatMsgInfoStorage(loader: ClassLoader, pkg: String) {
         val storageCandidates = listOf(
             "com.tencent.mm.storage.a9",
             "com.tencent.mm.storage.bg",
@@ -36,7 +35,7 @@ object WeChatHooks {
         )
         for (clz in storageCandidates) {
             try {
-                val cls = lpparam.classLoader.loadClass(clz)
+                val cls = loader.loadClass(clz)
                 for (m in cls.declaredMethods) {
                     val ptypes = m.parameterTypes
                     if (ptypes.size == 1 && ContentValues::class.java.isAssignableFrom(ptypes[0])) {
@@ -47,7 +46,7 @@ object WeChatHooks {
                                     val cv = param.args[0] as? ContentValues ?: return
                                     val talker = cv.getAsString("talker") ?: return
                                     Log.d(TAG, "MsgInfoStorage hook: $clz.${m.name} talker=$talker")
-                                    onWeChatMessageRow(lpparam, cv)
+                                    onWeChatMessageRow(pkg, cv)
                                 }
                             })
                         Log.i(TAG, "MsgInfoStorage hook OK: $clz.${m.name}")
@@ -58,10 +57,10 @@ object WeChatHooks {
         }
     }
 
-    private fun hookWeChatDbInsert(lpparam: XC_LoadPackage.LoadPackageParam) {
+    private fun hookWeChatDbInsert(loader: ClassLoader, pkg: String) {
         try {
             val dbClass = XposedHelpers.findClass(
-                "com.tencent.wcdb.database.SQLiteDatabase", lpparam.classLoader)
+                "com.tencent.wcdb.database.SQLiteDatabase", loader)
 
             try {
                 XposedHelpers.findAndHookMethod(dbClass, "insertOrThrow",
@@ -71,7 +70,7 @@ object WeChatHooks {
                             val table = param.args[0] as? String ?: return
                             if (table != "message") return
                             val cv = param.args[2] as? ContentValues ?: return
-                            onWeChatMessageRow(lpparam, cv)
+                            onWeChatMessageRow(pkg, cv)
                         }
                     })
                 Log.i(TAG, "WCDB hook: insertOrThrow(String,String,ContentValues)")
@@ -91,7 +90,7 @@ object WeChatHooks {
                                 loadContactCache()
                             }
                             when (table) {
-                                "message" -> onWeChatMessageRow(lpparam, cv)
+                                "message" -> onWeChatMessageRow(pkg, cv)
                                 "rcontact" -> onWeChatContactRow(cv)
                                 "rconversation" -> onWeChatConversationRow(cv)
                                 "chatroom" -> onWeChatChatroomRow(cv)
@@ -117,12 +116,6 @@ object WeChatHooks {
         } catch (e: Exception) {
             Log.w(TAG, "WeChat WCDB hook init failed: ${e.message}")
         }
-    }
-
-    private fun onWeChatMessage(lpparam: XC_LoadPackage.LoadPackageParam, json: String, param: XC_MethodHook.MethodHookParam) {
-        try {
-            Log.d(TAG, "WeChat msg: $json")
-        } catch (_: Exception) { }
     }
 
     private fun resolveContact(rawSender: String): String {
@@ -193,7 +186,7 @@ object WeChatHooks {
         }
     }
 
-    private fun onWeChatMessageRow(lpparam: XC_LoadPackage.LoadPackageParam, cv: ContentValues) {
+    private fun onWeChatMessageRow(pkg: String, cv: ContentValues) {
         try {
             val talker = cv.getAsString("talker")
             val content = cv.getAsString("content")
@@ -235,11 +228,8 @@ object WeChatHooks {
             }
 
 
-            val context = XposedHelpers.callStaticMethod(
-                XposedHelpers.findClass("android.app.ActivityThread", null), "currentApplication"
-            ) as? Context ?: return
+            val context = currentContext() ?: return
 
-            val pkg = lpparam.packageName
             val msgSvrIdVal = msgSvrId ?: 0L
 
             bgHandler.post {

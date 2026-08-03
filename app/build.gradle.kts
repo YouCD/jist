@@ -51,7 +51,7 @@ android {
         getByName("xposed") {
             java.srcDirs("src/xposed/java")
             kotlin.srcDirs("src/xposed/java")
-            assets.srcDirs("src/xposed/assets")
+            resources.srcDirs("src/xposed/resources")
         }
     }
 
@@ -130,8 +130,8 @@ dependencies {
     implementation("io.noties.markwon:core:4.6.2")
     debugImplementation(libs.androidx.compose.ui.tooling)
     
-    // Xposed API (local jar, only for xposed flavor)
-    "xposedCompileOnly"(files("libs/api-82.jar"))
+    // Xposed API (libxposed, only for xposed flavor)
+    "xposedCompileOnly"("io.github.libxposed:api:101.0.1")
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

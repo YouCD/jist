@@ -3,17 +3,15 @@
 package dev.rcht.jist.xposed
 
 import android.app.Notification
-import android.app.NotificationManager
 import android.content.ContentValues
 import android.content.Context
 import android.net.Uri
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
-import de.robv.android.xposed.IXposedHookLoadPackage
-import de.robv.android.xposed.XC_MethodHook
-import de.robv.android.xposed.XposedHelpers
-import de.robv.android.xposed.callbacks.XC_LoadPackage
+import io.github.libxposed.api.XposedModule
+import io.github.libxposed.api.XposedModuleInterface.PackageReadyParam
+import java.lang.reflect.Method
 import java.security.MessageDigest
 
 // ── Package-level constants ─────────────────────────────────────────
@@ -32,6 +30,24 @@ const val TELEGRAM_X_PACKAGE = "org.thunderdog.challegram"
 const val NAGRAM_PACKAGE = "xyz.nextalone.nagram"
 
 val bgHandler by lazy { Handler(Looper.getMainLooper()) }
+
+// ── Shared reflection helpers ────────────────────────────────────────
+
+fun findMethod(clazz: Class<*>, name: String, vararg paramTypes: Class<*>?): Method? {
+    return try {
+        val types = paramTypes.filterNotNull().toTypedArray()
+        clazz.getDeclaredMethod(name, *types).apply { isAccessible = true }
+    } catch (_: Throwable) { null }
+}
+
+fun currentContext(): Context? {
+    return try {
+        val atClass = Class.forName("android.app.ActivityThread")
+        val m = atClass.getDeclaredMethod("currentApplication")
+        m.isAccessible = true
+        m.invoke(null) as? Context
+    } catch (_: Throwable) { null }
+}
 
 // ── Shared provider operations ─────────────────────────────────────
 
@@ -71,78 +87,76 @@ fun sha256(input: String): String {
 
 // ── Main Xposed entry point ────────────────────────────────────────
 
-class JistXposed : IXposedHookLoadPackage {
+class JistXposed : XposedModule() {
 
-    override fun handleLoadPackage(lpparam: XC_LoadPackage.LoadPackageParam) {
-        if (lpparam.packageName == PROVIDER_PACKAGE) return
-        if (lpparam.packageName.startsWith("android.")) return
-        if (lpparam.packageName.startsWith("com.android.")) return
+    override fun onPackageReady(param: PackageReadyParam) {
+        XposedHelpers.module = this
+        val pkg = param.packageName
+        if (pkg == PROVIDER_PACKAGE) return
+        if (pkg.startsWith("android.")) return
+        if (pkg.startsWith("com.android.")) return
 
-        when (lpparam.packageName) {
+        val loader = param.classLoader
+        when (pkg) {
             WECHAT_PACKAGE -> {
-                hookNotificationNotify(lpparam)
-                WeChatHooks.setup(lpparam)
+                hookNotificationNotify(pkg)
+                WeChatHooks.setup(loader, pkg)
             }
             TELEGRAM_X_PACKAGE -> {
-                hookNotificationNotify(lpparam)
-                TelegramHooks.setupTelegramX(lpparam)
+                hookNotificationNotify(pkg)
+                TelegramHooks.setupTelegramX(loader, pkg)
             }
             NAGRAM_PACKAGE -> {
-                hookNotificationNotify(lpparam)
-                TelegramHooks.setupNagram(lpparam, "Nagram")
+                hookNotificationNotify(pkg)
+                TelegramHooks.setupNagram(loader, pkg, "Nagram")
             }
             TELEGRAM_PACKAGE -> {
-                hookNotificationNotify(lpparam)
-                TelegramHooks.setupNagram(lpparam, "Telegram")
+                hookNotificationNotify(pkg)
+                TelegramHooks.setupNagram(loader, pkg, "Telegram")
             }
-            else -> hookNotificationNotify(lpparam)
+            else -> hookNotificationNotify(pkg)
         }
     }
 
     // ── NotificationManager hook (all apps) ──────────────────────────
 
-    private fun hookNotificationNotify(lpparam: XC_LoadPackage.LoadPackageParam) {
+    private fun hookNotificationNotify(pkg: String) {
         try {
-            val nmClass = XposedHelpers.findClass("android.app.NotificationManager", lpparam.classLoader)
-            XposedHelpers.findAndHookMethod(nmClass, "notify",
-                String::class.java, Int::class.javaPrimitiveType, Notification::class.java,
-                notifyHook(lpparam.packageName, hasTag = true))
-            XposedHelpers.findAndHookMethod(nmClass, "notify",
-                Int::class.javaPrimitiveType, Notification::class.java,
-                notifyHook(lpparam.packageName, hasTag = false))
-            try {
-                XposedHelpers.findAndHookMethod(nmClass, "notifyAsPackage",
-                    String::class.java, String::class.java, Int::class.javaPrimitiveType, Notification::class.java,
-                    object : XC_MethodHook() {
-                        override fun beforeHookedMethod(param: MethodHookParam) {
-                            val pkg = param.args[0] as? String ?: return
-                            val tag = param.args[1] as? String
-                            val id = (param.args[2] as? Int) ?: return
-                            val notification = param.args[3] as? Notification ?: return
-                            captureAndSendNotification(pkg, tag, id, notification)
-                        }
-                    })
-                Log.i(TAG, "notifyAsPackage hook OK")
-            } catch (_: Exception) { }
-        } catch (_: Exception) { }
-    }
-
-    private fun notifyHook(pkg: String, hasTag: Boolean) = object : XC_MethodHook() {
-        override fun beforeHookedMethod(param: MethodHookParam) {
-            captureAndSend(param, pkg, hasTag)
-        }
-    }
-
-    private fun captureAndSend(param: XC_MethodHook.MethodHookParam, pkg: String, hasTag: Boolean) {
-        try {
-            val (tag, id, notification) = if (hasTag) {
-                Triple(param.args[0] as? String, (param.args[1] as? Int) ?: return,
-                       (param.args[2] as? Notification) ?: return)
-            } else {
-                Triple(null, (param.args[0] as? Int) ?: return,
-                       (param.args[1] as? Notification) ?: return)
+            val nmClass = Class.forName("android.app.NotificationManager")
+            val notifyWithTag = findMethod(nmClass, "notify",
+                String::class.java, Int::class.javaPrimitiveType, Notification::class.java)
+            if (notifyWithTag != null) {
+                hook(notifyWithTag).intercept { chain ->
+                    val tag = chain.args[0] as? String
+                    val id = chain.args[1] as? Int ?: return@intercept null
+                    val notification = chain.args[2] as? Notification ?: return@intercept null
+                    captureAndSendNotification(pkg, tag, id, notification)
+                    chain.proceed()
+                }
             }
-            captureAndSendNotification(pkg, tag, id, notification)
+            val notifyNoTag = findMethod(nmClass, "notify",
+                Int::class.javaPrimitiveType, Notification::class.java)
+            if (notifyNoTag != null) {
+                hook(notifyNoTag).intercept { chain ->
+                    val id = chain.args[0] as? Int ?: return@intercept null
+                    val notification = chain.args[1] as? Notification ?: return@intercept null
+                    captureAndSendNotification(pkg, null, id, notification)
+                    chain.proceed()
+                }
+            }
+            val notifyAsPkg = findMethod(nmClass, "notifyAsPackage",
+                String::class.java, String::class.java, Int::class.javaPrimitiveType, Notification::class.java)
+            if (notifyAsPkg != null) {
+                hook(notifyAsPkg).intercept { chain ->
+                    val targetPkg = chain.args[0] as? String ?: return@intercept null
+                    val tag = chain.args[1] as? String
+                    val id = chain.args[2] as? Int ?: return@intercept null
+                    val notification = chain.args[3] as? Notification ?: return@intercept null
+                    captureAndSendNotification(targetPkg, tag, id, notification)
+                    chain.proceed()
+                }
+                Log.i(TAG, "notifyAsPackage hook OK")
+            }
         } catch (_: Exception) { }
     }
 
@@ -153,9 +167,7 @@ class JistXposed : IXposedHookLoadPackage {
             val content = extras.getString(Notification.EXTRA_TEXT, "")
             if (title.isBlank() && content.isBlank()) return
 
-            val context = XposedHelpers.callStaticMethod(
-                XposedHelpers.findClass("android.app.ActivityThread", null), "currentApplication"
-            ) as? Context ?: return
+            val context = currentContext() ?: return
 
             val appName = try {
                 context.packageManager.getApplicationLabel(
@@ -164,10 +176,6 @@ class JistXposed : IXposedHookLoadPackage {
 
             val senderName = extras.getString(Notification.EXTRA_SELF_DISPLAY_NAME)
                 ?: extras.getString(Notification.EXTRA_SUB_TEXT)
-
-           //if (pkg == WECHAT_PACKAGE) {
-           //    Log.d(TAG, "notification: title=$title senderName=$senderName content=${content.take(60)}")
-           //}
 
             val values = ContentValues().apply {
                 put("packageName", pkg)

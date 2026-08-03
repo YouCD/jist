@@ -9,7 +9,7 @@
             android:value="Jist Xposed - 全量通知捕获与深度消息记录" />
         <meta-data
             android:name="xposedminversion"
-            android:value="82" />
+            android:value="100" />
         <meta-data
             android:name="xposedscope"
             android:value="com.tencent.mm|org.thunderdog.challegram|xyz.nextalone.nagram|org.telegram.messenger" />
