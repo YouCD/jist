@@ -18,6 +18,7 @@ import dev.rcht.jist.llm.NotificationForSummary
 import dev.rcht.jist.llm.PromptBuilder
 import dev.rcht.jist.notification.SummaryNotificationManager
 import dev.rcht.jist.engine.SummaryResult
+import kotlinx.coroutines.flow.first
 import java.util.concurrent.TimeUnit
 
 class SummaryWorker(context: Context, params: WorkerParameters) :
@@ -118,6 +119,10 @@ class SummaryWorker(context: Context, params: WorkerParameters) :
                         )
                         val id = app.summaryRepository.insert(summary)
                         results.add(summary.copy(id = id))
+
+                        val webhookPrefs = app.preferencesRepository.preferencesFlow.first()
+                        app.webhookService.sendAsync(summary.copy(id = id), webhookPrefs)
+
                         Log.i(TAG, "Xposed summary: ${chat.chatName} (${messages.size} msgs)")
                     }
                     is LlmResult.Error -> Log.w(TAG, "Xposed summary error ${chat.chatName}: ${result.error.message}")
