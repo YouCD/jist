@@ -1,6 +1,7 @@
 package dev.rcht.jist.llm.client
 
 import dev.rcht.jist.llm.LlmClient
+import dev.rcht.jist.llm.LlmClientFactory
 import dev.rcht.jist.llm.LlmRequestConfig
 import dev.rcht.jist.llm.LlmResult
 import dev.rcht.jist.llm.model.ChatMessage
@@ -25,11 +26,17 @@ import java.io.IOException
 class OpenAiCompatibleClient(private val httpClient: OkHttpClient) : LlmClient {
 
     @Serializable
+    data class ChatTemplateKwargs(
+        val enable_thinking: Boolean = false
+    )
+
+    @Serializable
     data class OpenAiRequest(
         val model: String,
         val messages: List<ChatMessage>,
         val max_completion_tokens: Int = 1000,
-        val temperature: Float = 0.7f
+        val temperature: Float = 0.7f,
+        val chat_template_kwargs: ChatTemplateKwargs = ChatTemplateKwargs()
     )
 
     private val json = Json {
@@ -98,7 +105,7 @@ class OpenAiCompatibleClient(private val httpClient: OkHttpClient) : LlmClient {
         val body = json.encodeToString(apiRequest)
             .toRequestBody("application/json".toMediaType())
 
-        val url = "${config.baseUrl}/v1/chat/completions"
+        val url = "${LlmClientFactory.normalizeBaseUrl(config.baseUrl)}/v1/chat/completions"
 
         return Request.Builder()
             .url(url)

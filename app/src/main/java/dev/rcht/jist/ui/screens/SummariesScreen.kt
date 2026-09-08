@@ -241,7 +241,7 @@ private fun SummariesScreenPreview() {
                         contactOrGroup = "Design Team",
                         summaryText = "Sarah shared new mockups for the dashboard redesign. The team discussed color palette changes and approved the glassmorphism approach.",
                         messageCount = 12,
-                        modelUsed = "gpt-4o-mini",
+                        modelUsed = "unknown",
                         createdAt = System.currentTimeMillis()
                     ),
                     dev.rcht.jist.data.db.entity.SummaryEntity(
@@ -252,7 +252,7 @@ private fun SummariesScreenPreview() {
                         contactOrGroup = "#general",
                         summaryText = "Sprint planning meeting moved to Friday. New deployment pipeline is ready for testing.",
                         messageCount = 8,
-                        modelUsed = "gpt-4",
+                        modelUsed = "unknown",
                         createdAt = System.currentTimeMillis() - 3600000
                     )
                 )

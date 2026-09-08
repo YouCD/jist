@@ -47,11 +47,11 @@ object DatabaseSeeder {
                 // Create a placeholder default config
                 // User will need to add their actual API key
                 val defaultConfig = LlmConfigEntity(
-                    name = "Default OpenAI",
+                    name = "Default Config",
                     provider = "OPENAI",
-                    apiKey = "", // Empty - user must fill in
-                    baseUrl = "https://api.openai.com",
-                    modelId = "gpt-4o-mini",
+                    apiKey = "",
+                    baseUrl = "",
+                    modelId = "",
                     isDefault = true,
                     maxTokens = 1000,
                     temperature = 0.7f

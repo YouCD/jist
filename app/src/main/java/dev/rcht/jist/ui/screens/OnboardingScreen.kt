@@ -51,6 +51,7 @@ import androidx.compose.material.icons.filled.SdStorage
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.outlined.Apps
 import androidx.compose.material3.*
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -166,12 +167,18 @@ fun OnboardingScreen(
     // LLM Config State
     var apiKey by remember { mutableStateOf("") }
     var selectedProvider by remember { mutableStateOf("OPENAI") }
-    var modelName by remember { mutableStateOf("gpt-4o-mini") }
+    var modelName by remember { mutableStateOf("") }
     var temperature by remember { mutableStateOf(0.7f) }
     var maxTokens by remember { mutableStateOf(1000) }
     var testConnectionResult by remember { mutableStateOf<String?>(null) }
     var testConnectionLoading by remember { mutableStateOf(false) }
     var baseUrl by remember { mutableStateOf("") }
+    
+    // Available models state
+    var availableModels by remember { mutableStateOf<List<String>>(emptyList()) }
+    var modelsLoading by remember { mutableStateOf(false) }
+    var modelsError by remember { mutableStateOf<String?>(null) }
+    var showModelDropdown by remember { mutableStateOf(false) }
     
     // Refresh function
     fun refreshStatuses() {
@@ -181,6 +188,54 @@ fun OnboardingScreen(
             val pm = context.getSystemService(PowerManager::class.java)
             pm?.isIgnoringBatteryOptimizations(pkg) ?: false
         } catch (_: Exception) { false }
+    }
+
+    // Fetch available models function
+    fun fetchModels() {
+        val effectiveBaseUrl = baseUrl.ifBlank { LlmClientFactory.getDefaultBaseUrl(selectedProvider) }
+        if (effectiveBaseUrl.isBlank() || apiKey.isBlank()) {
+            modelsError = "Please enter API key and base URL first"
+            return
+        }
+
+        modelsLoading = true
+        modelsError = null
+        availableModels = emptyList()
+
+        scope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            try {
+                val httpClient = OkHttpClient.Builder()
+                    .connectTimeout(30, TimeUnit.SECONDS)
+                    .readTimeout(5, TimeUnit.MINUTES)
+                    .build()
+
+                val result = LlmClientFactory.fetchAvailableModels(effectiveBaseUrl, apiKey, httpClient)
+                
+                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                    modelsLoading = false
+                    
+                    result.fold(
+                        onSuccess = { models ->
+                            availableModels = models
+                            modelsError = null
+                            if (modelName.isBlank() || modelName !in models) {
+                                modelName = models.firstOrNull() ?: ""
+                            }
+                        },
+                        onFailure = { error ->
+                            modelsError = error.message
+                            availableModels = emptyList()
+                        }
+                    )
+                }
+            } catch (e: Exception) {
+                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                    modelsLoading = false
+                    modelsError = "Failed to fetch models: ${e.message}"
+                    availableModels = emptyList()
+                }
+            }
+        }
     }
 
     // Test connection function
@@ -200,7 +255,8 @@ fun OnboardingScreen(
 
         val httpClient = OkHttpClient.Builder()
             .connectTimeout(30, TimeUnit.SECONDS)
-            .readTimeout(30, TimeUnit.SECONDS)
+            .readTimeout(5, TimeUnit.MINUTES)
+            .writeTimeout(5, TimeUnit.MINUTES)
             .build()
 
         testConnectionLoading = true
@@ -385,7 +441,13 @@ fun OnboardingScreen(
                             summaryLength = uiState.summaryLength,
                             onSelectLength = { viewModel.setSummaryLength(it) },
                             baseUrl = baseUrl,
-                            onBaseUrlChange = { baseUrl = it }
+                            onBaseUrlChange = { baseUrl = it },
+                            availableModels = availableModels,
+                            modelsLoading = modelsLoading,
+                            modelsError = modelsError,
+                            onFetchModels = { fetchModels() },
+                            showModelDropdown = showModelDropdown,
+                            onShowModelDropdownChange = { showModelDropdown = it }
                         )
                     }
                 }
@@ -918,6 +980,7 @@ fun Step4ImportConfig(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun Step6LlmConfiguration(
     selectedProvider: String,
@@ -938,7 +1001,13 @@ fun Step6LlmConfiguration(
     summaryLength: String,
     onSelectLength: (String) -> Unit,
     baseUrl: String,
-    onBaseUrlChange: (String) -> Unit
+    onBaseUrlChange: (String) -> Unit,
+    availableModels: List<String>,
+    modelsLoading: Boolean,
+    modelsError: String?,
+    onFetchModels: () -> Unit,
+    showModelDropdown: Boolean,
+    onShowModelDropdownChange: (Boolean) -> Unit
 ) {
     var showApiKey by remember { mutableStateOf(false) }
     var showAdvancedSettings by remember { mutableStateOf(false) }
@@ -1090,20 +1159,100 @@ fun Step6LlmConfiguration(
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        OutlinedTextField(
-            value = modelName,
-            onValueChange = onModelNameChange,
+        // Model input with fetch button
+        Row(
             modifier = Modifier.fillMaxWidth(),
-            placeholder = { Text(stringResource(R.string.llm_custom_model_hint)) },
-            singleLine = true,
-            shape = RoundedCornerShape(12.dp),
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
-                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
-                focusedBorderColor = Color.Transparent,
-                unfocusedBorderColor = Color.Transparent
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            OutlinedTextField(
+                value = modelName,
+                onValueChange = onModelNameChange,
+                modifier = Modifier.weight(1f),
+                placeholder = { Text(stringResource(R.string.llm_custom_model_hint)) },
+                singleLine = true,
+                shape = RoundedCornerShape(12.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                    focusedBorderColor = Color.Transparent,
+                    unfocusedBorderColor = Color.Transparent
+                )
             )
-        )
+            
+            Button(
+                onClick = onFetchModels,
+                modifier = Modifier.height(56.dp),
+                enabled = !modelsLoading && apiKey.isNotBlank() && (baseUrl.isNotBlank() || selectedProvider in listOf("OPENAI", "ANTHROPIC")),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                    contentColor = MaterialTheme.colorScheme.onSurface
+                ),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                if (modelsLoading) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(16.dp),
+                        strokeWidth = 2.dp
+                    )
+                } else {
+                    Text("Fetch")
+                }
+            }
+        }
+
+        // Model dropdown
+        if (availableModels.isNotEmpty()) {
+            Spacer(modifier = Modifier.height(8.dp))
+            
+            ExposedDropdownMenuBox(
+                expanded = showModelDropdown,
+                onExpandedChange = onShowModelDropdownChange
+            ) {
+                OutlinedTextField(
+                    value = modelName,
+                    onValueChange = {},
+                    readOnly = true,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .menuAnchor(),
+                    trailingIcon = {
+                        ExposedDropdownMenuDefaults.TrailingIcon(expanded = showModelDropdown)
+                    },
+                    shape = RoundedCornerShape(12.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                        focusedBorderColor = Color.Transparent,
+                        unfocusedBorderColor = Color.Transparent
+                    )
+                )
+                
+                ExposedDropdownMenu(
+                    expanded = showModelDropdown,
+                    onDismissRequest = { onShowModelDropdownChange(false) }
+                ) {
+                    availableModels.forEach { model ->
+                        DropdownMenuItem(
+                            text = { Text(model) },
+                            onClick = {
+                                onModelNameChange(model)
+                                onShowModelDropdownChange(false)
+                            }
+                        )
+                    }
+                }
+            }
+        }
+
+        // Models error message
+        if (modelsError != null) {
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = modelsError!!,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error
+            )
+        }
 
         Spacer(modifier = Modifier.height(16.dp))
 

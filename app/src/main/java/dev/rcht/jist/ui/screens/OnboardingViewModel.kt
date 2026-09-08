@@ -75,7 +75,7 @@ class OnboardingViewModel(private val context: Context) : ViewModel() {
         }
     }
     
-    fun saveLlmConfig(apiKey: String, provider: String = "openai", model: String = "gpt-4-turbo", temperature: Float = 0.7f, maxTokens: Int = 1000, baseUrl: String = "") {
+    fun saveLlmConfig(apiKey: String, provider: String = "openai", model: String = "", temperature: Float = 0.7f, maxTokens: Int = 1000, baseUrl: String = "") {
          viewModelScope.launch {
             try {
                 val existing = app.llmConfigRepository.getAll().firstOrNull { it.provider == provider }

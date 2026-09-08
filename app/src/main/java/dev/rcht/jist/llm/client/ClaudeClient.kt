@@ -1,6 +1,7 @@
 package dev.rcht.jist.llm.client
 
 import dev.rcht.jist.llm.LlmClient
+import dev.rcht.jist.llm.LlmClientFactory
 import dev.rcht.jist.llm.LlmRequestConfig
 import dev.rcht.jist.llm.LlmResult
 import dev.rcht.jist.llm.model.ChatMessage
@@ -96,7 +97,7 @@ class ClaudeClient(private val httpClient: OkHttpClient) : LlmClient {
         val body = json.encodeToString(claudeRequest)
             .toRequestBody("application/json".toMediaType())
 
-        val url = "${config.baseUrl}/v1/messages"
+        val url = "${LlmClientFactory.normalizeBaseUrl(config.baseUrl)}/v1/messages"
 
         return Request.Builder()
             .url(url)

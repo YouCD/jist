@@ -89,6 +89,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.graphics.Brush
 import dev.rcht.jist.R
+import okhttp3.OkHttpClient
+import java.util.concurrent.TimeUnit
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -110,16 +112,12 @@ fun LlmConfigScreen(
     
     // Provider and model state
     val providers = listOf("OPENAI", "ANTHROPIC")
-    val modelsByProvider = mapOf(
-        "OPENAI" to listOf("gpt-5.2", "gpt-5-mini-2025-08-07", "gpt-4o", "gpt-4o-mini", "o1", "o3-mini"),
-        "ANTHROPIC" to listOf("claude-3-5-sonnet-20241022", "claude-3-5-haiku-20241022", "claude-3-opus-20240229", "claude-3-haiku-20240307")
-    )
     
     // Form state
     var selectedProvider by remember { mutableStateOf(uiState.selectedConfig?.provider ?: "OPENAI") }
     var isCustomModel by remember { mutableStateOf(false) }
     var customModelName by remember { mutableStateOf("") }
-    var selectedModel by remember { mutableStateOf(uiState.selectedConfig?.modelId ?: modelsByProvider["OPENAI"]?.firstOrNull() ?: "") }
+    var selectedModel by remember { mutableStateOf(uiState.selectedConfig?.modelId ?: "") }
     var apiKey by remember { mutableStateOf(uiState.selectedConfig?.apiKey ?: "") }
     var showApiKey by remember { mutableStateOf(false) }
     
@@ -132,6 +130,61 @@ fun LlmConfigScreen(
     // Dropdown state
     var expandedModel by remember { mutableStateOf(false) }
     
+    // Fetched models state
+    var fetchedModels by remember { mutableStateOf<List<String>>(emptyList()) }
+    var modelsLoading by remember { mutableStateOf(false) }
+    var modelsError by remember { mutableStateOf<String?>(null) }
+    
+    // Fetch available models function
+    fun fetchModels() {
+        val effectiveBaseUrl = baseUrl.ifBlank { LlmClientFactory.getDefaultBaseUrl(selectedProvider) }
+        if (effectiveBaseUrl.isBlank() || apiKey.isBlank()) {
+            modelsError = "Please enter API key and base URL first"
+            return
+        }
+
+        modelsLoading = true
+        modelsError = null
+
+        scope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            try {
+                val httpClient = OkHttpClient.Builder()
+                    .connectTimeout(30, TimeUnit.SECONDS)
+                    .readTimeout(5, TimeUnit.MINUTES)
+                    .build()
+
+                val result = LlmClientFactory.fetchAvailableModels(effectiveBaseUrl, apiKey, httpClient)
+                
+                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                    modelsLoading = false
+                    
+                    result.fold(
+                        onSuccess = { models ->
+                            fetchedModels = models
+                            modelsError = null
+                            val currentModel = if (isCustomModel) customModelName else selectedModel
+                            if (currentModel.isBlank() || currentModel !in models) {
+                                selectedModel = models.firstOrNull() ?: ""
+                                isCustomModel = false
+                                customModelName = ""
+                            }
+                        },
+                        onFailure = { error ->
+                            modelsError = error.message
+                            fetchedModels = emptyList()
+                        }
+                    )
+                }
+            } catch (e: Exception) {
+                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                    modelsLoading = false
+                    modelsError = "Failed to fetch models: ${e.message}"
+                    fetchedModels = emptyList()
+                }
+            }
+        }
+    }
+    
     // Update state when selected config changes
     LaunchedEffect(uiState.selectedConfig) {
         uiState.selectedConfig?.let { config ->
@@ -140,26 +193,9 @@ fun LlmConfigScreen(
             temperature = config.temperature
             maxTokens = config.maxTokens
             baseUrl = config.baseUrl
-            val availableModels = modelsByProvider[config.provider] ?: emptyList()
-            if (config.modelId in availableModels) {
-                selectedModel = config.modelId
-                isCustomModel = false
-                customModelName = ""
-            } else {
-                isCustomModel = true
-                customModelName = config.modelId
-                if (availableModels.isNotEmpty()) {
-                    selectedModel = availableModels.first()
-                }
-            }
-        }
-    }
-
-    // Update model when provider changes
-    LaunchedEffect(selectedProvider) {
-        val availableModels = modelsByProvider[selectedProvider] ?: emptyList()
-        if (!isCustomModel && selectedModel !in availableModels && availableModels.isNotEmpty()) {
-            selectedModel = availableModels.first()
+            selectedModel = config.modelId
+            isCustomModel = false
+            customModelName = ""
         }
     }
     
@@ -348,75 +384,111 @@ fun LlmConfigScreen(
                 
                 Spacer(modifier = Modifier.height(8.dp))
                 
-                Box(modifier = Modifier.fillMaxWidth()) {
-                    OutlinedTextField(
-                        value = if (isCustomModel && customModelName.isNotBlank()) customModelName else if (isCustomModel) "" else selectedModel,
-                        onValueChange = {},
-                        modifier = Modifier.fillMaxWidth(),
-                        readOnly = true,
-                        placeholder = {
-                            if (isCustomModel && customModelName.isBlank()) {
-                                Text(stringResource(R.string.llm_custom_model_option))
-                            }
-                        },
-                        trailingIcon = {
-                            IconButton(onClick = { expandedModel = true }) {
-                                Icon(
-                                    imageVector = Icons.Default.KeyboardArrowDown,
-                                    contentDescription = stringResource(R.string.llm_select_model)
+                // Model input with fetch button
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Box(modifier = Modifier.weight(1f)) {
+                        OutlinedTextField(
+                            value = if (isCustomModel && customModelName.isNotBlank()) customModelName else if (isCustomModel) "" else selectedModel,
+                            onValueChange = {},
+                            modifier = Modifier.fillMaxWidth(),
+                            readOnly = true,
+                            placeholder = {
+                                if (isCustomModel && customModelName.isBlank()) {
+                                    Text(stringResource(R.string.llm_custom_model_option))
+                                }
+                            },
+                            trailingIcon = {
+                                IconButton(onClick = { expandedModel = true }) {
+                                    Icon(
+                                        imageVector = Icons.Default.KeyboardArrowDown,
+                                        contentDescription = stringResource(R.string.llm_select_model)
+                                    )
+                                }
+                            },
+                            shape = RoundedCornerShape(12.dp),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                                focusedBorderColor = Color.Transparent,
+                                unfocusedBorderColor = Color.Transparent
+                            )
+                        )
+                        
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(56.dp)
+                                .clickable { expandedModel = true }
+                        )
+                        
+                        DropdownMenu(
+                            expanded = expandedModel,
+                            onDismissRequest = { expandedModel = false },
+                            modifier = Modifier.fillMaxWidth(0.9f)
+                        ) {
+                            fetchedModels.forEach { model ->
+                                DropdownMenuItem(
+                                    text = {
+                                        Text(
+                                            text = model,
+                                            fontWeight = if (model == selectedModel && !isCustomModel) FontWeight.Bold else FontWeight.Normal
+                                        )
+                                    },
+                                    onClick = {
+                                        selectedModel = model
+                                        isCustomModel = false
+                                        expandedModel = false
+                                    }
                                 )
                             }
-                        },
-                        shape = RoundedCornerShape(12.dp),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
-                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
-                            focusedBorderColor = Color.Transparent,
-                            unfocusedBorderColor = Color.Transparent
-                        )
-                    )
-                    
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(56.dp)
-                            .clickable { expandedModel = true }
-                    )
-                    
-                    DropdownMenu(
-                        expanded = expandedModel,
-                        onDismissRequest = { expandedModel = false },
-                        modifier = Modifier.fillMaxWidth(0.9f)
-                    ) {
-                        modelsByProvider[selectedProvider]?.forEach { model ->
                             DropdownMenuItem(
                                 text = {
                                     Text(
-                                        text = model,
-                                        fontWeight = if (model == selectedModel && !isCustomModel) FontWeight.Bold else FontWeight.Normal
+                                        text = stringResource(R.string.llm_custom_model_option),
+                                        fontWeight = if (isCustomModel) FontWeight.Bold else FontWeight.Normal,
+                                        color = MaterialTheme.colorScheme.primary
                                     )
                                 },
                                 onClick = {
-                                    selectedModel = model
-                                    isCustomModel = false
+                                    isCustomModel = true
                                     expandedModel = false
                                 }
                             )
                         }
-                        DropdownMenuItem(
-                            text = {
-                                Text(
-                                    text = stringResource(R.string.llm_custom_model_option),
-                                    fontWeight = if (isCustomModel) FontWeight.Bold else FontWeight.Normal,
-                                    color = MaterialTheme.colorScheme.primary
-                                )
-                            },
-                            onClick = {
-                                isCustomModel = true
-                                expandedModel = false
-                            }
-                        )
                     }
+                    
+                    Button(
+                        onClick = { fetchModels() },
+                        modifier = Modifier.height(56.dp),
+                        enabled = !modelsLoading && apiKey.isNotBlank() && (baseUrl.isNotBlank() || selectedProvider in listOf("OPENAI", "ANTHROPIC")),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                            contentColor = MaterialTheme.colorScheme.onSurface
+                        ),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        if (modelsLoading) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(16.dp),
+                                strokeWidth = 2.dp
+                            )
+                        } else {
+                            Text("Fetch")
+                        }
+                    }
+                }
+                
+                // Models error message
+                if (modelsError != null) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = modelsError!!,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error
+                    )
                 }
                 
                 AnimatedVisibility(

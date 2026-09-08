@@ -154,6 +154,7 @@ class SummaryDetailViewModel(
             notifications = notifications,
             chatMessages = chatMessages,
             isXposedChat = isXposedChat,
+            isLoading = false,
             isReSummarizing = false,
             error = null
         )
@@ -178,6 +179,7 @@ class SummaryDetailViewModel(
                     notifications = notifications,
                     chatMessages = chatMessages,
                     isXposedChat = isXposedChat,
+                    isLoading = false,
                     isReSummarizing = false,
                     error = null
                 )

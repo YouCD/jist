@@ -73,7 +73,7 @@ class WebhookService(private val httpClient: OkHttpClient) {
                     .replace("\${appName}", "Test App")
                     .replace("\${contactOrGroup}", "Test Contact")
                     .replace("\${messageCount}", "5")
-                    .replace("\${modelUsed}", "gpt-4o-mini")
+                    .replace("\${modelUsed}", "unknown")
                     .replace("\${tokenCount}", "150")
                     .replace("\${createdAt}", System.currentTimeMillis().toString())
                     .replace("\${packageName}", "com.example.test")
