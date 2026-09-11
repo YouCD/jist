@@ -413,14 +413,14 @@ fun SummaryDetailScreen(
                                 }
                             }
 
-                            Spacer(modifier = Modifier.height(8.dp))
+                            Spacer(modifier = Modifier.height(24.dp))
                             HorizontalDivider(
                                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
                                 color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
                             )
 
                             if (notifications.isNotEmpty() || chatMessages.isNotEmpty()) {
-                                Spacer(modifier = Modifier.height(12.dp))
+                                Spacer(modifier = Modifier.height(28.dp))
                                 Text(
                                     text = if (isXposedChat) {
                                         stringResource(R.string.summary_original_messages, chatMessages.size)
@@ -430,6 +430,7 @@ fun SummaryDetailScreen(
                                     style = MaterialTheme.typography.titleMedium,
                                     modifier = Modifier.padding(horizontal = 16.dp)
                                 )
+                                Spacer(modifier = Modifier.height(24.dp))
                             }
 
                             // Scrollable notifications section (takes remaining space)

@@ -1,6 +1,7 @@
 package dev.rcht.jist.ui.screens
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
@@ -12,6 +13,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -24,31 +26,39 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import dev.rcht.jist.R
 import dev.rcht.jist.util.DrawableUtil
 import dev.rcht.jist.util.displayContent
 import dev.rcht.jist.ui.components.GlassCard
 import dev.rcht.jist.ui.components.GlassScaffold
+import dev.rcht.jist.ui.xposedchats.SummaryDialogState
 import dev.rcht.jist.ui.xposedchats.XposedChatItem
+import dev.rcht.jist.ui.xposedchats.XposedChatsState
 import dev.rcht.jist.ui.xposedchats.XposedSourceGroup
+import kotlin.math.roundToInt
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
@@ -56,6 +66,7 @@ import java.util.*
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun XposedChatsScreen(
+    uiState: XposedChatsState,
     groups: List<XposedSourceGroup>,
     isLoading: Boolean,
     isEmpty: Boolean,
@@ -63,8 +74,16 @@ fun XposedChatsScreen(
     onDeleteChats: (List<Long>) -> Unit,
     onToggleSummarized: (chatId: Long, summarized: Boolean) -> Unit,
     onSaveChatSettings: (chatId: Long, customPrompt: String?, minMessages: Int, retentionDays: Int) -> Unit,
+    onChatSummarize: (Long) -> Unit,
+    onSummaryGenerated: (Long, String) -> Unit,
     onRefresh: () -> Unit,
     isRefreshing: Boolean = false,
+    isSummarizing: Boolean = false,
+    summarizeError: String? = null,
+    pendingResummarizeChatId: Long? = null,
+    onClearPendingResummarize: () -> Unit,
+    onDismissSummaryDialog: () -> Unit,
+    summarizingChatName: String? = null,
     modifier: Modifier = Modifier
 ) {
     var selecting by remember { mutableStateOf(false) }
@@ -72,6 +91,7 @@ fun XposedChatsScreen(
     var showDeleteDialog by remember { mutableStateOf(false) }
     var knownKeys: List<String> by rememberSaveable { mutableStateOf(ArrayList(groups.map { it.source.packageName })) }
     var expandedGroups: List<String> by rememberSaveable { mutableStateOf(ArrayList(groups.map { it.source.packageName })) }
+    var pendingResummarizeChatId by remember { mutableStateOf<Long?>(null) }
     val allKeys = groups.map { it.source.packageName }.toSet()
     LaunchedEffect(allKeys) {
         val added = allKeys - knownKeys.toSet()
@@ -83,14 +103,22 @@ fun XposedChatsScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     val lazyListState = rememberLazyListState()
-    val stickyHeaderKeys by remember {
-        derivedStateOf {
-            lazyListState.layoutInfo.visibleItemsInfo
-                .filter { it.key is String && (it.key as String).endsWith("_header") }
-                .filter { it.offset == lazyListState.layoutInfo.viewportStartOffset }
-                .map { it.key as String }
-                .toSet()
+    LaunchedEffect(isSummarizing, summarizingChatName) {
+        if (!isSummarizing && summarizingChatName != null) {
+            // Show the summary dialog after summarization completes
+            val chat = groups.flatMap { it.chats }.find { it.chat.chatName == summarizingChatName }
+            if (chat != null) {
+                onSummaryGenerated(chat.chat.id, "")
+            }
         }
+    }
+
+    val stickyHeaderKeys by derivedStateOf {
+        lazyListState.layoutInfo.visibleItemsInfo
+            .filter { it.key is String && (it.key as String).endsWith("_header") }
+            .filter { it.offset == lazyListState.layoutInfo.viewportStartOffset }
+            .map { it.key as String }
+            .toSet()
     }
 
     GlassScaffold(
@@ -177,8 +205,11 @@ fun XposedChatsScreen(
                                         enter = expandVertically(tween(300)) + fadeIn(tween(300)),
                                         exit = shrinkVertically(tween(300)) + fadeOut(tween(300))
                                     ) {
-                                        Column(modifier = Modifier.padding(bottom = 8.dp)) {
+                                         Column(modifier = Modifier.padding(bottom = 8.dp)) {
                                             group.chats.forEachIndexed { index, chatItem ->
+                                                if (index > 0) {
+                                                    Spacer(Modifier.height(8.dp))
+                                                }
                                                 XposedChatCard(
                                                     item = chatItem,
                                                     selecting = selecting,
@@ -198,17 +229,11 @@ fun XposedChatsScreen(
                                                     },
                                                     onToggleSummarized = { v -> onToggleSummarized(chatItem.chat.id, v) },
                                                     onSaveChatSettings = { prompt, min, retention -> onSaveChatSettings(chatItem.chat.id, prompt, min, retention) },
+                                                    onChatSummarize = { onChatSummarize(chatItem.chat.id) },
                                                     snackbarHostState = snackbarHostState
                                                 )
-                                                if (index < group.chats.lastIndex) {
-                                                    HorizontalDivider(
-                                                        modifier = Modifier.padding(horizontal = 4.dp),
-                                                        thickness = 1.dp,
-                                                        color = Color(0xFF1A1A1A)
-                                                    )
-                                                }
                                             }
-                                        }
+                                         }
                                     }
                                 }
                             }
@@ -240,6 +265,56 @@ fun XposedChatsScreen(
             }
         )
     }
+
+    if (uiState.summaryDialogState != null || pendingResummarizeChatId != null) {
+        val state = uiState.summaryDialogState
+        SummaryDialog(
+            chatName = state?.chatName ?: "",
+            messageCount = state?.messageCount ?: 0,
+            summaryText = state?.summaryText ?: "",
+            createdAt = state?.timestamp ?: System.currentTimeMillis(),
+            onDismiss = {
+                if (pendingResummarizeChatId != null) {
+                    val chatId = pendingResummarizeChatId!!
+                    pendingResummarizeChatId = null
+                    onChatSummarize(chatId)
+                } else {
+                    onClearPendingResummarize()
+                    onDismissSummaryDialog()
+                }
+            },
+            onResummarize = {
+                pendingResummarizeChatId = state?.chatId
+                onDismissSummaryDialog()
+            }
+        )
+    }
+
+    LaunchedEffect(isSummarizing, summarizingChatName) {
+        if (!isSummarizing && summarizingChatName != null) {
+            // Show summary dialog when summarization completes
+            val chat = groups.flatMap { it.chats }.find { it.chat.chatName == summarizingChatName }
+            if (chat != null) {
+                onSummaryGenerated(chat.chat.id, chat.chat.chatName)
+            }
+        }
+    }
+
+    if (isSummarizing) {
+        val name = summarizingChatName ?: "该群聊"
+        AlertDialog(
+            onDismissRequest = { },
+            title = { Text("正在生成摘要") },
+            text = {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    CircularProgressIndicator(modifier = Modifier.size(48.dp))
+                    Spacer(Modifier.height(16.dp))
+                    Text("正在为「$name」生成 AI 摘要...")
+                }
+            },
+            confirmButton = { }
+        )
+    }
 }
 
 @Composable
@@ -260,10 +335,7 @@ private fun SourceSectionHeader(
             DrawableUtil.drawableToBitmap(drawable).asImageBitmap()
         } catch (_: Exception) { null }
     }
-    val rotation by animateFloatAsState(
-        targetValue = if (isExpanded) 180f else 0f,
-        animationSpec = tween(200)
-    )
+    val rotation = if (isExpanded) 180f else 0f
     var showMenu by remember { mutableStateOf(false) }
 
     Column(modifier = Modifier.fillMaxWidth()) {
@@ -339,30 +411,83 @@ private fun SourceSectionHeader(
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
-private fun XposedChatCard(item: XposedChatItem, selecting: Boolean, selected: Boolean, onClick: () -> Unit, onLongClick: () -> Unit, onToggleSummarized: (Boolean) -> Unit, onSaveChatSettings: (customPrompt: String?, minMessages: Int, retentionDays: Int) -> Unit, snackbarHostState: SnackbarHostState? = null) {
-    val defaultPrompt = remember { dev.rcht.jist.llm.getDefaultSystemPrompt() }
-    var expanded by remember(item.chat.id, item.chat.isSummarized) { mutableStateOf(false) }
-    var promptText by remember(item.chat.id, item.chat.customPrompt) { mutableStateOf(item.chat.customPrompt ?: defaultPrompt) }
-    var minMessagesText by remember(item.chat.id, item.chat.minMessagesForSummary) { mutableStateOf(item.chat.minMessagesForSummary.toString()) }
-    var retentionDaysText by remember(item.chat.id, item.chat.retentionDays) { mutableStateOf(item.chat.retentionDays.toString()) }
-    var savedPrompt by remember(item.chat.id, item.chat.customPrompt) { mutableStateOf(item.chat.customPrompt ?: defaultPrompt) }
-    var savedMinMessages by remember(item.chat.id, item.chat.minMessagesForSummary) { mutableStateOf(item.chat.minMessagesForSummary.toString()) }
-    var savedRetentionDays by remember(item.chat.id, item.chat.retentionDays) { mutableStateOf(item.chat.retentionDays.toString()) }
-    val hasChanges = promptText != savedPrompt || minMessagesText != savedMinMessages || retentionDaysText != savedRetentionDays
-    val isDefault = promptText == defaultPrompt
+private fun XposedChatCard(item: XposedChatItem, selecting: Boolean, selected: Boolean, onClick: () -> Unit, onLongClick: () -> Unit, onToggleSummarized: (Boolean) -> Unit, onSaveChatSettings: (customPrompt: String?, minMessages: Int, retentionDays: Int) -> Unit, onChatSummarize: () -> Unit, snackbarHostState: SnackbarHostState? = null) {
+    val defaultPrompt by rememberUpdatedState(dev.rcht.jist.llm.getDefaultSystemPrompt())
+    var expanded by remember { mutableStateOf(false) }
+    var promptText by remember { mutableStateOf(item.chat.customPrompt ?: defaultPrompt) }
+    var minMessagesText by remember { mutableStateOf(item.chat.minMessagesForSummary.toString()) }
+    var retentionDaysText by remember { mutableStateOf(item.chat.retentionDays.toString()) }
+    var savedPrompt by remember { mutableStateOf(item.chat.customPrompt ?: defaultPrompt) }
+    var savedMinMessages by remember { mutableStateOf(item.chat.minMessagesForSummary.toString()) }
+    var savedRetentionDays by remember { mutableStateOf(item.chat.retentionDays.toString()) }
+    val hasChanges by derivedStateOf { promptText != savedPrompt || minMessagesText != savedMinMessages || retentionDaysText != savedRetentionDays }
+    val isDefault by derivedStateOf { promptText == defaultPrompt }
     val focusManager = LocalFocusManager.current
     val scope = rememberCoroutineScope()
+    val density = LocalDensity.current
+    val summaryActionWidth = 72.dp
+    val summaryActionWidthPx by derivedStateOf { with(density) { summaryActionWidth.toPx() } }
+    val offsetX = remember { Animatable(0f) }
+    val cardOpen by derivedStateOf { offsetX.value < -0.5f }
 
-    GlassCard(
-        modifier = Modifier
-            .fillMaxWidth()
-            .then(if (selected) Modifier.border(2.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(12.dp)) else Modifier)
-            .combinedClickable(
-                onClick = onClick,
-                onLongClick = { if (!selecting) onLongClick() }
-            ),
-        shape = RoundedCornerShape(12.dp)
-    ) {
+    Box(modifier = Modifier.fillMaxWidth()) {
+        Box(
+            modifier = Modifier
+                .height(45.dp)
+                .width(summaryActionWidth)
+                .align(Alignment.CenterEnd)
+                .clip(RoundedCornerShape(12.dp))
+                .background(MaterialTheme.colorScheme.primary)
+                .clickable {
+                    scope.launch { offsetX.animateTo(0f, tween(200)) }
+                    onChatSummarize()
+                },
+            contentAlignment = Alignment.Center
+        ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+                Icon(Icons.Outlined.AutoAwesome, contentDescription = "AI摘要", tint = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.size(24.dp))
+            }
+        }
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .offset { IntOffset(offsetX.value.roundToInt(), 0) }
+                .pointerInput(Unit) {
+                    detectHorizontalDragGestures(
+                        onDragEnd = {
+                            scope.launch {
+                                offsetX.animateTo(
+                                    targetValue = if (offsetX.value < -summaryActionWidthPx / 2f) -summaryActionWidthPx else 0f,
+                                    animationSpec = tween(200)
+                                )
+                            }
+                        },
+                        onHorizontalDrag = { change, dragAmount ->
+                            change.consume()
+                            scope.launch {
+                                offsetX.snapTo((offsetX.value + dragAmount).coerceIn(-summaryActionWidthPx, 0f))
+                            }
+                        }
+                    )
+                }
+        ) {
+        GlassCard(
+            modifier = Modifier
+                .fillMaxWidth()
+                .then(if (selected) Modifier.border(2.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(12.dp)) else Modifier)
+                .combinedClickable(
+                    onClick = {
+                        if (offsetX.value < -0.5f) {
+                            scope.launch { offsetX.animateTo(0f, tween(200)) }
+                        } else {
+                            onClick()
+                        }
+                    },
+                    onLongClick = { if (!selecting) onLongClick() }
+                ),
+            containerColor = Color(0xFF1E1E1E),
+            shape = RoundedCornerShape(12.dp)
+        ) {
         Column {
                 Row(
                     modifier = Modifier
@@ -385,34 +510,35 @@ private fun XposedChatCard(item: XposedChatItem, selecting: Boolean, selected: B
                                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f))
                         }
                     }
-                    if (item.latestMessage != null) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        val msg = item.latestMessage
+                        if (msg != null) {
                             Text(
                                 text = buildString {
-                                    if (item.latestMessage.senderName.isNotBlank()) {
-                                        append(item.latestMessage.senderName); append(": ")
+                                    if (msg.senderName.isNotBlank()) {
+                                        append(msg.senderName); append(": ")
                                     }
-                                    append(displayContent(item.latestMessage.content))
+                                    append(displayContent(msg.content))
                                 },
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 maxLines = 1, overflow = TextOverflow.Ellipsis,
                                 modifier = Modifier.weight(1f)
                             )
-                            if (item.messageCount > 0) {
-                                Spacer(Modifier.width(6.dp))
-                                Box(
-                                    modifier = Modifier
-                                        .background(
-                                            color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
-                                            shape = RoundedCornerShape(14.dp)
-                                        )
-                                        .padding(horizontal = 8.dp, vertical = 2.dp)
-                                ) {
-                                    Text(text = item.messageCount.toString(),
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = MaterialTheme.colorScheme.onPrimaryContainer)
-                                }
+                        }
+                        if (item.messageCount > 0) {
+                            Spacer(Modifier.width(6.dp))
+                            Box(
+                                modifier = Modifier
+                                    .background(
+                                        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
+                                        shape = RoundedCornerShape(14.dp)
+                                    )
+                                    .padding(horizontal = 8.dp, vertical = 2.dp)
+                            ) {
+                                Text(text = item.messageCount.toString(),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer)
                             }
                         }
                     }
@@ -517,6 +643,8 @@ private fun XposedChatCard(item: XposedChatItem, selecting: Boolean, selected: B
             }
         }
     }
+        }
+    }
 }
 
 internal fun formatNumber(n: Int): String {
@@ -547,5 +675,44 @@ internal fun formatTimestamp(timestamp: Long): String {
         diff < 86_400_000 -> "${diff / 3_600_000}时前"
         else -> { val sdf = SimpleDateFormat("MM/dd", Locale.getDefault()); sdf.format(Date(timestamp)) }
     }
+}
+
+@Composable
+private fun SummaryDialog(
+    chatName: String,
+    messageCount: Int,
+    summaryText: String,
+    createdAt: Long,
+    onDismiss: () -> Unit,
+    onResummarize: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = { onDismiss() },
+        title = { Text("「$chatName」摘要 · ${messageCount} 条消息") },
+        text = {
+            Column {
+                Text("摘要时间：${formatTimestamp(createdAt)}", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Spacer(Modifier.height(8.dp))
+                if (summaryText.isNotEmpty()) {
+                    Text(
+                        text = summaryText,
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                } else {
+                    Text(
+                        text = "暂无摘要内容",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { onDismiss() }) { Text("收起") }
+        },
+        dismissButton = {
+            TextButton(onClick = { onResummarize() }) { Text("重新摘要") }
+        }
+    )
 }
 

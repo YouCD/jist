@@ -28,6 +28,7 @@ fun GlassCard(
     modifier: Modifier = Modifier,
     shape: RoundedCornerShape = RoundedCornerShape(24.dp),
     hazeState: HazeState? = null,
+    containerColor: Color? = null,
     content: @Composable () -> Unit
 ) {
     val cardModifier = if (hazeState != null) {
@@ -43,7 +44,7 @@ fun GlassCard(
         modifier = cardModifier,
         shape = shape,
         colors = CardDefaults.cardColors(
-            containerColor = if (hazeState != null) Color.Transparent else GlassSurface,
+            containerColor = containerColor ?: if (hazeState != null) Color.Transparent else GlassSurface,
             contentColor = Color.White
         ),
         border = BorderStroke(1.dp, GlassBorder)

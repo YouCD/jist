@@ -49,8 +49,6 @@ import dev.rcht.jist.ui.screens.XposedChatsScreen
 import dev.rcht.jist.ui.screens.XposedChatDetailScreen
 import dev.rcht.jist.ui.xposedchats.XposedChatsViewModel
 import dev.rcht.jist.ui.xposedchats.XposedChatDetailViewModel
-import dev.rcht.jist.llm.LlmClientFactory
-import dev.rcht.jist.llm.PromptBuilder
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
@@ -511,13 +509,17 @@ fun JistNavHost(
                         return XposedChatsViewModel(
                             jistApp.watchedChatRepository,
                             jistApp.chatMessageRepository,
-                            jistApp.chatSourceRepository
+                            jistApp.chatSourceRepository,
+                            jistApp.summaryRepository,
+                            jistApp.llmConfigRepository,
+                            jistApp.httpClient
                         ) as T
                     }
                 }
             )
             val uiState by viewModel.uiState.collectAsState()
             val isRefreshing = remember { mutableStateOf(false) }
+            val pendingResummarizeChatId = remember { mutableStateOf<Long?>(null) }
             val lifecycleOwner = LocalLifecycleOwner.current
             DisposableEffect(lifecycleOwner) {
                 val observer = LifecycleEventObserver { _, event ->
@@ -529,6 +531,7 @@ fun JistNavHost(
                 onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
             }
             XposedChatsScreen(
+                uiState = uiState,
                 groups = uiState.groups,
                 isLoading = uiState.isLoading,
                 isEmpty = uiState.isEmpty,
@@ -538,12 +541,34 @@ fun JistNavHost(
                 onDeleteChats = { ids -> viewModel.deleteChats(ids) },
                 onToggleSummarized = { id, v -> viewModel.toggleSummarized(id, v) },
                 onSaveChatSettings = { id, prompt, min, retention -> viewModel.updateChatSettings(id, prompt, min, retention) },
+                onChatSummarize = { chatId ->
+                    viewModel.summarizeChat(chatId)
+                },
+                onSummaryGenerated = { chatId, summaryText ->
+                    val chats = uiState.groups.flatMap { it.chats }
+                    val chat = chats.find { it.chat.id == chatId }
+                    if (chat != null) {
+                        viewModel.showSummaryDialogWithText(
+                            chatId,
+                            chat.chat.chatName,
+                            chat.messageCount,
+                            chat.latestMessage?.timestamp ?: System.currentTimeMillis(),
+                            summaryText
+                        )
+                    }
+                },
+                pendingResummarizeChatId = pendingResummarizeChatId.value,
+                onClearPendingResummarize = { pendingResummarizeChatId.value = null },
+                onDismissSummaryDialog = { viewModel.dismissSummaryDialog() },
                 onRefresh = {
                     isRefreshing.value = true
                     viewModel.loadData()
                     isRefreshing.value = false
                 },
-                isRefreshing = isRefreshing.value
+                isRefreshing = isRefreshing.value,
+                isSummarizing = uiState.isSummarizing,
+                summarizingChatName = uiState.summarizingChatName,
+                summarizeError = uiState.summarizeError
             )
         }
         composable(
