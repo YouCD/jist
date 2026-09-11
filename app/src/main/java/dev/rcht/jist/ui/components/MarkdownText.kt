@@ -18,7 +18,7 @@ fun MarkdownText(
     maxLines: Int = Int.MAX_VALUE
 ) {
     val context = LocalContext.current
-    val markwon = remember { Markwon.create(context) }
+    val markwon = remember(markdown) { Markwon.builder(context).build() }
     val textColor = MaterialTheme.colorScheme.onSurface
 
     AndroidView(
@@ -28,6 +28,9 @@ fun MarkdownText(
                 textSize = 14f
                 setLineSpacing(4f, 1f)
                 setTextIsSelectable(true)
+                this.maxLines = maxLines
+                markwon.setMarkdown(this, markdown)
+                movementMethod = LinkMovementMethod.getInstance()
             }
         },
         modifier = modifier,

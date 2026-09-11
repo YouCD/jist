@@ -19,6 +19,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
@@ -47,6 +49,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
+import androidx.activity.compose.BackHandler
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import dev.rcht.jist.R
@@ -54,6 +59,7 @@ import dev.rcht.jist.util.DrawableUtil
 import dev.rcht.jist.util.displayContent
 import dev.rcht.jist.ui.components.GlassCard
 import dev.rcht.jist.ui.components.GlassScaffold
+import dev.rcht.jist.ui.components.MarkdownText
 import dev.rcht.jist.ui.xposedchats.SummaryDialogState
 import dev.rcht.jist.ui.xposedchats.XposedChatItem
 import dev.rcht.jist.ui.xposedchats.XposedChatsState
@@ -103,14 +109,10 @@ fun XposedChatsScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     val lazyListState = rememberLazyListState()
-    LaunchedEffect(isSummarizing, summarizingChatName) {
-        if (!isSummarizing && summarizingChatName != null) {
-            // Show the summary dialog after summarization completes
-            val chat = groups.flatMap { it.chats }.find { it.chat.chatName == summarizingChatName }
-            if (chat != null) {
-                onSummaryGenerated(chat.chat.id, "")
-            }
-        }
+
+    LaunchedEffect(summarizeError) {
+        val err = summarizeError ?: return@LaunchedEffect
+        snackbarHostState.showSnackbar(err, duration = SnackbarDuration.Short)
     }
 
     val stickyHeaderKeys by derivedStateOf {
@@ -282,22 +284,8 @@ fun XposedChatsScreen(
                     onClearPendingResummarize()
                     onDismissSummaryDialog()
                 }
-            },
-            onResummarize = {
-                pendingResummarizeChatId = state?.chatId
-                onDismissSummaryDialog()
             }
         )
-    }
-
-    LaunchedEffect(isSummarizing, summarizingChatName) {
-        if (!isSummarizing && summarizingChatName != null) {
-            // Show summary dialog when summarization completes
-            val chat = groups.flatMap { it.chats }.find { it.chat.chatName == summarizingChatName }
-            if (chat != null) {
-                onSummaryGenerated(chat.chat.id, chat.chat.chatName)
-            }
-        }
     }
 
     if (isSummarizing) {
@@ -683,21 +671,39 @@ private fun SummaryDialog(
     messageCount: Int,
     summaryText: String,
     createdAt: Long,
-    onDismiss: () -> Unit,
-    onResummarize: () -> Unit
+    onDismiss: () -> Unit
 ) {
-    AlertDialog(
+    Dialog(
         onDismissRequest = { onDismiss() },
-        title = { Text("「$chatName」摘要 · ${messageCount} 条消息") },
-        text = {
-            Column {
+        properties = DialogProperties(dismissOnBackPress = true, dismissOnClickOutside = true)
+    ) {
+        BackHandler(enabled = true) { onDismiss() }
+        Surface(
+            shape = RoundedCornerShape(20.dp),
+            color = Color(0xFF1E1E1E),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(modifier = Modifier.padding(20.dp)) {
+                Text(
+                    text = "「$chatName」摘要 · ${messageCount} 条消息",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Spacer(Modifier.height(4.dp))
                 Text("摘要时间：${formatTimestamp(createdAt)}", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(Modifier.height(8.dp))
                 if (summaryText.isNotEmpty()) {
-                    Text(
-                        text = summaryText,
-                        style = MaterialTheme.typography.bodyMedium
-                    )
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(max = 320.dp)
+                            .verticalScroll(rememberScrollState())
+                    ) {
+                        MarkdownText(
+                            markdown = summaryText,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
                 } else {
                     Text(
                         text = "暂无摘要内容",
@@ -705,14 +711,12 @@ private fun SummaryDialog(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
+                Spacer(Modifier.height(12.dp))
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                    TextButton(onClick = { onDismiss() }) { Text("收起") }
+                }
             }
-        },
-        confirmButton = {
-            TextButton(onClick = { onDismiss() }) { Text("收起") }
-        },
-        dismissButton = {
-            TextButton(onClick = { onResummarize() }) { Text("重新摘要") }
         }
-    )
+    }
 }
 

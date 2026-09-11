@@ -251,7 +251,6 @@ fun JistNavHost(
             SummaryDetailScreen(
                 uiState = uiState,
                 onNavigateBack = { navController.popBackStack() },
-                onReSummarize = { viewModel.reSummarize() },
                 onPageChanged = { index -> viewModel.onPageChanged(index) },
                 isReSummarizing = uiState.isReSummarizing
             )

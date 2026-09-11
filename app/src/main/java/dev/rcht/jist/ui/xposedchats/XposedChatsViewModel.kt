@@ -92,11 +92,15 @@ class XposedChatsViewModel(
                 _uiState.value = XposedChatsState(
                     groups = groups,
                     isLoading = false,
-                    isEmpty = groups.isEmpty()
+                    isEmpty = groups.isEmpty(),
+                    summaryDialogState = _uiState.value.summaryDialogState,
+                    isSummarizing = _uiState.value.isSummarizing,
+                    summarizeError = _uiState.value.summarizeError,
+                    summarizingChatName = _uiState.value.summarizingChatName
                 )
             } catch (e: Exception) {
                 Log.e(TAG, "Error loading xposed chats", e)
-                _uiState.value = XposedChatsState(isLoading = false, isEmpty = true)
+                _uiState.value = _uiState.value.copy(isLoading = false, isEmpty = true)
             }
         }
     }

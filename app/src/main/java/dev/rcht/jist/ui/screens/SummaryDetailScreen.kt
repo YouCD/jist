@@ -4,7 +4,6 @@ import android.content.Intent
 import dev.rcht.jist.R
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
@@ -38,7 +37,6 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Redo
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -70,7 +68,6 @@ import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import dev.rcht.jist.ui.summarydetail.SummaryDetailUiState
@@ -84,7 +81,6 @@ import java.util.Locale
 fun SummaryDetailScreen(
     uiState: SummaryDetailUiState = SummaryDetailUiState(),
     onNavigateBack: () -> Unit = {},
-    onReSummarize: () -> Unit = {},
     onPageChanged: (Int) -> Unit = {},
     isReSummarizing: Boolean = false,
     modifier: Modifier = Modifier,
@@ -481,35 +477,6 @@ fun SummaryDetailScreen(
                             }
                         }
                     }
-                }
-
-                val infiniteTransition = rememberInfiniteTransition()
-                val fabAngle = infiniteTransition.animateFloat(
-                    initialValue = 0f, targetValue = 360f,
-                    animationSpec = infiniteRepeatable(
-                        animation = tween(1000, easing = LinearEasing)
-                    )
-                )
-                val fabAlpha = animateFloatAsState(
-                    targetValue = if (isReSummarizing) 0.4f else 1f,
-                    animationSpec = tween(300),
-                    label = "fabAlpha"
-                )
-                FloatingActionButton(
-                    onClick = { if (!isReSummarizing) onReSummarize() },
-                    containerColor = MaterialTheme.colorScheme.primary.copy(alpha = if (isReSummarizing) 0.6f else 1f),
-                    contentColor = MaterialTheme.colorScheme.onPrimary,
-                    modifier = Modifier
-                        .align(Alignment.BottomEnd)
-                        .padding(16.dp)
-                ) {
-                    Icon(
-                        Icons.AutoMirrored.Filled.Redo,
-                        contentDescription = stringResource(R.string.summary_resummarize),
-                        modifier = Modifier
-                            .graphicsLayer(rotationZ = if (isReSummarizing) fabAngle.value else 0f)
-                            .graphicsLayer(alpha = fabAlpha.value)
-                    )
                 }
             }
         }
