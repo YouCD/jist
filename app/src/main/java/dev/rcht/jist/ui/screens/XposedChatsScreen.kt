@@ -414,7 +414,9 @@ private fun XposedChatCard(item: XposedChatItem, selecting: Boolean, selected: B
     val scope = rememberCoroutineScope()
     val density = LocalDensity.current
     val summaryActionWidth = 72.dp
+    val summaryActionGap = 12.dp
     val summaryActionWidthPx by derivedStateOf { with(density) { summaryActionWidth.toPx() } }
+    val summaryActionTotalPx by derivedStateOf { with(density) { (summaryActionWidth + summaryActionGap).toPx() } }
     val offsetX = remember { Animatable(0f) }
     val cardOpen by derivedStateOf { offsetX.value < -0.5f }
 
@@ -445,7 +447,7 @@ private fun XposedChatCard(item: XposedChatItem, selecting: Boolean, selected: B
                         onDragEnd = {
                             scope.launch {
                                 offsetX.animateTo(
-                                    targetValue = if (offsetX.value < -summaryActionWidthPx / 2f) -summaryActionWidthPx else 0f,
+                                    targetValue = if (offsetX.value < -summaryActionWidthPx / 2f) -summaryActionTotalPx else 0f,
                                     animationSpec = tween(200)
                                 )
                             }
@@ -453,7 +455,7 @@ private fun XposedChatCard(item: XposedChatItem, selecting: Boolean, selected: B
                         onHorizontalDrag = { change, dragAmount ->
                             change.consume()
                             scope.launch {
-                                offsetX.snapTo((offsetX.value + dragAmount).coerceIn(-summaryActionWidthPx, 0f))
+                                offsetX.snapTo((offsetX.value + dragAmount).coerceIn(-summaryActionTotalPx, 0f))
                             }
                         }
                     )

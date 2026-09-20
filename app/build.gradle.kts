@@ -128,6 +128,7 @@ dependencies {
     implementation(libs.haze)
     implementation(libs.haze.materials)
     implementation("io.noties.markwon:core:4.6.2")
+    implementation("io.noties.markwon:ext-tables:4.6.2")
     debugImplementation(libs.androidx.compose.ui.tooling)
     
     // Xposed API (libxposed, only for xposed flavor)

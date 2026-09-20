@@ -221,7 +221,10 @@ fun JistNavHost(
                 },
                 onDeleteSummaries = { ids -> viewModel.deleteSummaries(ids) },
                 onRefresh = { viewModel.refreshSummaries() },
-                isRefreshing = uiState.isRefreshing
+                isRefreshing = uiState.isRefreshing,
+                onLoadMore = { viewModel.loadMoreSummaries() },
+                isLoadingMore = uiState.isLoadingMore,
+                hasMore = uiState.hasMore
             )
         }
         composable("summary_detail/{summaryId}") { backStackEntry ->

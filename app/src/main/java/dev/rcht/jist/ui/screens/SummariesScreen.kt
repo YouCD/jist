@@ -8,9 +8,12 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
@@ -28,14 +31,18 @@ import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
@@ -61,11 +68,27 @@ fun SummariesScreen(
     onDeleteSummaries: (List<Long>) -> Unit = {},
     onRefresh: () -> Unit = {},
     isRefreshing: Boolean = false,
+    onLoadMore: () -> Unit = {},
+    isLoadingMore: Boolean = false,
+    hasMore: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     var isSelecting by remember { mutableStateOf(false) }
     var selectedIds by remember { mutableStateOf(setOf<Long>()) }
     var showDeleteConfirm by remember { mutableStateOf(false) }
+    var unreadExpanded by rememberSaveable { mutableStateOf(true) }
+    var readExpanded by rememberSaveable { mutableStateOf(false) }
+    val lazyListState = rememberLazyListState()
+    val shouldLoadMore by remember {
+        derivedStateOf {
+            val info = lazyListState.layoutInfo
+            info.totalItemsCount > 0 &&
+                (info.visibleItemsInfo.lastOrNull()?.index ?: 0) >= info.totalItemsCount - 3
+        }
+    }
+    LaunchedEffect(shouldLoadMore) {
+        if (shouldLoadMore && hasMore && !isLoadingMore) onLoadMore()
+    }
 
     GlassScaffold(
         modifier = modifier.fillMaxSize(),
@@ -163,33 +186,78 @@ fun SummariesScreen(
                         }
                     }
                 } else {
-                    LazyColumn {
-                        uiState.filteredSummaries.forEachIndexed { index, summary ->
-                            val selected = summary.id in selectedIds
-                            item(key = summary.id) {
-                                SummaryCard(
-                                    summary = summary,
-                                    onClick = { onSummaryClick(summary.id) },
-                                    onLongClick = {
-                                        if (!isSelecting) {
-                                            isSelecting = true
-                                            selectedIds = setOf(summary.id)
-                                        }
-                                    },
-                                    selected = selected,
-                                    isSelecting = isSelecting,
-                                    onSelectChange = { checked ->
-                                        selectedIds = if (checked) selectedIds + summary.id else selectedIds - summary.id
-                                    },
-                                    modifier = Modifier.fillMaxWidth()
+                    val unreadSummaries = uiState.filteredSummaries.filter { !it.isRead }
+                    val readSummaries = uiState.filteredSummaries.filter { it.isRead }
+                    LazyColumn(
+                        state = lazyListState,
+                        modifier = Modifier.fillMaxSize(),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        if (unreadSummaries.isNotEmpty()) {
+                            item(key = "header_unread") {
+                                SummarySectionHeader(
+                                    title = "未读",
+                                    isUnreadGroup = true,
+                                    isExpanded = unreadExpanded,
+                                    onToggle = { unreadExpanded = !unreadExpanded }
                                 )
                             }
-                            if (index < uiState.filteredSummaries.lastIndex) {
-                                item(key = "divider_${summary.id}") {
-                                    HorizontalDivider(
-                                        modifier = Modifier.padding(horizontal = 16.dp),
-                                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
+                            if (unreadExpanded) {
+                                items(unreadSummaries, key = { it.id }) { summary ->
+                                    SummaryItem(
+                                        summary = summary,
+                                        selected = summary.id in selectedIds,
+                                        isSelecting = isSelecting,
+                                        onClick = { onSummaryClick(summary.id) },
+                                        onLongClick = {
+                                            if (!isSelecting) {
+                                                isSelecting = true
+                                                selectedIds = setOf(summary.id)
+                                            }
+                                        },
+                                        onSelectChange = { checked ->
+                                            selectedIds = if (checked) selectedIds + summary.id else selectedIds - summary.id
+                                        }
                                     )
+                                }
+                            }
+                        }
+                        if (readSummaries.isNotEmpty()) {
+                            item(key = "header_read") {
+                                SummarySectionHeader(
+                                    title = "已读",
+                                    isUnreadGroup = false,
+                                    isExpanded = readExpanded,
+                                    onToggle = { readExpanded = !readExpanded }
+                                )
+                            }
+                            if (readExpanded) {
+                                items(readSummaries, key = { it.id }) { summary ->
+                                    SummaryItem(
+                                        summary = summary,
+                                        selected = summary.id in selectedIds,
+                                        isSelecting = isSelecting,
+                                        onClick = { onSummaryClick(summary.id) },
+                                        onLongClick = {
+                                            if (!isSelecting) {
+                                                isSelecting = true
+                                                selectedIds = setOf(summary.id)
+                                            }
+                                        },
+                                        onSelectChange = { checked ->
+                                            selectedIds = if (checked) selectedIds + summary.id else selectedIds - summary.id
+                                        }
+                                    )
+                                }
+                            }
+                        }
+                        if (isLoadingMore) {
+                            item(key = "loading_more") {
+                                Box(
+                                    modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    CircularProgressIndicator(modifier = Modifier.size(24.dp))
                                 }
                             }
                         }
@@ -221,6 +289,61 @@ fun SummariesScreen(
                     Text(stringResource(R.string.summaries_delete_cancel))
                 }
             }
+        )
+    }
+}
+
+@Composable
+private fun SummaryItem(
+    summary: dev.rcht.jist.data.db.entity.SummaryEntity,
+    selected: Boolean,
+    isSelecting: Boolean,
+    onClick: () -> Unit,
+    onLongClick: () -> Unit,
+    onSelectChange: (Boolean) -> Unit
+) {
+    SummaryCard(
+        summary = summary,
+        onClick = onClick,
+        onLongClick = onLongClick,
+        selected = selected,
+        isSelecting = isSelecting,
+        onSelectChange = onSelectChange,
+        modifier = Modifier.fillMaxWidth()
+    )
+}
+
+@Composable
+private fun SummarySectionHeader(title: String, isUnreadGroup: Boolean, isExpanded: Boolean, onToggle: () -> Unit) {
+    val rotation = if (isExpanded) 0f else -90f
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(8.dp))
+            .clickable(onClick = onToggle)
+            .padding(top = 12.dp, bottom = 4.dp, start = 8.dp, end = 8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        if (isUnreadGroup) {
+            Box(
+                modifier = Modifier
+                    .size(8.dp)
+                    .background(MaterialTheme.colorScheme.primary, CircleShape)
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+        }
+        Text(
+            text = title,
+            style = MaterialTheme.typography.labelLarge,
+            fontWeight = FontWeight.SemiBold,
+            color = if (isUnreadGroup) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Spacer(modifier = Modifier.weight(1f))
+        Icon(
+            imageVector = Icons.Default.KeyboardArrowDown,
+            contentDescription = if (isExpanded) "收起" else "展开",
+            modifier = Modifier.size(16.dp).rotate(rotation),
+            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
         )
     }
 }

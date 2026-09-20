@@ -9,11 +9,15 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
+private const val PAGE_SIZE = 20
+
 data class SummariesUiState(
     val summaries: List<SummaryEntity> = emptyList(),
     val filteredSummaries: List<SummaryEntity> = emptyList(),
     val isLoading: Boolean = true,
     val isRefreshing: Boolean = false,
+    val isLoadingMore: Boolean = false,
+    val hasMore: Boolean = false,
     val error: String? = null,
     val searchQuery: String = "",
     val selectedAppFilter: String? = null
@@ -40,16 +44,43 @@ class SummariesViewModel(
         viewModelScope.launch(Dispatchers.IO) {
             _uiState.value = _uiState.value.copy(isLoading = true)
             try {
-                val summaries = sortSummaries(summaryRepository.getAll())
+                val page = summaryRepository.getRecent(PAGE_SIZE, 0)
+                val sorted = sortSummaries(page)
                 _uiState.value = _uiState.value.copy(
-                    summaries = summaries,
-                    filteredSummaries = summaries,
+                    summaries = sorted,
+                    filteredSummaries = sorted,
                     isLoading = false,
+                    hasMore = page.size == PAGE_SIZE,
                     error = null
                 )
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
+                    error = "Error loading summaries: ${e.message}"
+                )
+            }
+        }
+    }
+
+    fun loadMoreSummaries() {
+        val state = _uiState.value
+        if (state.isLoading || state.isLoadingMore || !state.hasMore) return
+        if (state.searchQuery.isNotBlank() || state.selectedAppFilter != null) return
+        viewModelScope.launch(Dispatchers.IO) {
+            _uiState.value = _uiState.value.copy(isLoadingMore = true)
+            try {
+                val offset = _uiState.value.summaries.size
+                val page = summaryRepository.getRecent(PAGE_SIZE, offset)
+                val merged = sortSummaries(_uiState.value.summaries + page)
+                _uiState.value = _uiState.value.copy(
+                    summaries = merged,
+                    filteredSummaries = merged,
+                    isLoadingMore = false,
+                    hasMore = page.size == PAGE_SIZE
+                )
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(
+                    isLoadingMore = false,
                     error = "Error loading summaries: ${e.message}"
                 )
             }
@@ -83,10 +114,11 @@ class SummariesViewModel(
                     summaryRepository.getAll()
                 }
             }
-            
+
             val sorted = sortSummaries(filtered)
             _uiState.value = _uiState.value.copy(
-                filteredSummaries = sorted
+                filteredSummaries = sorted,
+                hasMore = false
             )
         }
     }
@@ -96,11 +128,13 @@ class SummariesViewModel(
         viewModelScope.launch(Dispatchers.IO) {
             _uiState.value = _uiState.value.copy(isRefreshing = true)
             try {
-                val summaries = sortSummaries(summaryRepository.getAll())
+                val page = summaryRepository.getRecent(PAGE_SIZE, 0)
+                val sorted = sortSummaries(page)
                 _uiState.value = _uiState.value.copy(
-                    summaries = summaries,
-                    filteredSummaries = summaries,
+                    summaries = sorted,
+                    filteredSummaries = sorted,
                     isRefreshing = false,
+                    hasMore = page.size == PAGE_SIZE,
                     error = null
                 )
             } catch (e: Exception) {

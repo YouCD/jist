@@ -10,6 +10,7 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
 import io.noties.markwon.Markwon
+import io.noties.markwon.ext.tables.TablePlugin
 
 @Composable
 fun MarkdownText(
@@ -18,7 +19,11 @@ fun MarkdownText(
     maxLines: Int = Int.MAX_VALUE
 ) {
     val context = LocalContext.current
-    val markwon = remember(markdown) { Markwon.builder(context).build() }
+    val markwon = remember(context) {
+        Markwon.builder(context)
+            .usePlugin(TablePlugin.create(context))
+            .build()
+    }
     val textColor = MaterialTheme.colorScheme.onSurface
 
     AndroidView(
