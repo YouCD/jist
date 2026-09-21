@@ -8,6 +8,7 @@ import dev.rcht.jist.data.db.entity.LlmConfigEntity
 import dev.rcht.jist.data.repository.LlmConfigRepository
 import dev.rcht.jist.llm.LlmClientFactory
 import dev.rcht.jist.llm.LlmRequestConfig
+import dev.rcht.jist.llm.parseCustomHeaders
 import dev.rcht.jist.llm.client.OpenAiCompatibleClient
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -18,7 +19,9 @@ import okhttp3.OkHttpClient
 data class LlmConfigUiState(
     val configs: List<LlmConfigEntity> = emptyList(),
     val selectedConfig: LlmConfigEntity? = null,
-    val providers: List<String> = listOf("OPENAI", "CLAUDE", "CUSTOM"),
+    // 保存成功后变化，屏幕据此收起键盘（退出编辑态，表单值保留）
+    val savedToken: Long = 0L,
+    val providers: List<String> = listOf("OPENAI", "ANTHROPIC", "CUSTOM"),
     val isLoading: Boolean = false,
     val testConnectionLoading: Boolean = false,
     val testConnectionResult: String? = null,
@@ -70,7 +73,11 @@ class LlmConfigViewModel(
                     llmConfigRepository.setDefault(config)
                 }
                 loadConfigs()
-                _uiState.value = _uiState.value.copy(error = null)
+                // 保存成功：留在本页、保留表单值，仅通知屏幕收起键盘退出编辑态
+                _uiState.value = _uiState.value.copy(
+                    error = null,
+                    savedToken = System.currentTimeMillis()
+                )
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(
                     error = context.getString(R.string.llm_error_saving, e.message ?: "")
@@ -121,7 +128,8 @@ class LlmConfigViewModel(
                     maxTokens = 50,
                     temperature = 0.7f,
                     apiKey = config.apiKey,
-                    baseUrl = config.baseUrl
+                    baseUrl = config.baseUrl,
+                    extraHeaders = parseCustomHeaders(config.customHeaders)
                 )
 
                 val result = llmClient.complete(testMessages, requestConfig)

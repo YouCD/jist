@@ -24,6 +24,9 @@ navigationCompose = "2.8.2"
 lifecycleRuntimeCompose = "2.10.0"
 haze = "1.7.2"
 hazeMaterials = "1.7.2"
+mcpSdk = "0.15.0"
+nanohttpd = "2.3.1"
+slf4jApi = "2.0.18"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -59,6 +62,10 @@ androidx-navigation-compose = { group = "androidx.navigation", name = "navigatio
 androidx-activity-compose = { group = "androidx.activity", name = "activity-compose", version = "1.10.1" }
 haze = { group = "dev.chrisbanes.haze", name = "haze", version.ref = "haze" }
 haze-materials = { group = "dev.chrisbanes.haze", name = "haze-materials", version.ref = "hazeMaterials" }
+mcp-kotlin-sdk-core = { group = "io.modelcontextprotocol", name = "kotlin-sdk-core", version.ref = "mcpSdk" }
+mcp-kotlin-sdk-server = { group = "io.modelcontextprotocol", name = "kotlin-sdk-server", version.ref = "mcpSdk" }
+nanohttpd = { group = "org.nanohttpd", name = "nanohttpd", version.ref = "nanohttpd" }
+slf4j-api = { group = "org.slf4j", name = "slf4j-api", version.ref = "slf4jApi" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

@@ -13,6 +13,7 @@ import dev.rcht.jist.JistApplication
 import dev.rcht.jist.data.db.entity.SummaryEntity
 import dev.rcht.jist.llm.LlmClientFactory
 import dev.rcht.jist.llm.LlmRequestConfig
+import dev.rcht.jist.llm.parseCustomHeaders
 import dev.rcht.jist.llm.LlmResult
 import dev.rcht.jist.llm.NotificationForSummary
 import dev.rcht.jist.llm.PromptBuilder
@@ -71,14 +72,17 @@ class SummaryWorker(context: Context, params: WorkerParameters) :
 
     private suspend fun summarizeXposedChats(): List<SummaryEntity> {
         val config = app.llmConfigRepository.getDefault() ?: return emptyList()
-        val chats = app.watchedChatRepository.getAll().filter { it.isSummarized }
+        // isEnabled guard: chats "deleted" via the UI are soft-disabled and
+        // must not keep getting summarized in the background.
+        val chats = app.watchedChatRepository.getAll().filter { it.isEnabled && it.isSummarized }
         if (chats.isEmpty()) return emptyList()
 
         val client = LlmClientFactory.createClient(config, app.httpClient)
         val llmConfig = LlmRequestConfig(
             model = config.modelId, maxTokens = config.maxTokens,
             temperature = config.temperature, apiKey = config.apiKey,
-            baseUrl = config.baseUrl
+            baseUrl = config.baseUrl,
+            extraHeaders = parseCustomHeaders(config.customHeaders)
         )
         val results = mutableListOf<SummaryEntity>()
 
@@ -120,9 +124,6 @@ class SummaryWorker(context: Context, params: WorkerParameters) :
                         val id = app.summaryRepository.insert(summary)
                         results.add(summary.copy(id = id))
 
-                        val webhookPrefs = app.preferencesRepository.preferencesFlow.first()
-                        app.webhookService.sendAsync(summary.copy(id = id), webhookPrefs)
-
                         Log.i(TAG, "Xposed summary: ${chat.chatName} (${messages.size} msgs)")
                     }
                     is LlmResult.Error -> Log.w(TAG, "Xposed summary error ${chat.chatName}: ${result.error.message}")
@@ -140,7 +141,9 @@ class SummaryWorker(context: Context, params: WorkerParameters) :
         for (chat in chats) {
             if (chat.retentionDays > 0) {
                 val cutoff = now - chat.retentionDays * 86400_000L
-                app.chatMessageRepository.deleteOlderThan(cutoff)
+                // Per-chat scope: the global deleteOlderThan(before) would let
+                // one chat's short retention wipe other chats' history.
+                app.chatMessageRepository.deleteOlderThan(chat.id, cutoff)
                 Log.i(TAG, "Retention cleanup: ${chat.chatName} (${chat.retentionDays}d)")
             }
         }

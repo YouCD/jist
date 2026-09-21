@@ -33,6 +33,9 @@ interface ChatMessageDao {
     @Query("SELECT COUNT(*) FROM chat_messages WHERE watchedChatId = :chatId")
     suspend fun countByWatchedChat(chatId: Long): Int
 
+    @Query("SELECT MAX(timestamp) FROM chat_messages WHERE watchedChatId = :chatId")
+    suspend fun maxTimestampByWatchedChat(chatId: Long): Long?
+
     @Query("DELETE FROM chat_messages WHERE id IN (:ids)")
     suspend fun deleteByIds(vararg ids: Long)
 
@@ -41,4 +44,7 @@ interface ChatMessageDao {
 
     @Query("DELETE FROM chat_messages WHERE timestamp < :before")
     suspend fun deleteOlderThan(before: Long)
+
+    @Query("DELETE FROM chat_messages WHERE watchedChatId = :chatId AND timestamp < :before")
+    suspend fun deleteOlderThan(chatId: Long, before: Long)
 }

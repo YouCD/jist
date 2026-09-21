@@ -99,13 +99,17 @@ object XposedHelpers {
             param.thisObject = chain.thisObject
             param.args = chain.args
             hook.beforeHookedMethod(param)
-            param.result = try {
-                chain.proceed()
+            val threw: Throwable? = try {
+                param.result = chain.proceed()
+                null
             } catch (t: Throwable) {
                 param.throwable = t
-                null
+                t
             }
             hook.afterHookedMethod(param)
+            // Re-throw the original exception: swallowing it would change the
+            // host app's error handling (e.g. WeChat reacting to DB failures).
+            if (threw != null) throw threw
             param.result
         }
     }

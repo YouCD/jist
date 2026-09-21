@@ -86,7 +86,8 @@ class JistContentProvider : ContentProvider() {
 
         val existing = runBlocking { app.watchedChatRepository.getByChatKey(sourceId, chatId) }
         if (existing != null) {
-            runBlocking { app.watchedChatRepository.setEnabled(existing.id, true) }
+            // Do NOT force re-enable: a chat the user disabled/"deleted" must
+            // stay hidden even when new messages arrive from the module.
             return Uri.withAppendedPath(uri, existing.id.toString())
         }
 

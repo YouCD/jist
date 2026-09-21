@@ -18,10 +18,13 @@ import dev.rcht.jist.data.repository.WatchCollectedItemRepository
 import dev.rcht.jist.data.repository.WatchTopicRepository
 import dev.rcht.jist.engine.SummaryEngine
 import dev.rcht.jist.engine.WatchEngine
-import dev.rcht.jist.webhook.WebhookService
+import dev.rcht.jist.mcp.JistMcpServer
+import dev.rcht.jist.mcp.McpToolHandlers
 import dev.rcht.jist.worker.SummaryWorker
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.flow.first
@@ -51,12 +54,14 @@ class JistApplication : Application() {
     lateinit var watchedChatRepository: WatchedChatRepository
     lateinit var chatMessageRepository: ChatMessageRepository
 
-    // Webhook
-    lateinit var webhookService: WebhookService
-
     // Engines
     lateinit var summaryEngine: SummaryEngine
     lateinit var watchEngine: WatchEngine
+
+    // MCP server (read-only query endpoint for external agents)
+    lateinit var mcpServer: JistMcpServer
+
+    private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     
     override fun onCreate() {
         super.onCreate()
@@ -103,9 +108,6 @@ class JistApplication : Application() {
         }
 
 
-        // Initialize webhook service
-        webhookService = WebhookService(httpClient)
-
         // Initialize engines
         summaryEngine = SummaryEngine(
             this,
@@ -114,8 +116,7 @@ class JistApplication : Application() {
             llmConfigRepository,
             appRuleRepository,
             preferencesRepository,
-            httpClient,
-            webhookService
+            httpClient
         )
         watchEngine = WatchEngine(
             this,
@@ -124,7 +125,25 @@ class JistApplication : Application() {
             llmConfigRepository,
             httpClient
         )
-        
+
+        // Initialize MCP server (started only when enabled in settings)
+        mcpServer = JistMcpServer(
+            this,
+            preferencesRepository,
+            McpToolHandlers(
+                notificationRepository,
+                chatSourceRepository,
+                watchedChatRepository,
+                chatMessageRepository
+            )
+        )
+        appScope.launch {
+            val prefs = preferencesRepository.preferencesFlow.first()
+            if (prefs.mcpEnabled) {
+                mcpServer.start()
+            }
+        }
+
         // Schedule periodic summarization
         SummaryWorker.schedule(this)
         
@@ -132,6 +151,11 @@ class JistApplication : Application() {
         createNotificationChannels()
     }
     
+    override fun onTerminate() {
+        super.onTerminate()
+        appScope.cancel()
+    }
+
     private fun createNotificationChannels() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager

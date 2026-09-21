@@ -7,10 +7,10 @@ import dev.rcht.jist.data.repository.LlmConfigRepository
 import dev.rcht.jist.data.repository.NotificationRepository
 import dev.rcht.jist.data.preferences.PreferencesRepository
 import dev.rcht.jist.data.repository.SummaryRepository
-import dev.rcht.jist.webhook.WebhookService
 import dev.rcht.jist.llm.LlmClient
 import dev.rcht.jist.llm.LlmClientFactory
 import dev.rcht.jist.llm.LlmRequestConfig
+import dev.rcht.jist.llm.parseCustomHeaders
 import dev.rcht.jist.llm.LlmResult
 import dev.rcht.jist.llm.NotificationForSummary
 import dev.rcht.jist.llm.PromptBuilder
@@ -28,8 +28,7 @@ class SummaryEngine(
     private val llmConfigRepository: LlmConfigRepository,
     private val appRuleRepository: AppRuleRepository,
     private val preferencesRepository: PreferencesRepository,
-    private val httpClient: OkHttpClient,
-    private val webhookService: WebhookService
+    private val httpClient: OkHttpClient
 ) {
 
     private val promptBuilder = PromptBuilder()
@@ -104,7 +103,8 @@ class SummaryEngine(
                 maxTokens = llmConfig.maxTokens,
                 temperature = llmConfig.temperature,
                 apiKey = llmConfig.apiKey,
-                baseUrl = llmConfig.baseUrl
+                baseUrl = llmConfig.baseUrl,
+                extraHeaders = parseCustomHeaders(llmConfig.customHeaders)
             )
 
             val response = client.complete(messages, llmConfig_)
@@ -130,10 +130,6 @@ class SummaryEngine(
                     )
 
                     val summaryId = summaryRepository.insert(summaryEntity)
-
-                    // Fire webhook after successful save
-                    val webhookPrefs = preferencesRepository.preferencesFlow.first()
-                    webhookService.sendAsync(summaryEntity, webhookPrefs)
 
                     // Mark notifications as summarized
                     notifications.forEach { notification ->

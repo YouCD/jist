@@ -23,7 +23,15 @@ class ChatMessageRepository(private val dao: ChatMessageDao) {
 
     suspend fun countByWatchedChat(chatId: Long): Int = dao.countByWatchedChat(chatId)
 
+    suspend fun maxTimestampByWatchedChat(chatId: Long): Long? = dao.maxTimestampByWatchedChat(chatId)
+
     suspend fun deleteByIds(vararg ids: Long) = dao.deleteByIds(*ids)
 
+    suspend fun deleteByWatchedChat(chatId: Long) = dao.deleteByWatchedChat(chatId)
+
     suspend fun deleteOlderThan(before: Long) = dao.deleteOlderThan(before)
+
+    /** Delete only the given chat's messages older than [before]. */
+    suspend fun deleteOlderThan(chatId: Long, before: Long) =
+        dao.deleteOlderThan(chatId, before)
 }

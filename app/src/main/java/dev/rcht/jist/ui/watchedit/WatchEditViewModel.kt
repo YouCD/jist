@@ -9,6 +9,7 @@ import dev.rcht.jist.data.repository.WatchTopicRepository
 import dev.rcht.jist.llm.LlmClient
 import dev.rcht.jist.llm.LlmClientFactory
 import dev.rcht.jist.llm.LlmRequestConfig
+import dev.rcht.jist.llm.parseCustomHeaders
 import dev.rcht.jist.llm.LlmResult
 import dev.rcht.jist.llm.model.ChatMessage
 import kotlinx.coroutines.Dispatchers
@@ -125,7 +126,8 @@ class WatchEditViewModel(
                     maxTokens = 256,
                     temperature = 0.3f,
                     apiKey = config.apiKey,
-                    baseUrl = config.baseUrl
+                    baseUrl = config.baseUrl,
+                    extraHeaders = parseCustomHeaders(config.customHeaders)
                 )
                 val promptText = keywordPromptTemplate
                     .replace("{title}", state.title)

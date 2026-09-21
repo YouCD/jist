@@ -16,6 +16,7 @@ import dev.rcht.jist.llm.LlmResult
 import dev.rcht.jist.llm.NotificationForSummary
 import dev.rcht.jist.llm.PromptBuilder
 import dev.rcht.jist.llm.LlmRequestConfig
+import dev.rcht.jist.llm.parseCustomHeaders
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -135,7 +136,8 @@ class XposedChatDetailViewModel(
                     maxTokens = config.maxTokens,
                     temperature = config.temperature,
                     apiKey = config.apiKey,
-                    baseUrl = config.baseUrl
+                    baseUrl = config.baseUrl,
+                    extraHeaders = parseCustomHeaders(config.customHeaders)
                 )
                 val result = client.complete(llmMessages, llmConfig)
 

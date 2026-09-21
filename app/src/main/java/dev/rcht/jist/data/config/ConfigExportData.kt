@@ -31,7 +31,8 @@ data class LlmConfigDto(
     val modelId: String,
     val isDefault: Boolean = false,
     val maxTokens: Int = 512,
-    val temperature: Float = 0.3f
+    val temperature: Float = 0.3f,
+    val customHeaders: String = ""
 )
 
 @Serializable
@@ -125,7 +126,8 @@ fun LlmConfigEntity.toDto() = LlmConfigDto(
     modelId = modelId,
     isDefault = isDefault,
     maxTokens = maxTokens,
-    temperature = temperature
+    temperature = temperature,
+    customHeaders = customHeaders
 )
 
 fun LlmConfigDto.toEntity() = LlmConfigEntity(
@@ -136,7 +138,8 @@ fun LlmConfigDto.toEntity() = LlmConfigEntity(
     modelId = modelId,
     isDefault = isDefault,
     maxTokens = maxTokens,
-    temperature = temperature
+    temperature = temperature,
+    customHeaders = customHeaders
 )
 
 fun AppRuleEntity.toDto() = AppRuleDto(

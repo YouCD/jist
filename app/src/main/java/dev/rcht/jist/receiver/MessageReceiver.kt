@@ -29,15 +29,13 @@ class MessageReceiver : BroadcastReceiver() {
                 val source = app.chatSourceRepository.getOrCreate(pkg, intent.getStringExtra("appDisplayName") ?: pkg)
 
                 val existingChat = app.watchedChatRepository.getByChatKey(source.id, chatId)
-                if (existingChat != null) {
-                    if (!existingChat.isEnabled) {
-                        app.watchedChatRepository.setEnabled(existingChat.id, true)
-                    }
-                } else {
+                if (existingChat == null) {
                     app.watchedChatRepository.insert(
                         WatchedChatEntity(sourceId = source.id, chatId = chatId, chatName = chatName)
                     )
                 }
+                // Do NOT re-enable an existing chat: a chat the user disabled or
+                // "deleted" must stay hidden even when new messages arrive.
                 val watched = app.watchedChatRepository.getByChatKey(source.id, chatId) ?: return@runBlocking
 
                 val message = ChatMessageEntity(

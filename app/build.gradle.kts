@@ -110,6 +110,29 @@ dependencies {
     implementation(libs.gson)
     implementation(libs.kotlinx.serialization.json)
     
+    // MCP Server (external agent integration).
+    // The published SDK modules list Ktor server transports and a newer
+    // kotlin-stdlib as runtime deps; we only use the pure-protocol classes
+    // (Server / ServerSession / ToolRegistry) + our own NanoHTTPD transport,
+    // so exclude Ktor and stdlib to keep the APK lean and stay on the
+    // project's stdlib (the AGP-pinned Kotlin compiler can't read 2.4 metadata).
+    implementation(libs.mcp.kotlin.sdk.core) {
+        exclude(group = "io.ktor")
+        exclude(group = "org.jetbrains.kotlin", module = "kotlin-stdlib")
+        exclude(group = "org.jetbrains.kotlin", module = "kotlin-stdlib-jdk7")
+        exclude(group = "org.jetbrains.kotlin", module = "kotlin-stdlib-jdk8")
+    }
+    implementation(libs.mcp.kotlin.sdk.server) {
+        exclude(group = "io.ktor")
+        exclude(group = "org.jetbrains.kotlin", module = "kotlin-stdlib")
+        exclude(group = "org.jetbrains.kotlin", module = "kotlin-stdlib-jdk7")
+        exclude(group = "org.jetbrains.kotlin", module = "kotlin-stdlib-jdk8")
+    }
+    implementation(libs.nanohttpd)
+    // kotlin-logging (transitive of MCP SDK) routes through slf4j, but its
+    // Android variant POM drops the slf4j-api dep → add explicitly (NOP logger, no binding)
+    implementation(libs.slf4j.api)
+    
     // WorkManager
     implementation(libs.androidx.work.runtime.ktx)
     

@@ -14,6 +14,7 @@ import dev.rcht.jist.data.repository.SummaryRepository
 import dev.rcht.jist.data.repository.WatchedChatRepository
 import dev.rcht.jist.llm.LlmClientFactory
 import dev.rcht.jist.llm.LlmRequestConfig
+import dev.rcht.jist.llm.parseCustomHeaders
 import dev.rcht.jist.llm.LlmResult
 import dev.rcht.jist.llm.NotificationForSummary
 import dev.rcht.jist.llm.PromptBuilder
@@ -177,7 +178,15 @@ class XposedChatsViewModel(
     fun deleteChats(ids: List<Long>) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                ids.forEach { watchedChatRepository.deleteById(it) }
+                for (id in ids) {
+                    // Soft delete: keep the row disabled instead of removing it,
+                    // otherwise the Xposed module would recreate the chat on the
+                    // next incoming message and the "deleted" chat would come
+                    // back to life. Messages are removed explicitly.
+                    val chat = watchedChatRepository.getAll().find { it.id == id } ?: continue
+                    chatMessageRepository.deleteByWatchedChat(chat.id)
+                    watchedChatRepository.setEnabled(chat.id, false)
+                }
                 loadData()
             } catch (e: Exception) {
                 Log.e(TAG, "Error deleting chats $ids", e)
@@ -189,6 +198,9 @@ class XposedChatsViewModel(
     var summarizingChatName: String? = null
 
     fun summarizeChat(chatId: Long) {
+        // Guard against double-triggering (e.g. a second tap while the first
+        // summarization is still running) which would insert duplicate summaries.
+        if (summarizingChatId == chatId) return
         val chat = runBlocking { watchedChatRepository.getAll().find { it.id == chatId } } ?: return
         val source = runBlocking { chatSourceRepository.getEnabled().find { it.id == chat.sourceId } }
         val messages = runBlocking { chatMessageRepository.getByWatchedChat(chatId) }
@@ -237,7 +249,8 @@ class XposedChatsViewModel(
                     maxTokens = llmConfig.maxTokens,
                     temperature = llmConfig.temperature,
                     apiKey = llmConfig.apiKey,
-                    baseUrl = llmConfig.baseUrl
+                    baseUrl = llmConfig.baseUrl,
+                    extraHeaders = parseCustomHeaders(llmConfig.customHeaders)
                 )) }
 
                 when (result) {

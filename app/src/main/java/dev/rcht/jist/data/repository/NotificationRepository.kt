@@ -1,6 +1,7 @@
 package dev.rcht.jist.data.repository
 
 import dev.rcht.jist.data.db.dao.NotificationDao
+import dev.rcht.jist.data.db.entity.ConversationRow
 import dev.rcht.jist.data.db.entity.NotificationEntity
 
 class NotificationRepository(private val notificationDao: NotificationDao) {
@@ -87,5 +88,17 @@ class NotificationRepository(private val notificationDao: NotificationDao) {
     
     suspend fun getByConversationKey(key: String): List<NotificationEntity> {
         return notificationDao.getByConversationKey(key)
+    }
+
+    suspend fun getByConversationKeyAndTimeRange(key: String, timeFrom: Long, timeTo: Long): List<NotificationEntity> {
+        return notificationDao.getByConversationKeyAndTimeRange(key, timeFrom, timeTo)
+    }
+
+    suspend fun listConversations(): List<ConversationRow> {
+        return notificationDao.listConversations()
+    }
+
+    suspend fun oldestTimestamp(): Long? {
+        return notificationDao.oldestTimestamp()
     }
 }

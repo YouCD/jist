@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.core.app.NotificationManagerCompat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import dev.rcht.jist.JistApplication
 import dev.rcht.jist.data.preferences.PreferencesRepository
 import dev.rcht.jist.data.repository.AppRuleRepository
 import dev.rcht.jist.data.repository.LlmConfigRepository
@@ -24,18 +25,20 @@ data class SettingsUiState(
     val hasSystemNotificationPermission: Boolean = false,
     val dailyDigestTime: String = "08:00 AM",
     val version: String = "1.0.0",
-    val webhookEnabled: Boolean = false,
-    val webhookUrl: String = "",
-    val webhookHttpMethod: String = "POST",
-    val webhookMessageTemplate: String = "",
-    val webhookCustomHeaders: String = ""
+    val mcpEnabled: Boolean = false,
+    val mcpToken: String = "",
+    val mcpPort: Int = 8765,
+    val mcpAllowLan: Boolean = false,
+    val mcpRunning: Boolean = false,
+    val mcpError: String? = null
 )
 
 class SettingsViewModel(
     private val context: Context,
     private val preferencesRepository: PreferencesRepository,
     private val appRuleRepository: AppRuleRepository,
-    private val llmConfigRepository: LlmConfigRepository
+    private val llmConfigRepository: LlmConfigRepository,
+    private val japp: JistApplication
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(SettingsUiState())
@@ -75,11 +78,12 @@ class SettingsViewModel(
                     llmModelName = modelName,
                     notificationsEnabled = hasSystemPermission && prefs.notificationsEnabled,
                     hasSystemNotificationPermission = hasSystemPermission,
-                    webhookEnabled = prefs.webhookEnabled,
-                    webhookUrl = prefs.webhookUrl,
-                    webhookHttpMethod = prefs.webhookHttpMethod,
-                    webhookMessageTemplate = prefs.webhookMessageTemplate,
-                    webhookCustomHeaders = prefs.webhookCustomHeaders
+                    mcpEnabled = prefs.mcpEnabled,
+                    mcpToken = prefs.mcpToken,
+                    mcpPort = prefs.mcpPort,
+                    mcpAllowLan = prefs.mcpAllowLan,
+                    mcpRunning = japp.mcpServer.isRunning,
+                    mcpError = japp.mcpServer.lastError
                 )
             }
         }
@@ -164,33 +168,38 @@ class SettingsViewModel(
         }
     }
 
-    fun setWebhookEnabled(enabled: Boolean) {
+    fun setMcpEnabled(enabled: Boolean) {
         viewModelScope.launch {
-            preferencesRepository.setWebhookEnabled(enabled)
+            preferencesRepository.setMcpEnabled(enabled)
+            japp.mcpServer.applyEnabled(enabled)
+            _uiState.value = _uiState.value.copy(
+                mcpEnabled = enabled,
+                mcpRunning = japp.mcpServer.isRunning,
+                mcpError = japp.mcpServer.lastError
+            )
         }
     }
 
-    fun setWebhookUrl(url: String) {
+    fun setMcpAllowLan(allowLan: Boolean) {
         viewModelScope.launch {
-            preferencesRepository.setWebhookUrl(url)
+            preferencesRepository.setMcpAllowLan(allowLan)
+            if (japp.mcpServer.isRunning) {
+                japp.mcpServer.restart()
+            }
+            _uiState.value = _uiState.value.copy(
+                mcpAllowLan = allowLan,
+                mcpRunning = japp.mcpServer.isRunning,
+                mcpError = japp.mcpServer.lastError
+            )
         }
     }
 
-    fun setWebhookHttpMethod(method: String) {
+    fun regenerateMcpToken(onDone: (String) -> Unit = {}) {
         viewModelScope.launch {
-            preferencesRepository.setWebhookHttpMethod(method)
-        }
-    }
-
-    fun setWebhookMessageTemplate(template: String) {
-        viewModelScope.launch {
-            preferencesRepository.setWebhookMessageTemplate(template)
-        }
-    }
-
-    fun setWebhookCustomHeaders(headers: String) {
-        viewModelScope.launch {
-            preferencesRepository.setWebhookCustomHeaders(headers)
+            val token = preferencesRepository.regenerateMcpToken()
+            japp.mcpServer.updateToken(token)
+            _uiState.value = _uiState.value.copy(mcpToken = token)
+            onDone(token)
         }
     }
 }

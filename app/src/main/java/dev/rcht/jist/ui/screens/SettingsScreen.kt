@@ -3,11 +3,8 @@ package dev.rcht.jist.ui.screens
 import dev.rcht.jist.R
 import android.content.Intent
 import android.provider.Settings
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForwardIos
@@ -21,11 +18,11 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.ViewModel
@@ -37,7 +34,6 @@ import dev.rcht.jist.data.config.ConfigManager
 import dev.rcht.jist.ui.settings.SettingsViewModel
 import dev.rcht.jist.ui.components.GlassScaffold
 import dev.rcht.jist.ui.components.JistSnackbarHost
-import dev.rcht.jist.webhook.WebhookService
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
@@ -56,7 +52,7 @@ fun SettingsScreen(
         factory = object : ViewModelProvider.Factory {
             override fun <T : ViewModel> create(modelClass: Class<T>): T {
                 @Suppress("UNCHECKED_CAST")
-                return SettingsViewModel(context, app.preferencesRepository, app.appRuleRepository, app.llmConfigRepository) as T
+                return SettingsViewModel(context, app.preferencesRepository, app.appRuleRepository, app.llmConfigRepository, app) as T
             }
         }
     )
@@ -64,12 +60,16 @@ fun SettingsScreen(
 
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
+    val clipboardManager = LocalClipboardManager.current
+    val copyText: (String, String) -> Unit = { text, msg ->
+        clipboardManager.setText(AnnotatedString(text))
+        scope.launch { snackbarHostState.showSnackbar(msg) }
+    }
     val configManager = remember {
         ConfigManager(context, app.preferencesRepository, app.llmConfigRepository, app.appRuleRepository, app.customPromptRepository, app.watchTopicRepository, app.chatSourceRepository, app.watchedChatRepository)
     }
 
     var showStyleDialog by remember { mutableStateOf(false) }
-    var showWebhookDialog by remember { mutableStateOf(false) }
     var showImportConfirmDialog by remember { mutableStateOf(false) }
     var pendingImportJson by remember { mutableStateOf<String?>(null) }
 
@@ -230,22 +230,94 @@ fun SettingsScreen(
                 }
             }
 
-            // Webhook Section
+            // MCP Section
             item {
-                SettingsSection(title = stringResource(R.string.settings_webhook_section)) {
+                SettingsSection(title = "MCP 服务（外部 Agent 接入）") {
                     SettingsSwitchItem(
-                        icon = Icons.Outlined.Http,
-                        title = stringResource(R.string.settings_webhook_enable),
-                        checked = uiState.webhookEnabled,
-                        onCheckedChange = { viewModel.setWebhookEnabled(it) }
+                        icon = Icons.Outlined.Lan,
+                        title = "启用 MCP 服务（只读查询）",
+                        checked = uiState.mcpEnabled,
+                        onCheckedChange = { viewModel.setMcpEnabled(it) }
                     )
-                    if (uiState.webhookEnabled) {
+                    if (uiState.mcpEnabled) {
+                        if (uiState.mcpError != null) {
+                            Text(
+                                text = "⚠️ ${uiState.mcpError}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.error,
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
+                            )
+                        } else if (uiState.mcpRunning) {
+                            Text(
+                                text = "运行中：http://${if (uiState.mcpAllowLan) "0.0.0.0" else "127.0.0.1"}:${uiState.mcpPort}/mcp",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
+                            )
+                        }
                         Divider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha=0.2f))
                         SettingsItem(
-                            icon = Icons.Outlined.Settings,
-                            title = stringResource(R.string.settings_webhook_url),
-                            value = uiState.webhookUrl.ifBlank { stringResource(R.string.not_configured) },
-                            onClick = { showWebhookDialog = true }
+                            icon = Icons.Outlined.Key,
+                            title = "认证 Token",
+                            value = if (uiState.mcpToken.length > 12) uiState.mcpToken.take(8) + "…" else uiState.mcpToken,
+                            trailingIcon = Icons.Outlined.ContentCopy,
+                            onClick = { copyText(uiState.mcpToken, "Token 已复制") }
+                        )
+                        SettingsItem(
+                            icon = Icons.Outlined.Sync,
+                            title = "重新生成 Token",
+                            showChevron = false,
+                            trailingIcon = Icons.Outlined.ContentCopy,
+                            onClick = { viewModel.regenerateMcpToken { copyText(it, "已生成新 Token") } }
+                        )
+                        SettingsItem(
+                            icon = Icons.Outlined.Numbers,
+                            title = "端口",
+                            value = uiState.mcpPort.toString(),
+                            showChevron = false,
+                            onClick = {}
+                        )
+                        SettingsSwitchItem(
+                            icon = Icons.Outlined.Lan,
+                            title = "允许局域网访问（0.0.0.0）",
+                            checked = uiState.mcpAllowLan,
+                            onCheckedChange = { viewModel.setMcpAllowLan(it) }
+                        )
+                        if (!uiState.mcpAllowLan) {
+                            Divider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha=0.2f))
+                            SettingsItem(
+                                icon = Icons.Outlined.Terminal,
+                                title = "USB 转发命令（电脑连接手机后执行）",
+                                value = "adb reverse tcp:${uiState.mcpPort} tcp:${uiState.mcpPort}",
+                                trailingIcon = Icons.Outlined.ContentCopy,
+                                onClick = {
+                                    copyText(
+                                        "adb reverse tcp:${uiState.mcpPort} tcp:${uiState.mcpPort}",
+                                        "命令已复制"
+                                    )
+                                }
+                            )
+                        }
+                        SettingsItem(
+                            icon = Icons.Outlined.DataObject,
+                            title = "客户端配置（MCP client JSON）",
+                            trailingIcon = Icons.Outlined.ContentCopy,
+                            onClick = {
+                                val host = if (uiState.mcpAllowLan) "<手机IP>" else "127.0.0.1"
+                                val json = """
+                                {
+                                  "mcpServers": {
+                                    "jist": {
+                                      "url": "http://$host:${uiState.mcpPort}/mcp",
+                                      "headers": {
+                                        "Authorization": "Bearer ${uiState.mcpToken}"
+                                      }
+                                    }
+                                  }
+                                }
+                                """.trimIndent()
+                                copyText(json, "配置已复制")
+                            }
                         )
                     }
                 }
@@ -302,378 +374,4 @@ fun SettingsScreen(
         )
     }
 
-    if (showWebhookDialog) {
-        WebhookSettingsDialog(
-            currentUrl = uiState.webhookUrl,
-            currentHttpMethod = uiState.webhookHttpMethod,
-            currentTemplate = uiState.webhookMessageTemplate,
-            currentHeaders = uiState.webhookCustomHeaders,
-            webhookService = app.webhookService,
-            snackbarHostState = snackbarHostState,
-            scope = scope,
-            onUrlChange = { viewModel.setWebhookUrl(it) },
-            onHttpMethodChange = { viewModel.setWebhookHttpMethod(it) },
-            onTemplateChange = { viewModel.setWebhookMessageTemplate(it) },
-            onHeadersChange = { viewModel.setWebhookCustomHeaders(it) },
-            onDismiss = { showWebhookDialog = false }
-        )
-    }
-}
-
-@Composable
-fun SummarizationStyleDialog(
-    currentTone: String,
-    currentLength: String,
-    onSelectTone: (String) -> Unit,
-    onSelectLength: (String) -> Unit = {},
-    onDismiss: () -> Unit
-) {
-    var selectedTone by remember { mutableStateOf(currentTone) }
-    var selectedLength by remember { mutableStateOf(currentLength.ifBlank { "MEDIUM" }) }
-
-    val isZh = java.util.Locale.getDefault().language == "zh"
-
-    val tones = listOf(
-        "PROFESSIONAL" to if (isZh) "专业" else "Professional",
-        "CASUAL" to if (isZh) "随意" else "Casual",
-        "WITTY" to if (isZh) "幽默" else "Witty",
-        "URGENT" to if (isZh) "紧急" else "Urgent"
-    )
-    val builder = remember { dev.rcht.jist.llm.PromptBuilder() }
-    val toneDesc = mapOf(
-        "PROFESSIONAL" to if (isZh) "正式、中立" else "Formal & neutral",
-        "CASUAL" to if (isZh) "口语化、轻松" else "Conversational",
-        "WITTY" to if (isZh) "轻松幽默" else "Light-hearted",
-        "URGENT" to if (isZh) "突出紧急事项" else "Action-oriented"
-    )
-    val lengths = listOf(
-        "SHORT" to if (isZh) "短" else "Short",
-        "MEDIUM" to if (isZh) "中" else "Medium",
-        "LONG" to if (isZh) "长" else "Long"
-    )
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(if (isZh) "摘要风格" else "Summarization Style") },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text(
-                    text = if (isZh) "语气" else "Tone",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                tones.forEach { (value, label) ->
-                    val isSelected = selectedTone == value
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { selectedTone = value }
-                            .padding(vertical = 4.dp, horizontal = 8.dp)
-                            .background(
-                                if (isSelected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
-                                else Color.Transparent,
-                                RoundedCornerShape(8.dp)
-                            )
-                            .padding(8.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        RadioButton(selected = isSelected, onClick = { selectedTone = value })
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Column {
-                            Text(text = label, style = MaterialTheme.typography.bodyLarge)
-                            Text(
-                                text = builder.toneInstruction(value),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = if (isSelected) 0.8f else 0.5f)
-                            )
-                        }
-                    }
-                }
-
-                HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
-
-                Text(
-                    text = if (isZh) "长度" else "Length",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-                    lengths.forEach { (value, label) ->
-                        val sub = when (value) {
-                            "SHORT" -> if (isZh) "50字以内" else "50 words"
-                            "MEDIUM" -> if (isZh) "150字以内" else "150 words"
-                            "LONG" -> if (isZh) "300字以内" else "300 words"
-                            else -> ""
-                        }
-                        FilterChip(
-                            selected = selectedLength == value,
-                            onClick = { selectedLength = value },
-                            label = {
-                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                    Text(text = label, fontWeight = FontWeight.Medium, fontSize = 13.sp)
-                                    Text(text = sub, fontSize = 9.sp, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f))
-                                }
-                            }
-                        )
-                    }
-                }
-            }
-        },
-        confirmButton = {
-            TextButton(onClick = {
-                onSelectTone(selectedTone)
-                onSelectLength(selectedLength)
-                onDismiss()
-            }) {
-                Text(if (isZh) "保存" else "Save")
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text(if (isZh) "取消" else "Cancel")
-            }
-        }
-    )
-}
-
-@Composable
-fun SettingsSection(title: String, content: @Composable ColumnScope.() -> Unit) {
-    Column {
-        Text(
-            text = title,
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-            modifier = Modifier.padding(start = 16.dp, bottom = 8.dp)
-        )
-        Card(
-            shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
-        ) {
-            Column(modifier = Modifier.fillMaxWidth()) {
-                content()
-            }
-        }
-    }
-}
-
-@Composable
-fun SettingsItem(
-    icon: ImageVector? = null,
-    title: String,
-    value: String? = null,
-    showChevron: Boolean = true,
-    trailingIcon: ImageVector? = null,
-    onClick: () -> Unit
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 16.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        if (icon != null) {
-            Box(
-                modifier = Modifier
-                    .size(32.dp)
-                    .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(8.dp)),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(icon, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
-            }
-             Spacer(modifier = Modifier.width(16.dp))
-        }
-       
-        Text(text = title, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
-        
-        if (value != null) {
-            Text(
-                text = value,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(end = 8.dp)
-            )
-        }
-        
-        if (trailingIcon != null) {
-             Icon(
-                imageVector = trailingIcon,
-                contentDescription = null,
-                modifier = Modifier.size(18.dp),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        } else if (showChevron) {
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.ArrowForwardIos,
-                contentDescription = null,
-                modifier = Modifier.size(14.dp),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-    }
-}
-
-@Composable
-fun WebhookSettingsDialog(
-    currentUrl: String,
-    currentHttpMethod: String,
-    currentTemplate: String,
-    currentHeaders: String,
-    webhookService: WebhookService,
-    snackbarHostState: SnackbarHostState,
-    scope: CoroutineScope,
-    onUrlChange: (String) -> Unit,
-    onHttpMethodChange: (String) -> Unit,
-    onTemplateChange: (String) -> Unit,
-    onHeadersChange: (String) -> Unit,
-    onDismiss: () -> Unit
-) {
-    var url by remember { mutableStateOf(currentUrl) }
-    var httpMethod by remember { mutableStateOf(currentHttpMethod) }
-    var template by remember { mutableStateOf(currentTemplate) }
-    var headers by remember { mutableStateOf(currentHeaders) }
-    var expandedMethod by remember { mutableStateOf(false) }
-    var testing by remember { mutableStateOf(false) }
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.settings_webhook_section)) },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                // URL
-                Text(stringResource(R.string.settings_webhook_url), style = MaterialTheme.typography.labelMedium)
-                OutlinedTextField(
-                    value = url,
-                    onValueChange = { url = it },
-                    placeholder = { Text(stringResource(R.string.settings_webhook_url_hint)) },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true
-                )
-
-                // HTTP Method
-                Text(stringResource(R.string.settings_webhook_http_method), style = MaterialTheme.typography.labelMedium)
-                Box {
-                    OutlinedTextField(
-                        value = httpMethod,
-                        onValueChange = {},
-                        readOnly = true,
-                        modifier = Modifier.fillMaxWidth(),
-                        trailingIcon = { Icon(Icons.Filled.ArrowDropDown, null) }
-                    )
-                    if (!expandedMethod) {
-                        Box(modifier = Modifier.matchParentSize().clickable { expandedMethod = true })
-                    }
-                    DropdownMenu(expanded = expandedMethod, onDismissRequest = { expandedMethod = false }) {
-                        listOf("POST", "GET", "PUT").forEach { method ->
-                            DropdownMenuItem(
-                                text = { Text(method) },
-                                onClick = { httpMethod = method; expandedMethod = false }
-                            )
-                        }
-                    }
-                }
-
-                // Message Template
-                Text(stringResource(R.string.settings_webhook_message_template), style = MaterialTheme.typography.labelMedium)
-                OutlinedTextField(
-                    value = template,
-                    onValueChange = { template = it },
-                    placeholder = { Text(stringResource(R.string.settings_webhook_message_template_hint)) },
-                    modifier = Modifier.fillMaxWidth().height(120.dp),
-                    maxLines = 6
-                )
-                Text(
-                    stringResource(R.string.settings_webhook_variables_hint),
-                    fontSize = 10.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
-                )
-
-                // Custom Headers
-                Text(stringResource(R.string.settings_webhook_custom_headers), style = MaterialTheme.typography.labelMedium)
-                OutlinedTextField(
-                    value = headers,
-                    onValueChange = { headers = it },
-                    placeholder = { Text(stringResource(R.string.settings_webhook_custom_headers_hint)) },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true
-                )
-                Text(
-                    stringResource(R.string.settings_webhook_custom_headers_hint),
-                    fontSize = 10.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
-                )
-
-                Spacer(Modifier.height(4.dp))
-                Button(
-                    onClick = {
-                        testing = true
-                        webhookService.sendTestAsync(url, httpMethod, template, headers) { result ->
-                            scope.launch {
-                                testing = false
-                                result.fold(
-                                    onSuccess = { msg ->
-                                        snackbarHostState.showSnackbar("✓ $msg")
-                                    },
-                                    onFailure = { err ->
-                                        snackbarHostState.showSnackbar("✗ ${err.message ?: "Unknown error"}")
-                                    }
-                                )
-                            }
-                        }
-                    },
-                    enabled = url.isNotBlank() && !testing,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    if (testing) {
-                        CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
-                        Spacer(Modifier.width(8.dp))
-                    }
-                    Text(if (testing) stringResource(R.string.testing) else stringResource(R.string.settings_webhook_test))
-                }
-            }
-        },
-        confirmButton = {
-            TextButton(onClick = {
-                onUrlChange(url)
-                onHttpMethodChange(httpMethod)
-                onTemplateChange(template)
-                onHeadersChange(headers)
-                onDismiss()
-            }) {
-                Text(stringResource(R.string.save))
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.settings_cancel))
-            }
-        }
-    )
-}
-
-@Composable
-fun SettingsSwitchItem(
-    icon: ImageVector,
-    title: String,
-    checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-         Box(
-            modifier = Modifier
-                .size(32.dp)
-                .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(8.dp)),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(icon, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
-        }
-        Spacer(modifier = Modifier.width(16.dp))
-        Text(text = title, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
-        Switch(checked = checked, onCheckedChange = onCheckedChange)
-    }
 }

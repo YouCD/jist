@@ -104,15 +104,15 @@ class JistXposed : XposedModule() {
             }
             TELEGRAM_X_PACKAGE -> {
                 hookNotificationNotify(pkg)
-                TelegramHooks.setupTelegramX(loader, pkg)
+                setupTelegramX(loader, pkg)
             }
             NAGRAM_PACKAGE -> {
                 hookNotificationNotify(pkg)
-                TelegramHooks.setupNagram(loader, pkg, "Nagram")
+                TelegramNagram.setupNagram(loader, pkg, "Nagram")
             }
             TELEGRAM_PACKAGE -> {
                 hookNotificationNotify(pkg)
-                TelegramHooks.setupNagram(loader, pkg, "Telegram")
+                TelegramNagram.setupNagram(loader, pkg, "Telegram")
             }
             else -> hookNotificationNotify(pkg)
         }

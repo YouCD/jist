@@ -12,7 +12,7 @@ object ConversationKeyExtractor {
      * Extract conversation key with app-specific logic
      * Examples:
      * - WhatsApp: "com.whatsapp:0123456789" (contact/group ID from content)
-     * - Gmail: "com.google.android.gms:thread-abc123" (thread ID)
+     * - Gmail: "com.gmail:sender@example.com" (sender address from title)
      * - Telegram: "org.telegram.messenger:chat_123" (chat ID)
      * - Generic: "packageName:title" (fallback)
      */
@@ -30,7 +30,9 @@ object ConversationKeyExtractor {
     }
     
     private fun isGmail(packageName: String): Boolean {
-        return packageName == "com.google.android.gms" || packageName == "com.google.android.apps.inbox"
+        // com.google.android.gm is the real Gmail package; com.google.android.gms
+        // is the GMS system package (filtered out as a system app upstream).
+        return packageName == "com.google.android.gm" || packageName == "com.google.android.apps.inbox"
     }
     
     private fun isTelegram(packageName: String): Boolean {

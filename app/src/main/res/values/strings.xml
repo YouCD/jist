@@ -84,6 +84,10 @@
     <string name="llm_precise">Precise</string>
     <string name="llm_creative">Creative</string>
     <string name="llm_max_tokens">Max Tokens</string>
+    <string name="llm_custom_headers">Custom Headers</string>
+    <string name="llm_custom_headers_desc">Optional. One header per line, format: Key: Value. Lines starting with # are ignored.</string>
+    <string name="llm_custom_headers_hint">X-Title: Jist</string>
+    <string name="llm_custom_headers_ignored">%d line(s) do not match "Key: Value" format and will be ignored.</string>
     <string name="llm_test_connection">Test Connection</string>
     <string name="llm_save_config">Save Configuration</string>
     <string name="llm_saved_configs">Saved Configurations</string>
@@ -233,7 +237,6 @@
     <string name="settings_config_import_confirm_title">Import Config</string>
     <string name="settings_config_import_confirm_message">This will replace all current settings. Continue?</string>
     <string name="settings_confirm">Confirm</string>
-    <string name="settings_cancel">Cancel</string>
     <string name="onboarding_import_config_title">Import Existing Config</string>
     <string name="onboarding_import_config_desc">Import a previously exported config file to restore all your settings, LLM configuration, and monitored apps.</string>
     <string name="onboarding_import_config_button">Select Config File</string>
@@ -357,19 +360,4 @@
     <string name="xposed_chats_no_messages">暂无消息</string>
     <string name="nav_xposed_chats">消息</string>
 
-    <string name="not_configured">Not configured</string>
-
-    <!-- Webhook -->
-    <string name="settings_webhook_section">Webhook</string>
-    <string name="settings_webhook_enable">Enable Webhook</string>
-    <string name="settings_webhook_url">Webhook URL</string>
-    <string name="settings_webhook_url_hint">https://example.com/webhook</string>
-    <string name="settings_webhook_http_method">HTTP Method</string>
-    <string name="settings_webhook_message_template">Message Template</string>
-    <string name="settings_webhook_message_template_hint">{\"app\":\"${appName}\",\"summary\":\"${summaryText}\"}</string>
-    <string name="settings_webhook_custom_headers">Custom Headers</string>
-    <string name="settings_webhook_custom_headers_hint">[{\"key\":\"Authorization\",\"value\":\"Bearer xxx\"}]</string>
-    <string name="settings_webhook_test">Test Webhook</string>
-    <string name="settings_webhook_variables_hint">Available: ${summaryText}, ${appName}, ${contactOrGroup}, ${messageCount}, ${modelUsed}, ${tokenCount}, ${createdAt}, ${packageName}, ${summaryId}</string>
-    <string name="testing">Testing…</string>
 </resources>

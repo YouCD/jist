@@ -18,9 +18,8 @@ data class JistPreferences(
     val summaryTone: String = "PROFESSIONAL", // PROFESSIONAL, CASUAL, WITTY, URGENT
     val summaryLength: String = "MEDIUM", // SHORT, MEDIUM, LONG
     val notificationsEnabled: Boolean = true, // User preference for notifications (local state)
-    val webhookEnabled: Boolean = false,
-    val webhookUrl: String = "",
-    val webhookHttpMethod: String = "POST",
-    val webhookMessageTemplate: String = "{\"app\":\"\${appName}\",\"contact\":\"\${contactOrGroup}\",\"summary\":\"\${summaryText}\",\"messages\":\"\${messageCount}\",\"model\":\"\${modelUsed}\",\"timestamp\":\"\${createdAt}\"}",
-    val webhookCustomHeaders: String = ""
+    val mcpEnabled: Boolean = false,
+    val mcpToken: String = "",
+    val mcpPort: Int = 8765,
+    val mcpAllowLan: Boolean = false
 )

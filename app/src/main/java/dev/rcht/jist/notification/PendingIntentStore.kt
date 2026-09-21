@@ -8,8 +8,24 @@ object PendingIntentStore {
     private val store = mutableMapOf<String, PendingIntent>()
     private val chatUriStore = mutableMapOf<String, String>()
 
+    /**
+     * Cap on stored conversations. The maps are only cleared when a
+     * notification is dismissed/cancelled, so a long-lived process would
+     * otherwise accumulate entries forever. Active conversations number in
+     * the tens, so this is generous headroom.
+     */
+    private const val MAX_STORED_CONVERSATIONS = 128
+
+    private fun enforceCap() {
+        if (store.size <= MAX_STORED_CONVERSATIONS) return
+        Log.w(TAG, "PendingIntentStore exceeded $MAX_STORED_CONVERSATIONS entries; clearing")
+        store.clear()
+        chatUriStore.clear()
+    }
+
     fun put(conversationKey: String, pendingIntent: PendingIntent) {
         store[conversationKey] = pendingIntent
+        enforceCap()
         Log.d(TAG, "Stored in memory: $conversationKey")
     }
 
@@ -23,6 +39,7 @@ object PendingIntentStore {
 
     fun putChatUri(conversationKey: String, uri: String) {
         chatUriStore[conversationKey] = uri
+        enforceCap()
         Log.d(TAG, "Stored chat URI: $conversationKey -> $uri")
     }
 

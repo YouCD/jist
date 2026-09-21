@@ -84,6 +84,9 @@
     <string name="llm_precise">精确</string>
     <string name="llm_creative">创意</string>
     <string name="llm_max_tokens">最大 Token 数</string>
+    <string name="llm_custom_headers">自定义请求头</string>
+    <string name="llm_custom_headers_desc">可选。每行一个请求头，格式：Key: Value，# 开头的行会被忽略。</string>
+    <string name="llm_custom_headers_hint">X-Title: Jist</string>
     <string name="llm_test_connection">测试连接</string>
     <string name="llm_save_config">保存配置</string>
     <string name="llm_saved_configs">已保存的配置</string>
@@ -233,7 +236,6 @@
     <string name="settings_config_import_confirm_title">导入配置</string>
     <string name="settings_config_import_confirm_message">这将替换所有当前设置，是否继续？</string>
     <string name="settings_confirm">确认</string>
-    <string name="settings_cancel">取消</string>
     <string name="onboarding_import_config_title">导入现有配置</string>
     <string name="onboarding_import_config_desc">导入之前导出的配置文件，快速恢复所有设置、LLM 配置和已监控的应用。</string>
     <string name="onboarding_import_config_button">选择配置文件</string>
@@ -357,19 +359,4 @@
     <string name="xposed_chats_no_messages">暂无消息</string>
     <string name="nav_xposed_chats">消息</string>
 
-    <string name="not_configured">未配置</string>
-
-    <!-- Webhook -->
-    <string name="settings_webhook_section">Webhook</string>
-    <string name="settings_webhook_enable">启用 Webhook</string>
-    <string name="settings_webhook_url">Webhook 地址</string>
-    <string name="settings_webhook_url_hint">https://example.com/webhook</string>
-    <string name="settings_webhook_http_method">请求方式</string>
-    <string name="settings_webhook_message_template">消息模板</string>
-    <string name="settings_webhook_message_template_hint">{\"app\":\"${appName}\",\"summary\":\"${summaryText}\"}</string>
-    <string name="settings_webhook_custom_headers">自定义请求头</string>
-    <string name="settings_webhook_custom_headers_hint">[{\"key\":\"Authorization\",\"value\":\"Bearer xxx\"}]</string>
-    <string name="settings_webhook_test">测试 Webhook</string>
-    <string name="settings_webhook_variables_hint">可用变量: ${summaryText}, ${appName}, ${contactOrGroup}, ${messageCount}, ${modelUsed}, ${tokenCount}, ${createdAt}, ${packageName}, ${summaryId}</string>
-    <string name="testing">测试中…</string>
 </resources>

@@ -7,6 +7,7 @@ import androidx.room.Insert
 import androidx.room.Query
 import androidx.room.Transaction
 import androidx.room.Update
+import dev.rcht.jist.data.db.entity.ConversationRow
 import dev.rcht.jist.data.db.entity.NotificationEntity
 
 @Dao
@@ -63,6 +64,12 @@ interface NotificationDao {
     @Query("SELECT * FROM notifications WHERE conversationKey = :key ORDER BY timestamp ASC")
     suspend fun getByConversationKey(key: String): List<NotificationEntity>
 
+    @Query("SELECT * FROM notifications WHERE conversationKey = :key AND timestamp >= :timeFrom AND timestamp <= :timeTo ORDER BY timestamp ASC")
+    suspend fun getByConversationKeyAndTimeRange(key: String, timeFrom: Long, timeTo: Long): List<NotificationEntity>
+
+    @Query("SELECT packageName, title, conversationKey, COUNT(*) AS count, MAX(timestamp) AS lastSeen FROM notifications GROUP BY conversationKey ORDER BY lastSeen DESC")
+    suspend fun listConversations(): List<ConversationRow>
+
     @Query("SELECT * FROM notifications WHERE isSummarized = 0 ORDER BY timestamp ASC")
     suspend fun getAllUnsummarized(): List<NotificationEntity>
 
@@ -106,6 +113,9 @@ interface NotificationDao {
     
     @Query("SELECT COUNT(*) FROM notifications")
     suspend fun count(): Int
+
+    @Query("SELECT MIN(timestamp) FROM notifications")
+    suspend fun oldestTimestamp(): Long?
 
     @Query("DELETE FROM notifications")
     suspend fun deleteAll()

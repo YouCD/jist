@@ -12,7 +12,8 @@ object LlmClientFactory {
 
     enum class Provider {
         OPENAI,
-        CLAUDE,
+        CLAUDE, // legacy value kept in DB by older versions
+        ANTHROPIC,
         CUSTOM
     }
 
@@ -52,26 +53,26 @@ object LlmClientFactory {
     ): LlmClient {
         return when (config.provider) {
             "OPENAI", "CUSTOM" -> OpenAiCompatibleClient(httpClient)
-            "CLAUDE" -> ClaudeClient(httpClient)
+            "CLAUDE", "ANTHROPIC" -> ClaudeClient(httpClient)
             else -> OpenAiCompatibleClient(httpClient)
         }
     }
 
     fun getDefaultBaseUrl(provider: String): String = when (provider) {
         "OPENAI" -> "https://api.openai.com"
-        "CLAUDE" -> "https://api.anthropic.com"
+        "CLAUDE", "ANTHROPIC" -> "https://api.anthropic.com"
         else -> ""
     }
 
     fun getDefaultModel(provider: String): String = when (provider) {
         "OPENAI" -> ""
-        "CLAUDE" -> ""
+        "CLAUDE", "ANTHROPIC" -> ""
         else -> ""
     }
 
     fun getAvailableProviders() = listOf(
         Provider.OPENAI,
-        Provider.CLAUDE,
+        Provider.ANTHROPIC,
         Provider.CUSTOM
     )
 

@@ -13,3 +13,4 @@ local.properties
 /build/Jist/*
 !/build/Jist/Android.bp
 .idea
+.kotlin/errors

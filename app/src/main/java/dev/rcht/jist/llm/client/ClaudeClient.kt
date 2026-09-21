@@ -4,11 +4,14 @@ import dev.rcht.jist.llm.LlmClient
 import dev.rcht.jist.llm.LlmClientFactory
 import dev.rcht.jist.llm.LlmRequestConfig
 import dev.rcht.jist.llm.LlmResult
+import dev.rcht.jist.llm.mergeHeaders
 import dev.rcht.jist.llm.model.ChatMessage
 import dev.rcht.jist.llm.model.ClaudeRequest
 import dev.rcht.jist.llm.model.ClaudeResponse
 import dev.rcht.jist.llm.model.LlmError
 import dev.rcht.jist.llm.model.LlmResponse
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import okhttp3.MediaType.Companion.toMediaType
@@ -27,7 +30,18 @@ class ClaudeClient(private val httpClient: OkHttpClient) : LlmClient {
         encodeDefaults = true
     }
 
+    // The OkHttp call below blocks; run it on an IO thread so suspend
+    // callers (e.g. the single-threaded notification listener) are never blocked.
+    // Note: withContext's block is `crossinline`, so non-local `return`s are
+    // prohibited inside the lambda — the returning logic lives in doComplete().
     override suspend fun complete(
+        messages: List<ChatMessage>,
+        config: LlmRequestConfig
+    ): LlmResult<LlmResponse> = withContext(Dispatchers.IO) {
+        doComplete(messages, config)
+    }
+
+    private fun doComplete(
         messages: List<ChatMessage>,
         config: LlmRequestConfig
     ): LlmResult<LlmResponse> {
@@ -36,7 +50,7 @@ class ClaudeClient(private val httpClient: OkHttpClient) : LlmClient {
             if (config.apiKey.isBlank()) {
                 return LlmResult.Error(LlmError("API key is empty. Please configure it in Settings."))
             }
-            
+
             val request = buildRequest(messages, config)
             val response = httpClient.newCall(request).execute()
 
@@ -99,12 +113,19 @@ class ClaudeClient(private val httpClient: OkHttpClient) : LlmClient {
 
         val url = "${LlmClientFactory.normalizeBaseUrl(config.baseUrl)}/v1/messages"
 
-        return Request.Builder()
+        val headers = mergeHeaders(
+            mapOf(
+                "Authorization" to "Bearer ${config.apiKey}",
+                "Content-Type" to "application/json",
+                "anthropic-version" to "2023-06-01"
+            ),
+            config.extraHeaders
+        ) // user headers override built-ins (case-insensitive)
+
+        val builder = Request.Builder()
             .url(url)
             .post(body)
-            .addHeader("Authorization", "Bearer ${config.apiKey}")
-            .addHeader("Content-Type", "application/json")
-            .addHeader("anthropic-version", "2023-06-01")
-            .build()
+        headers.forEach { (k, v) -> builder.addHeader(k, v) }
+        return builder.build()
     }
 }

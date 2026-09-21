@@ -30,11 +30,10 @@ class PreferencesRepository(private val context: Context) {
         val SUMMARY_TONE = stringPreferencesKey("summary_tone")
         val SUMMARY_LENGTH = stringPreferencesKey("summary_length")
         val NOTIFICATIONS_ENABLED = booleanPreferencesKey("notifications_enabled")
-        val WEBHOOK_ENABLED = booleanPreferencesKey("webhook_enabled")
-        val WEBHOOK_URL = stringPreferencesKey("webhook_url")
-        val WEBHOOK_HTTP_METHOD = stringPreferencesKey("webhook_http_method")
-        val WEBHOOK_MESSAGE_TEMPLATE = stringPreferencesKey("webhook_message_template")
-        val WEBHOOK_CUSTOM_HEADERS = stringPreferencesKey("webhook_custom_headers")
+        val MCP_ENABLED = booleanPreferencesKey("mcp_enabled")
+        val MCP_TOKEN = stringPreferencesKey("mcp_token")
+        val MCP_PORT = intPreferencesKey("mcp_port")
+        val MCP_ALLOW_LAN = booleanPreferencesKey("mcp_allow_lan")
     }
     
     val preferencesFlow: Flow<JistPreferences> = context.dataStore.data.map { preferences ->
@@ -53,12 +52,10 @@ class PreferencesRepository(private val context: Context) {
             summaryTone = preferences[PreferenceKeys.SUMMARY_TONE] ?: "PROFESSIONAL",
             summaryLength = preferences[PreferenceKeys.SUMMARY_LENGTH] ?: "MEDIUM",
             notificationsEnabled = preferences[PreferenceKeys.NOTIFICATIONS_ENABLED] ?: true,
-            webhookEnabled = preferences[PreferenceKeys.WEBHOOK_ENABLED] ?: false,
-            webhookUrl = preferences[PreferenceKeys.WEBHOOK_URL] ?: "",
-            webhookHttpMethod = preferences[PreferenceKeys.WEBHOOK_HTTP_METHOD] ?: "POST",
-            webhookMessageTemplate = preferences[PreferenceKeys.WEBHOOK_MESSAGE_TEMPLATE]
-                ?: "{\"app\":\"\${appName}\",\"contact\":\"\${contactOrGroup}\",\"summary\":\"\${summaryText}\",\"messages\":\"\${messageCount}\",\"model\":\"\${modelUsed}\",\"timestamp\":\"\${createdAt}\"}",
-            webhookCustomHeaders = preferences[PreferenceKeys.WEBHOOK_CUSTOM_HEADERS] ?: ""
+            mcpEnabled = preferences[PreferenceKeys.MCP_ENABLED] ?: false,
+            mcpToken = preferences[PreferenceKeys.MCP_TOKEN] ?: "",
+            mcpPort = preferences[PreferenceKeys.MCP_PORT] ?: 8765,
+            mcpAllowLan = preferences[PreferenceKeys.MCP_ALLOW_LAN] ?: false
         )
     }
     
@@ -116,34 +113,27 @@ class PreferencesRepository(private val context: Context) {
         }
     }
 
-    suspend fun setWebhookEnabled(enabled: Boolean) {
+    suspend fun setMcpEnabled(enabled: Boolean) {
         context.dataStore.edit { preferences ->
-            preferences[PreferenceKeys.WEBHOOK_ENABLED] = enabled
+            preferences[PreferenceKeys.MCP_ENABLED] = enabled
+            if (enabled && (preferences[PreferenceKeys.MCP_TOKEN] ?: "").isEmpty()) {
+                preferences[PreferenceKeys.MCP_TOKEN] = java.util.UUID.randomUUID().toString()
+            }
         }
     }
 
-    suspend fun setWebhookUrl(url: String) {
+    suspend fun setMcpAllowLan(allowLan: Boolean) {
         context.dataStore.edit { preferences ->
-            preferences[PreferenceKeys.WEBHOOK_URL] = url
+            preferences[PreferenceKeys.MCP_ALLOW_LAN] = allowLan
         }
     }
 
-    suspend fun setWebhookHttpMethod(method: String) {
+    suspend fun regenerateMcpToken(): String {
+        val token = java.util.UUID.randomUUID().toString()
         context.dataStore.edit { preferences ->
-            preferences[PreferenceKeys.WEBHOOK_HTTP_METHOD] = method
+            preferences[PreferenceKeys.MCP_TOKEN] = token
         }
-    }
-
-    suspend fun setWebhookMessageTemplate(template: String) {
-        context.dataStore.edit { preferences ->
-            preferences[PreferenceKeys.WEBHOOK_MESSAGE_TEMPLATE] = template
-        }
-    }
-
-    suspend fun setWebhookCustomHeaders(headers: String) {
-        context.dataStore.edit { preferences ->
-            preferences[PreferenceKeys.WEBHOOK_CUSTOM_HEADERS] = headers
-        }
+        return token
     }
 
     suspend fun replaceAll(prefs: JistPreferences) {
@@ -163,11 +153,10 @@ class PreferencesRepository(private val context: Context) {
             preferences[PreferenceKeys.SUMMARY_TONE] = prefs.summaryTone
             preferences[PreferenceKeys.SUMMARY_LENGTH] = prefs.summaryLength
             preferences[PreferenceKeys.NOTIFICATIONS_ENABLED] = prefs.notificationsEnabled
-            preferences[PreferenceKeys.WEBHOOK_ENABLED] = prefs.webhookEnabled
-            preferences[PreferenceKeys.WEBHOOK_URL] = prefs.webhookUrl
-            preferences[PreferenceKeys.WEBHOOK_HTTP_METHOD] = prefs.webhookHttpMethod
-            preferences[PreferenceKeys.WEBHOOK_MESSAGE_TEMPLATE] = prefs.webhookMessageTemplate
-            preferences[PreferenceKeys.WEBHOOK_CUSTOM_HEADERS] = prefs.webhookCustomHeaders
+            preferences[PreferenceKeys.MCP_ENABLED] = prefs.mcpEnabled
+            preferences[PreferenceKeys.MCP_TOKEN] = prefs.mcpToken
+            preferences[PreferenceKeys.MCP_PORT] = prefs.mcpPort
+            preferences[PreferenceKeys.MCP_ALLOW_LAN] = prefs.mcpAllowLan
         }
     }
 }
