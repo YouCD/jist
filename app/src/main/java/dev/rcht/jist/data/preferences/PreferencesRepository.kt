@@ -128,6 +128,12 @@ class PreferencesRepository(private val context: Context) {
         }
     }
 
+    suspend fun setMcpPort(port: Int) {
+        context.dataStore.edit { preferences ->
+            preferences[PreferenceKeys.MCP_PORT] = port
+        }
+    }
+
     suspend fun regenerateMcpToken(): String {
         val token = java.util.UUID.randomUUID().toString()
         context.dataStore.edit { preferences ->

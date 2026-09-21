@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -23,6 +24,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -36,6 +38,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
@@ -173,6 +176,60 @@ fun SettingsSection(title: String, content: @Composable ColumnScope.() -> Unit) 
             }
         }
     }
+}
+
+@Composable
+fun McpPortDialog(
+    currentPort: Int,
+    onConfirm: (Int) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var text by remember { mutableStateOf(currentPort.toString()) }
+    val parsed = text.trim().toIntOrNull()
+    val valid = parsed != null && parsed in 1024..65535
+    val isZh = java.util.Locale.getDefault().language == "zh"
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(if (isZh) "修改端口" else "Change Port") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(
+                    value = text,
+                    onValueChange = { newValue ->
+                        if (newValue.length <= 5 && newValue.all { c -> c.isDigit() }) {
+                            text = newValue
+                        }
+                    },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    singleLine = true,
+                    label = { Text(if (isZh) "端口（1024-65535）" else "Port (1024-65535)") },
+                    isError = text.isNotBlank() && !valid,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                if (text.isNotBlank() && !valid) {
+                    Text(
+                        text = if (isZh) "请输入 1024-65535 之间的端口号" else "Enter a port between 1024 and 65535",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = { parsed?.let { onConfirm(it) } },
+                enabled = valid
+            ) {
+                Text(if (isZh) "保存" else "Save")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(if (isZh) "取消" else "Cancel")
+            }
+        }
+    )
 }
 
 @Composable

@@ -27,7 +27,9 @@ class McpForegroundService : Service() {
     private fun startForegroundCompat() {
         val notification = buildNotification()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            startForeground(NOTIF_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC)
+            // Use SPECIAL_USE for long-running services
+            // DATA_SYNC has a strict timeout that causes crashes.
+            startForeground(NOTIF_ID, notification, 0x40000000 /* SPECIAL_USE */)
         } else {
             startForeground(NOTIF_ID, notification)
         }
@@ -56,6 +58,7 @@ class McpForegroundService : Service() {
     }
 
     companion object {
+        const val TAG = "JistForegroundService"
         const val CHANNEL_ID = "mcp_service"
         private const val NOTIF_ID = 1001
     }

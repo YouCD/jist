@@ -71,6 +71,7 @@ fun SettingsScreen(
 
     var showStyleDialog by remember { mutableStateOf(false) }
     var showImportConfirmDialog by remember { mutableStateOf(false) }
+    var showPortDialog by remember { mutableStateOf(false) }
     var pendingImportJson by remember { mutableStateOf<String?>(null) }
 
     val exportOk = stringResource(R.string.settings_config_exported)
@@ -275,7 +276,7 @@ fun SettingsScreen(
                             title = "端口",
                             value = uiState.mcpPort.toString(),
                             showChevron = false,
-                            onClick = {}
+                            onClick = { showPortDialog = true }
                         )
                         SettingsSwitchItem(
                             icon = Icons.Outlined.Lan,
@@ -283,21 +284,7 @@ fun SettingsScreen(
                             checked = uiState.mcpAllowLan,
                             onCheckedChange = { viewModel.setMcpAllowLan(it) }
                         )
-                        if (!uiState.mcpAllowLan) {
-                            Divider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha=0.2f))
-                            SettingsItem(
-                                icon = Icons.Outlined.Terminal,
-                                title = "USB 转发命令（电脑连接手机后执行）",
-                                value = "adb reverse tcp:${uiState.mcpPort} tcp:${uiState.mcpPort}",
-                                trailingIcon = Icons.Outlined.ContentCopy,
-                                onClick = {
-                                    copyText(
-                                        "adb reverse tcp:${uiState.mcpPort} tcp:${uiState.mcpPort}",
-                                        "命令已复制"
-                                    )
-                                }
-                            )
-                        }
+
                         SettingsItem(
                             icon = Icons.Outlined.DataObject,
                             title = "客户端配置（MCP client JSON）",
@@ -362,6 +349,17 @@ fun SettingsScreen(
                  Spacer(modifier = Modifier.height(32.dp))
             }
         }
+    }
+
+    if (showPortDialog) {
+        McpPortDialog(
+            currentPort = uiState.mcpPort,
+            onConfirm = { port ->
+                showPortDialog = false
+                viewModel.setMcpPort(port)
+            },
+            onDismiss = { showPortDialog = false }
+        )
     }
 
     if (showStyleDialog) {

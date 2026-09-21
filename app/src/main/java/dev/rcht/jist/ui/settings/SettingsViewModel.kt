@@ -194,6 +194,22 @@ class SettingsViewModel(
         }
     }
 
+    fun setMcpPort(port: Int) {
+        viewModelScope.launch {
+            val previous = _uiState.value.mcpPort
+            preferencesRepository.setMcpPort(port)
+            // Only restart when the port actually changed.
+            if (port != previous && japp.mcpServer.isRunning) {
+                japp.mcpServer.restart()
+            }
+            _uiState.value = _uiState.value.copy(
+                mcpPort = port,
+                mcpRunning = japp.mcpServer.isRunning,
+                mcpError = japp.mcpServer.lastError
+            )
+        }
+    }
+
     fun regenerateMcpToken(onDone: (String) -> Unit = {}) {
         viewModelScope.launch {
             val token = preferencesRepository.regenerateMcpToken()
