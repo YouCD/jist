@@ -113,9 +113,6 @@
     <string name="settings_llm_model">LLM 模型</string>
     <string name="settings_summarization_style">摘要风格</string>
     <string name="settings_push_notifications">推送通知</string>
-    <string name="settings_daily_digest">每日摘要</string>
-    <string name="settings_help_support">帮助与支持</string>
-    <string name="settings_privacy_policy">隐私政策</string>
     <string name="settings_version">版本</string>
     <string name="settings_jist_2026">Jist 2026</string>
     <string name="settings_configured">已配置</string>

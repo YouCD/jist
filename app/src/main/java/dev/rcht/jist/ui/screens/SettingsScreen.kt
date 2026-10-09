@@ -197,15 +197,6 @@ fun SettingsScreen(
                             }
                         }
                     )
-                    Divider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha=0.2f))
-                    SettingsItem(
-                        icon = Icons.Outlined.Schedule,
-                        title = stringResource(R.string.settings_daily_digest),
-                        // value = uiState.dailyDigestTime,
-                        value = stringResource(R.string.coming_soon),
-                        onClick = { /* Time picker placeholder */ }
-                    )
-                    // Haptic Feedback omitted as requested
                 }
             }
 
@@ -313,18 +304,6 @@ fun SettingsScreen(
             // About Section
             item {
                 SettingsSection(title = stringResource(R.string.settings_about_section)) {
-                    SettingsItem(
-                        title = stringResource(R.string.settings_help_support),
-                        trailingIcon = Icons.Outlined.OpenInNew,
-                        onClick = { /* Open URL */ }
-                    )
-                    Divider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha=0.2f))
-                    SettingsItem(
-                        title = stringResource(R.string.settings_privacy_policy),
-                         trailingIcon = Icons.Outlined.OpenInNew,
-                        onClick = { /* Open URL */ }
-                    )
-                    Divider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha=0.2f))
                     SettingsItem(
                         title = stringResource(R.string.settings_version),
                         value = uiState.version,

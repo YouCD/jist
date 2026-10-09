@@ -114,9 +114,6 @@
     <string name="settings_llm_model">LLM Model</string>
     <string name="settings_summarization_style">Summarization Style</string>
     <string name="settings_push_notifications">Push Notifications</string>
-    <string name="settings_daily_digest">Daily Digest</string>
-    <string name="settings_help_support">Help &amp; Support</string>
-    <string name="settings_privacy_policy">Privacy Policy</string>
     <string name="settings_version">Version</string>
     <string name="settings_jist_2026">Jist 2026</string>
     <string name="settings_configured">Configured</string>
