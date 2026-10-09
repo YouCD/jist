@@ -11,6 +11,7 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.ExistingPeriodicWorkPolicy
 import dev.rcht.jist.JistApplication
 import dev.rcht.jist.data.db.entity.SummaryEntity
+import dev.rcht.jist.llm.ImageAnalysisHelper
 import dev.rcht.jist.llm.LlmClientFactory
 import dev.rcht.jist.llm.LlmRequestConfig
 import dev.rcht.jist.llm.parseCustomHeaders
@@ -106,7 +107,15 @@ class SummaryWorker(context: Context, params: WorkerParameters) :
 
                 val llmMessages = PromptBuilder().buildMessages(notifications = notifications,
                     appName = appName, contactOrGroup = chat.chatName,
-                    customPrompt = chat.customPrompt)
+                    customPrompt = chat.customPrompt).toMutableList()
+
+                // Image analysis: same shared helper as the manual flow.
+                if (config.imageAnalysis) {
+                    val imageMsg = ImageAnalysisHelper.buildImageMessage(
+                        applicationContext, app.chatImageRepository, chat.chatId,
+                        messages.minOf { it.timestamp }, messages.maxOf { it.timestamp })
+                    if (imageMsg != null) llmMessages.add(1, imageMsg)
+                }
 
                 when (val result = client.complete(llmMessages, llmConfig)) {
                     is LlmResult.Success -> {

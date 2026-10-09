@@ -7,6 +7,7 @@ import androidx.room.migration.Migration
 import androidx.room.RoomDatabase
 import androidx.sqlite.db.SupportSQLiteDatabase
 import dev.rcht.jist.data.db.dao.AppRuleDao
+import dev.rcht.jist.data.db.dao.ChatImageDao
 import dev.rcht.jist.data.db.dao.ChatMessageDao
 import dev.rcht.jist.data.db.dao.ChatSourceDao
 import dev.rcht.jist.data.db.dao.CustomPromptDao
@@ -17,6 +18,7 @@ import dev.rcht.jist.data.db.dao.WatchedChatDao
 import dev.rcht.jist.data.db.dao.WatchCollectedItemDao
 import dev.rcht.jist.data.db.dao.WatchTopicDao
 import dev.rcht.jist.data.db.entity.AppRuleEntity
+import dev.rcht.jist.data.db.entity.ChatImageEntity
 import dev.rcht.jist.data.db.entity.ChatMessageEntity
 import dev.rcht.jist.data.db.entity.ChatSourceEntity
 import dev.rcht.jist.data.db.entity.CustomPromptEntity
@@ -40,9 +42,10 @@ import dev.rcht.jist.data.db.fts.SummaryFts
         WatchCollectedItemEntity::class,
         ChatSourceEntity::class,
         WatchedChatEntity::class,
-        ChatMessageEntity::class
+        ChatMessageEntity::class,
+        ChatImageEntity::class
     ],
-    version = 19,
+    version = 21,
     exportSchema = false
 )
 abstract class JistDatabase : RoomDatabase() {
@@ -57,6 +60,7 @@ abstract class JistDatabase : RoomDatabase() {
     abstract fun chatSourceDao(): ChatSourceDao
     abstract fun watchedChatDao(): WatchedChatDao
     abstract fun chatMessageDao(): ChatMessageDao
+    abstract fun chatImageDao(): ChatImageDao
     
     companion object {
         private var instance: JistDatabase? = null
@@ -189,6 +193,36 @@ abstract class JistDatabase : RoomDatabase() {
             }
         }
 
+        private val MIGRATION_19_20 = object : Migration(19, 20) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS `chat_images` (
+                        `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        `chatId` TEXT NOT NULL DEFAULT '',
+                        `chatAppKey` TEXT NOT NULL DEFAULT '',
+                        `senderName` TEXT NOT NULL DEFAULT '',
+                        `messageTimestamp` INTEGER NOT NULL DEFAULT 0,
+                        `fileName` TEXT NOT NULL,
+                        `format` TEXT NOT NULL,
+                        `sizeBytes` INTEGER NOT NULL,
+                        `contentHash` TEXT NOT NULL,
+                        `storedPath` TEXT,
+                        `capturedAt` INTEGER NOT NULL
+                    )
+                    """.trimIndent()
+                )
+                db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_chat_images_contentHash` ON `chat_images` (`contentHash`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_chat_images_capturedAt` ON `chat_images` (`capturedAt`)")
+            }
+        }
+
+        private val MIGRATION_20_21 = object : Migration(20, 21) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE llm_configs ADD COLUMN imageAnalysis INTEGER NOT NULL DEFAULT 0")
+            }
+        }
+
         fun getInstance(context: Context): JistDatabase {
             if (instance == null) {
                 instance = Room.databaseBuilder(
@@ -196,7 +230,7 @@ abstract class JistDatabase : RoomDatabase() {
                     JistDatabase::class.java,
                     "jist.db"
                 )
-                    .addMigrations(MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19)
+                    .addMigrations(MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20, MIGRATION_20_21)
                     .allowMainThreadQueries()
                     .build()
             }

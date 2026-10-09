@@ -14,6 +14,12 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.addJsonObject
+import kotlinx.serialization.json.buildJsonArray
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
+import kotlinx.serialization.json.putJsonArray
+import kotlinx.serialization.json.putJsonObject
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -109,15 +115,45 @@ class OpenAiCompatibleClient(private val httpClient: OkHttpClient) : LlmClient {
         messages: List<ChatMessage>,
         config: LlmRequestConfig
     ): Request {
-        val apiRequest = OpenAiRequest(
-            model = config.model,
-            messages = messages,
-            max_completion_tokens = config.maxTokens,
-            temperature = config.temperature
-        )
+        val hasImages = messages.any { it.hasImages }
+        val bodyText = if (hasImages) {
+            // Vision payloads use a content array; build the JSON manually.
+            buildJsonObject {
+                put("model", config.model)
+                put("max_completion_tokens", config.maxTokens)
+                put("temperature", config.temperature)
+                putJsonObject("chat_template_kwargs") { put("enable_thinking", false) }
+                putJsonArray("messages") {
+                    for (m in messages) addJsonObject {
+                        put("role", m.role)
+                        if (m.hasImages) {
+                            putJsonArray("content") {
+                                for (url in m.images) addJsonObject {
+                                    put("type", "image_url")
+                                    putJsonObject("image_url") { put("url", url) }
+                                }
+                                if (m.content.isNotBlank()) addJsonObject {
+                                    put("type", "text"); put("text", m.content)
+                                }
+                            }
+                        } else {
+                            put("content", m.content)
+                        }
+                    }
+                }
+            }.toString()
+        } else {
+            json.encodeToString(
+                OpenAiRequest(
+                    model = config.model,
+                    messages = messages,
+                    max_completion_tokens = config.maxTokens,
+                    temperature = config.temperature
+                )
+            )
+        }
 
-        val body = json.encodeToString(apiRequest)
-            .toRequestBody("application/json".toMediaType())
+        val body = bodyText.toRequestBody("application/json".toMediaType())
 
         val url = "${LlmClientFactory.normalizeBaseUrl(config.baseUrl)}/v1/chat/completions"
 

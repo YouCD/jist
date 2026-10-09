@@ -14,6 +14,11 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.addJsonObject
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
+import kotlinx.serialization.json.putJsonArray
+import kotlinx.serialization.json.putJsonObject
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -90,6 +95,17 @@ class ClaudeClient(private val httpClient: OkHttpClient) : LlmClient {
         }
     }
 
+    /** "data:image/jpeg;base64,XXX" -> ("image/jpeg", "XXX") */
+    private fun parseDataUrl(url: String): Pair<String, String> {
+        val comma = url.indexOf(',')
+        if (url.startsWith("data:") && comma > 0) {
+            val meta = url.substring(5, comma)
+            val mediaType = meta.substringBefore(";").ifBlank { "image/jpeg" }
+            return mediaType to url.substring(comma + 1)
+        }
+        return "image/jpeg" to url
+    }
+
     private fun buildRequest(
         messages: List<ChatMessage>,
         config: LlmRequestConfig
@@ -100,16 +116,51 @@ class ClaudeClient(private val httpClient: OkHttpClient) : LlmClient {
         // Filter out system messages for Claude API (they go in system field)
         val apiMessages = messages.filter { it.role != "system" }
 
-        val claudeRequest = ClaudeRequest(
-            model = config.model,
-            max_tokens = config.maxTokens,
-            system = systemPrompt ?: config.systemPrompt,
-            messages = apiMessages,
-            temperature = config.temperature
-        )
+        val hasImages = apiMessages.any { it.hasImages }
+        val bodyText = if (hasImages) {
+            // Anthropic vision: content is an array of image/text blocks.
+            buildJsonObject {
+                put("model", config.model)
+                put("max_tokens", config.maxTokens)
+                val sys = systemPrompt ?: config.systemPrompt
+                if (!sys.isNullOrBlank()) put("system", sys)
+                putJsonArray("messages") {
+                    for (m in apiMessages) addJsonObject {
+                        put("role", m.role)
+                        if (m.hasImages) {
+                            putJsonArray("content") {
+                                for (url in m.images) addJsonObject {
+                                    put("type", "image")
+                                    val (mediaType, b64) = parseDataUrl(url)
+                                    putJsonObject("source") {
+                                        put("type", "base64")
+                                        put("media_type", mediaType)
+                                        put("data", b64)
+                                    }
+                                }
+                                if (m.content.isNotBlank()) addJsonObject {
+                                    put("type", "text"); put("text", m.content)
+                                }
+                            }
+                        } else {
+                            put("content", m.content)
+                        }
+                    }
+                }
+            }.toString()
+        } else {
+            json.encodeToString(
+                ClaudeRequest(
+                    model = config.model,
+                    max_tokens = config.maxTokens,
+                    system = systemPrompt ?: config.systemPrompt,
+                    messages = apiMessages,
+                    temperature = config.temperature
+                )
+            )
+        }
 
-        val body = json.encodeToString(claudeRequest)
-            .toRequestBody("application/json".toMediaType())
+        val body = bodyText.toRequestBody("application/json".toMediaType())
 
         val url = "${LlmClientFactory.normalizeBaseUrl(config.baseUrl)}/v1/messages"
 

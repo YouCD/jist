@@ -87,6 +87,8 @@
     <string name="llm_custom_headers">自定义请求头</string>
     <string name="llm_custom_headers_desc">可选。每行一个请求头，格式：Key: Value，# 开头的行会被忽略。</string>
     <string name="llm_custom_headers_hint">X-Title: Jist</string>
+    <string name="llm_image_analysis">图片分析</string>
+    <string name="llm_image_analysis_desc">生成摘要时，会话中的图片将作为视觉内容发给模型（需模型支持视觉能力）。</string>
     <string name="llm_test_connection">测试连接</string>
     <string name="llm_save_config">保存配置</string>
     <string name="llm_saved_configs">已保存的配置</string>

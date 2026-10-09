@@ -22,6 +22,7 @@ import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -60,7 +61,9 @@ internal fun LlmAdvancedSettingsCard(
     onMaxTokensChange: (Int) -> Unit,
     headersInitText: String,
     headersCurrentText: String,
-    onHeadersTextChange: (String) -> Unit
+    onHeadersTextChange: (String) -> Unit,
+    imageAnalysis: Boolean,
+    onImageAnalysisChange: (Boolean) -> Unit
 ) {
     var showAdvancedSettings by remember { mutableStateOf(false) }
     val scrollScope = rememberCoroutineScope()
@@ -194,6 +197,31 @@ internal fun LlmAdvancedSettingsCard(
                                 text = stringResource(R.string.onboarding_4000),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+
+                    // Image analysis toggle
+                    Column {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = stringResource(R.string.llm_image_analysis),
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                                Spacer(modifier = Modifier.height(2.dp))
+                                Text(
+                                    text = stringResource(R.string.llm_image_analysis_desc),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            Checkbox(
+                                checked = imageAnalysis,
+                                onCheckedChange = { onImageAnalysisChange(it) }
                             )
                         }
                     }

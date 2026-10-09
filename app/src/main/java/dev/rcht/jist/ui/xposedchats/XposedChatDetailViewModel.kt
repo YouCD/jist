@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import dev.rcht.jist.data.db.entity.ChatMessageEntity
 import dev.rcht.jist.data.db.entity.SummaryEntity
 import dev.rcht.jist.data.db.entity.WatchedChatEntity
+import dev.rcht.jist.data.repository.ChatImageRepository
 import dev.rcht.jist.data.repository.ChatMessageRepository
 import dev.rcht.jist.data.repository.ChatSourceRepository
 import dev.rcht.jist.data.repository.LlmConfigRepository
@@ -15,6 +16,7 @@ import dev.rcht.jist.llm.LlmClientFactory
 import dev.rcht.jist.llm.LlmResult
 import dev.rcht.jist.llm.NotificationForSummary
 import dev.rcht.jist.llm.PromptBuilder
+import dev.rcht.jist.llm.ImageAnalysisHelper
 import dev.rcht.jist.llm.LlmRequestConfig
 import dev.rcht.jist.llm.parseCustomHeaders
 import kotlinx.coroutines.Dispatchers
@@ -39,7 +41,9 @@ class XposedChatDetailViewModel(
     private val summaryRepository: SummaryRepository,
     private val llmConfigRepository: LlmConfigRepository,
     private val chatSourceRepository: ChatSourceRepository,
+    private val chatImageRepository: ChatImageRepository,
     private val httpClient: OkHttpClient,
+    private val context: android.content.Context,
     private val chatId: Long
 ) : ViewModel() {
 
@@ -128,7 +132,22 @@ class XposedChatDetailViewModel(
                     appName = appName,
                     contactOrGroup = contactOrGroup,
                     customPrompt = chat.customPrompt
-                )
+                ).toMutableList()
+
+                // Image analysis: attach the chat's captured images in the
+                // message time window as vision content (jpeg/png only).
+                Log.i(TAG, "summarize: imageAnalysis=${config.imageAnalysis} " +
+                    "window=[${messages.minOf { it.timestamp }}..${messages.maxOf { it.timestamp }}] " +
+                    "msgs=${messages.size}")
+                if (config.imageAnalysis) {
+                    val imageMsg = ImageAnalysisHelper.buildImageMessage(
+                        context, chatImageRepository, chat.chatId,
+                        messages.minOf { it.timestamp }, messages.maxOf { it.timestamp },
+                        maxWaitMs = 8_000L) // capture lags message arrival
+                    if (imageMsg != null) {
+                        llmMessages.add(1, imageMsg)
+                    }
+                }
 
                 val client = LlmClientFactory.createClient(config, httpClient)
                 val llmConfig = LlmRequestConfig(

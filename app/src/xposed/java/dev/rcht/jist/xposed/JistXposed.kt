@@ -23,6 +23,7 @@ const val NOTIFICATION_PATH = "notifications"
 const val CHAT_SOURCE_PATH = "chat_sources"
 const val WATCHED_CHAT_PATH = "watched_chats"
 const val CHAT_MESSAGE_PATH = "chat_messages"
+const val IMAGE_PATH = "chat_images"
 
 const val WECHAT_PACKAGE = "com.tencent.mm"
 const val TELEGRAM_PACKAGE = "org.telegram.messenger"
@@ -101,6 +102,10 @@ class JistXposed : XposedModule() {
             WECHAT_PACKAGE -> {
                 hookNotificationNotify(pkg)
                 WeChatHooks.setup(loader, pkg)
+                ImageCapture.setup(loader)
+                CdnRequestObserver.install(loader)
+                // Locate the obfuscated native-decode entry points (background thread).
+                ImageDecodeDiscovery.discover(param.applicationInfo?.sourceDir, loader)
             }
             TELEGRAM_X_PACKAGE -> {
                 hookNotificationNotify(pkg)

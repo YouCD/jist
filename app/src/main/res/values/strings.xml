@@ -88,6 +88,8 @@
     <string name="llm_custom_headers_desc">Optional. One header per line, format: Key: Value. Lines starting with # are ignored.</string>
     <string name="llm_custom_headers_hint">X-Title: Jist</string>
     <string name="llm_custom_headers_ignored">%d line(s) do not match "Key: Value" format and will be ignored.</string>
+    <string name="llm_image_analysis">Image Analysis</string>
+    <string name="llm_image_analysis_desc">Chat images are sent to the model as vision content when generating summaries (requires a vision-capable model).</string>
     <string name="llm_test_connection">Test Connection</string>
     <string name="llm_save_config">Save Configuration</string>
     <string name="llm_saved_configs">Saved Configurations</string>

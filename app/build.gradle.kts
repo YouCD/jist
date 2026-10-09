@@ -19,7 +19,7 @@ val generatedVersionCode = when {
 
 android {
     namespace = "dev.rcht.jist"
-    compileSdk = 36
+    compileSdk = 37
 
     flavorDimensions += "channel"
     productFlavors {
@@ -85,7 +85,7 @@ android {
 dependencies {
 
     implementation(libs.androidx.core.ktx)
-    implementation("androidx.core:core-splashscreen:1.0.1")
+    implementation(libs.androidx.core.splashscreen)
     implementation(libs.androidx.appcompat)
     implementation(libs.material)
     implementation(libs.androidx.constraintlayout)
@@ -132,17 +132,23 @@ dependencies {
     // kotlin-logging (transitive of MCP SDK) routes through slf4j, but its
     // Android variant POM drops the slf4j-api dep → add explicitly (NOP logger, no binding)
     implementation(libs.slf4j.api)
+
+    // Xposed-flavor only: runtime dex scanning to locate WeChat's obfuscated
+    // image-decode entry points (no hardcoded class names → survives renames
+    // until a signature change, then re-adapt the matcher).
+    add("xposedImplementation", "org.luckypray:dexkit:2.3.0")
     
     // WorkManager
     implementation(libs.androidx.work.runtime.ktx)
     
-    // Jetpack Compose
-    implementation(platform(libs.androidx.compose.bom))
+    // Jetpack Compose (pinned explicitly instead of a BOM so the transitive
+    // set matches the 1.12.x line; foundation-layout was previously pinned
+    // separately at 1.10.0, which split the foundation artifacts)
     implementation(libs.androidx.compose.ui)
     implementation(libs.androidx.compose.ui.graphics)
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.foundation)
-    implementation("androidx.compose.foundation:foundation-layout:1.10.0")
+    implementation(libs.androidx.compose.foundation.layout)
     implementation(libs.androidx.compose.material3)
     implementation(libs.androidx.compose.material.icons.extended)
     implementation(libs.androidx.lifecycle.runtime.compose)
@@ -150,8 +156,8 @@ dependencies {
     implementation(libs.androidx.activity.compose)
     implementation(libs.haze)
     implementation(libs.haze.materials)
-    implementation("io.noties.markwon:core:4.6.2")
-    implementation("io.noties.markwon:ext-tables:4.6.2")
+    implementation(libs.markwon.core)
+    implementation(libs.markwon.ext.tables)
     debugImplementation(libs.androidx.compose.ui.tooling)
     
     // Xposed API (libxposed, only for xposed flavor)

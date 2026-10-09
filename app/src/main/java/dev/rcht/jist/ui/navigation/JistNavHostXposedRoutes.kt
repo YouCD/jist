@@ -69,7 +69,9 @@ fun NavGraphBuilder.xposedChatsRoute(
                         jistApp.chatSourceRepository,
                         jistApp.summaryRepository,
                         jistApp.llmConfigRepository,
-                        jistApp.httpClient
+                        jistApp.httpClient,
+                        jistApp.chatImageRepository,
+                        jistApp
                     ) as T
                 }
             }
@@ -151,7 +153,9 @@ fun NavGraphBuilder.xposedChatDetailRoute(
                         jistApp.summaryRepository,
                         jistApp.llmConfigRepository,
                         jistApp.chatSourceRepository,
+                        jistApp.chatImageRepository,
                         jistApp.httpClient,
+                        jistApp,
                         chatId
                     ) as T
                 }

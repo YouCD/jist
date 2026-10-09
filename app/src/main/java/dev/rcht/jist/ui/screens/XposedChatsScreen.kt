@@ -190,6 +190,10 @@ fun XposedChatsScreen(
                                                     onToggleSummarized = { v -> onToggleSummarized(chatItem.chat.id, v) },
                                                     onSaveChatSettings = { prompt, min, retention -> onSaveChatSettings(chatItem.chat.id, prompt, min, retention) },
                                                     onChatSummarize = { onChatSummarize(chatItem.chat.id) },
+                                                    onDelete = {
+                                                        selectedIds = setOf(chatItem.chat.id)
+                                                        showDeleteDialog = true
+                                                    },
                                                     snackbarHostState = snackbarHostState
                                                 )
                                             }

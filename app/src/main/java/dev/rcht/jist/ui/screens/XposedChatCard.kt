@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.outlined.AutoAwesome
@@ -39,7 +40,7 @@ import androidx.compose.animation.AnimatedVisibility
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
-internal fun XposedChatCard(item: XposedChatItem, selecting: Boolean, selected: Boolean, onClick: () -> Unit, onLongClick: () -> Unit, onToggleSummarized: (Boolean) -> Unit, onSaveChatSettings: (customPrompt: String?, minMessages: Int, retentionDays: Int) -> Unit, onChatSummarize: () -> Unit, snackbarHostState: SnackbarHostState? = null) {
+internal fun XposedChatCard(item: XposedChatItem, selecting: Boolean, selected: Boolean, onClick: () -> Unit, onLongClick: () -> Unit, onToggleSummarized: (Boolean) -> Unit, onSaveChatSettings: (customPrompt: String?, minMessages: Int, retentionDays: Int) -> Unit, onChatSummarize: () -> Unit, onDelete: () -> Unit, snackbarHostState: SnackbarHostState? = null) {
     val defaultPrompt by rememberUpdatedState(dev.rcht.jist.llm.getDefaultSystemPrompt())
     var expanded by remember { mutableStateOf(false) }
     var promptText by remember { mutableStateOf(item.chat.customPrompt ?: defaultPrompt) }
@@ -53,50 +54,82 @@ internal fun XposedChatCard(item: XposedChatItem, selecting: Boolean, selected: 
     val focusManager = LocalFocusManager.current
     val scope = rememberCoroutineScope()
     val density = LocalDensity.current
-    val summaryActionWidth = 72.dp
-    val summaryActionGap = 12.dp
-    val summaryActionWidthPx by derivedStateOf { with(density) { summaryActionWidth.toPx() } }
-    val summaryActionTotalPx by derivedStateOf { with(density) { (summaryActionWidth + summaryActionGap).toPx() } }
-    val offsetX = remember { Animatable(0f) }
-    val cardOpen by derivedStateOf { offsetX.value < -0.5f }
+    val actionWidth = 72.dp
+    val actionGap = 12.dp
+    val actionEndPad = 12.dp // padding between the two action buttons and screen edge
+    val cardGap = 16.dp // visible gap between card edge and delete button
+    // Card must travel the full buttons row extent PLUS the gap, otherwise the
+    // gap cancels out (button row and card shift would grow by the same amount).
+    val actionTotalPx by derivedStateOf { with(density) { (actionWidth * 2 + actionGap + actionEndPad + cardGap).toPx() } }
+    val deleteBg = Color(0xFFD93025)
+    val deleteIconTint = Color(0xFFF5F5F5)
+    val snappedOffset = remember { Animatable(0f) }
+    var dragDelta by remember { mutableFloatStateOf(0f) }
+    val offsetPx by derivedStateOf { snappedOffset.value + dragDelta }
+    val cardOpen by derivedStateOf { offsetPx < -0.5f }
 
     Box(modifier = Modifier.fillMaxWidth()) {
-        Box(
+        Row(
             modifier = Modifier
                 .height(45.dp)
-                .width(summaryActionWidth)
                 .align(Alignment.CenterEnd)
-                .clip(RoundedCornerShape(12.dp))
-                .background(MaterialTheme.colorScheme.primary)
-                .clickable {
-                    scope.launch { offsetX.animateTo(0f, tween(200)) }
-                    onChatSummarize()
-                },
-            contentAlignment = Alignment.Center
+                .padding(end = actionEndPad),
+            horizontalArrangement = Arrangement.spacedBy(actionGap)
         ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+            Box(
+                modifier = Modifier
+                    .size(actionWidth)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(deleteBg)
+                    .clickable {
+                        dragDelta = 0f
+                        scope.launch { snappedOffset.animateTo(0f, tween(200)) }
+                        onDelete()
+                    },
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(Icons.Default.Delete, contentDescription = "删除消息", tint = deleteIconTint, modifier = Modifier.size(24.dp))
+            }
+            Box(
+                modifier = Modifier
+                    .size(actionWidth)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(MaterialTheme.colorScheme.primary)
+                    .clickable {
+                        dragDelta = 0f
+                        scope.launch { snappedOffset.animateTo(0f, tween(200)) }
+                        onChatSummarize()
+                    },
+                contentAlignment = Alignment.Center
+            ) {
                 Icon(Icons.Outlined.AutoAwesome, contentDescription = "AI摘要", tint = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.size(24.dp))
             }
         }
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .offset { IntOffset(offsetX.value.roundToInt(), 0) }
+                .offset { IntOffset(offsetPx.roundToInt(), 0) }
                 .pointerInput(Unit) {
                     detectHorizontalDragGestures(
+                        onHorizontalDrag = { change, dragAmount ->
+                            change.consume()
+                            // Direct state update (no coroutine per event) so the
+                            // end-of-drag snap animation can't be clobbered.
+                            dragDelta = (dragDelta + dragAmount).coerceIn(-actionTotalPx, 0f)
+                        },
                         onDragEnd = {
+                            val final = snappedOffset.value + dragDelta
+                            dragDelta = 0f
                             scope.launch {
-                                offsetX.animateTo(
-                                    targetValue = if (offsetX.value < -summaryActionWidthPx / 2f) -summaryActionTotalPx else 0f,
+                                snappedOffset.animateTo(
+                                    targetValue = if (final < -actionTotalPx / 2f) -actionTotalPx else 0f,
                                     animationSpec = tween(200)
                                 )
                             }
                         },
-                        onHorizontalDrag = { change, dragAmount ->
-                            change.consume()
-                            scope.launch {
-                                offsetX.snapTo((offsetX.value + dragAmount).coerceIn(-summaryActionTotalPx, 0f))
-                            }
+                        onDragCancel = {
+                            dragDelta = 0f
+                            scope.launch { snappedOffset.animateTo(0f, tween(200)) }
                         }
                     )
                 }
@@ -107,8 +140,9 @@ internal fun XposedChatCard(item: XposedChatItem, selecting: Boolean, selected: 
                 .then(if (selected) Modifier.border(2.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(12.dp)) else Modifier)
                 .combinedClickable(
                     onClick = {
-                        if (offsetX.value < -0.5f) {
-                            scope.launch { offsetX.animateTo(0f, tween(200)) }
+                        if (cardOpen) {
+                            dragDelta = 0f
+                            scope.launch { snappedOffset.animateTo(0f, tween(200)) }
                         } else {
                             onClick()
                         }

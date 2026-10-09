@@ -139,6 +139,7 @@ fun LlmConfigScreen(
     // 折叠卡片后输入框重建时仍能恢复最新编辑内容（修复折叠/展开后显示值与实际保存值不一致）
     var headersText by remember { mutableStateOf("") }
     var headersInitText by remember { mutableStateOf(uiState.selectedConfig?.customHeaders ?: "") }
+    var imageAnalysis by remember { mutableStateOf(uiState.selectedConfig?.imageAnalysis ?: false) }
 
     // 滚动跟踪：自定义请求头输入框聚焦时，自动滚动到可视区上部（键盘弹出后会遮挡底部）
     // 统一使用窗口坐标系（positionInWindow），避免不同节点 positionInRoot 坐标系不一致导致计算错误
@@ -213,6 +214,7 @@ fun LlmConfigScreen(
             baseUrl = config.baseUrl
             headersInitText = config.customHeaders
             headersText = config.customHeaders
+            imageAnalysis = config.imageAnalysis
             selectedModel = config.modelId
             isCustomModel = false
             customModelName = ""
@@ -340,7 +342,9 @@ fun LlmConfigScreen(
                 onMaxTokensChange = { maxTokens = it },
                 headersInitText = headersInitText,
                 headersCurrentText = headersText,
-                onHeadersTextChange = { headersText = it }
+                onHeadersTextChange = { headersText = it },
+                imageAnalysis = imageAnalysis,
+                onImageAnalysisChange = { imageAnalysis = it }
             )
             
             // Test Connection Result
@@ -369,7 +373,8 @@ fun LlmConfigScreen(
                         isDefault = uiState.selectedConfig?.isDefault ?: false,
                         maxTokens = maxTokens,
                         temperature = temperature,
-                        customHeaders = headersText
+                        customHeaders = headersText,
+                        imageAnalysis = imageAnalysis
                         )
                         onTestConnection(config)
                     },
@@ -404,7 +409,8 @@ fun LlmConfigScreen(
                         isDefault = true,
                         maxTokens = maxTokens,
                         temperature = temperature,
-                        customHeaders = headersText
+                        customHeaders = headersText,
+                        imageAnalysis = imageAnalysis
                     )
                     onSaveConfig(config)
                     scope.launch {

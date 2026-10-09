@@ -222,6 +222,21 @@ object WeChatHooks {
                 original
             } else null
 
+            // Register image messages so ImageCapture can associate the file
+            // that WeChat writes seconds later (exact size match).
+            if (type == 3 && rawXml != null) {
+                val thumbLen = Regex("""cdnthumblength="(\d+)"""").find(rawXml)?.groupValues?.get(1)?.toIntOrNull() ?: 0
+                val hdLen = Regex("""hdlength="(\d+)"""").find(rawXml)?.groupValues?.get(1)?.toIntOrNull() ?: 0
+                val fullLen = Regex("""(?<![a-z])length="(\d+)"""").find(rawXml)?.groupValues?.get(1)?.toIntOrNull() ?: 0
+                // This WeChat version stores the original image under cdnmidimgurl
+                // (mid = full-size) with the top-level aeskey attribute.
+                val fullFileid = Regex("""cdnmidimgurl="([0-9a-fA-F]+)"""").find(rawXml)?.groupValues?.get(1) ?: ""
+                val fullAeskey = Regex("""<img aeskey="([0-9a-fA-F]+)"""").find(rawXml)?.groupValues?.get(1) ?: ""
+                if (thumbLen > 0 || hdLen > 0 || fullLen > 0) {
+                    ImageCapture.registerPendingMessage(talker, senderName, createTime, thumbLen, hdLen, fullLen, fullFileid, fullAeskey)
+                }
+            }
+
             if (senderName.isEmpty()) {
                 Log.w(TAG, "skip message with empty sender from chat=$talker")
                 return

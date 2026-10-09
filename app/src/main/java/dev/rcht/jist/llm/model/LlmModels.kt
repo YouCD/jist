@@ -2,13 +2,18 @@ package dev.rcht.jist.llm.model
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.Transient
 
 // Chat message for LLM API requests
 @Serializable
 data class ChatMessage(
     val role: String, // "system", "user", "assistant"
-    val content: String
-)
+    val content: String,
+    // Optional vision payload: data URLs ("data:image/jpeg;base64,...").
+    // @Transient because the wire shape differs per provider (OpenAI content
+    // array vs Anthropic image blocks); the clients build it manually.
+    @Transient val images: List<String> = emptyList()
+) { val hasImages get() = images.isNotEmpty() }
 
 // OpenAI-compatible API response
 @Serializable

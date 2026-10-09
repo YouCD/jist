@@ -7,11 +7,13 @@ import dev.rcht.jist.data.db.entity.ChatMessageEntity
 import dev.rcht.jist.data.db.entity.ChatSourceEntity
 import dev.rcht.jist.data.db.entity.SummaryEntity
 import dev.rcht.jist.data.db.entity.WatchedChatEntity
+import dev.rcht.jist.data.repository.ChatImageRepository
 import dev.rcht.jist.data.repository.ChatMessageRepository
 import dev.rcht.jist.data.repository.ChatSourceRepository
 import dev.rcht.jist.data.repository.LlmConfigRepository
 import dev.rcht.jist.data.repository.SummaryRepository
 import dev.rcht.jist.data.repository.WatchedChatRepository
+import dev.rcht.jist.llm.ImageAnalysisHelper
 import dev.rcht.jist.llm.LlmClientFactory
 import dev.rcht.jist.llm.LlmRequestConfig
 import dev.rcht.jist.llm.parseCustomHeaders
@@ -63,6 +65,8 @@ class XposedChatsViewModel(
     private val summaryRepository: SummaryRepository,
     private val llmConfigRepository: LlmConfigRepository,
     private val httpClient: OkHttpClient,
+    private val chatImageRepository: ChatImageRepository,
+    private val context: android.content.Context,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(XposedChatsState())
@@ -241,7 +245,16 @@ class XposedChatsViewModel(
                     appName = appName,
                     contactOrGroup = chat.chatName,
                     customPrompt = chat.customPrompt
-                )
+                ).toMutableList()
+
+                // Image analysis: attach captured images in the message window.
+                if (llmConfig.imageAnalysis) {
+                    val imageMsg = ImageAnalysisHelper.buildImageMessage(
+                        context, chatImageRepository, chat.chatId,
+                        messages.minOf { it.timestamp }, messages.maxOf { it.timestamp },
+                        maxWaitMs = 8_000L) // capture lags message arrival
+                    if (imageMsg != null) llmMessages.add(1, imageMsg)
+                }
 
                 val client = LlmClientFactory.createClient(llmConfig, httpClient)
                 val result = runBlocking { client.complete(llmMessages, LlmRequestConfig(

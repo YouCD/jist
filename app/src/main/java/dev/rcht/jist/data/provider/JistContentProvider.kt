@@ -7,12 +7,14 @@ import android.database.MatrixCursor
 import android.net.Uri
 import android.util.Log
 import dev.rcht.jist.JistApplication
+import dev.rcht.jist.data.db.entity.ChatImageEntity
 import dev.rcht.jist.data.db.entity.ChatMessageEntity
 import dev.rcht.jist.data.db.entity.ChatSourceEntity
 import dev.rcht.jist.data.db.entity.NotificationEntity
 import dev.rcht.jist.data.db.entity.WatchedChatEntity
 import dev.rcht.jist.util.ConversationKeyExtractor
 import kotlinx.coroutines.runBlocking
+import java.io.File
 import java.security.MessageDigest
 
 class JistContentProvider : ContentProvider() {
@@ -31,6 +33,7 @@ class JistContentProvider : ContentProvider() {
             "/$CHAT_SOURCE_PATH" -> insertChatSource(app, values, uri)
             "/$WATCHED_CHAT_PATH" -> insertWatchedChat(app, values, uri)
             "/$CHAT_MESSAGE_PATH" -> insertChatMessage(app, values, uri)
+            "/$IMAGE_PATH" -> insertChatImage(app, values, uri)
             else -> {
                 Log.w(TAG, "Unknown insert path: ${uri.path}")
                 null
@@ -126,6 +129,67 @@ class JistContentProvider : ContentProvider() {
         return if (id > 0) Uri.withAppendedPath(uri, id.toString()) else null
     }
 
+    private fun insertChatImage(app: JistApplication, values: ContentValues, uri: Uri): Uri? {
+        val fileName = values.getAsString("fileName") ?: return null
+        val fmt = values.getAsString("format") ?: return null
+        val hash = values.getAsString("contentHash") ?: return null
+
+        val existing = runBlocking { app.chatImageRepository.findByHash(hash) }
+        if (existing != null) {
+            Log.d(TAG, "duplicate image skipped: ${hash.take(12)}")
+            return Uri.withAppendedPath(uri, existing.id.toString())
+        }
+
+        val ext = when (fmt) { "jpeg" -> "jpg"; "png" -> "png"; else -> "bin" }
+        val imagesDir = File(app.filesDir, "images").apply { mkdirs() }
+        val dest = File(imagesDir, "$hash.$ext")
+
+        try {
+            when {
+                // Inline bytes: write into the images dir directly.
+                values.get("imageBytes") is ByteArray -> {
+                    val bytes = values.get("imageBytes") as ByteArray
+                    dest.writeBytes(bytes)
+                }
+                // Root-copied file in files/inbox: move it into the images dir.
+                values.getAsString("storedPath") != null -> {
+                    val inbox = File(app.filesDir, values.getAsString("storedPath")!!)
+                    if (!inbox.renameTo(dest)) {
+                        if (inbox.exists()) { dest.delete(); inbox.copyTo(dest, true) }
+                    }
+                }
+                else -> return null
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "image file store failed: ${e.message}")
+            return null
+        }
+
+        val entity = ChatImageEntity(
+            chatId = values.getAsString("chatId") ?: "",
+            chatAppKey = values.getAsString("chatAppKey") ?: "",
+            senderName = values.getAsString("senderName") ?: "",
+            messageTimestamp = values.getAsLong("messageTimestamp") ?: 0L,
+            fileName = fileName,
+            format = fmt,
+            sizeBytes = values.getAsInteger("sizeBytes") ?: 0,
+            contentHash = hash,
+            storedPath = "images/$hash.$ext",
+            capturedAt = values.getAsLong("capturedAt") ?: System.currentTimeMillis()
+        )
+
+        val id = runBlocking {
+            try {
+                app.chatImageRepository.insert(entity)
+            } catch (e: Exception) {
+                Log.w(TAG, "chat image insert failed: ${e.message}")
+                -1L
+            }
+        }
+        Log.i(TAG, "inserted image id=$id file=$fileName fmt=$fmt hash=${hash.take(12)} chat=${entity.chatId}")
+        return if (id > 0) Uri.withAppendedPath(uri, id.toString()) else null
+    }
+
     override fun query(
         uri: Uri, projection: Array<String>?, selection: String?,
         selectionArgs: Array<String>?, sortOrder: String?
@@ -196,6 +260,7 @@ class JistContentProvider : ContentProvider() {
         const val CHAT_SOURCE_PATH = "chat_sources"
         const val WATCHED_CHAT_PATH = "watched_chats"
         const val CHAT_MESSAGE_PATH = "chat_messages"
+        const val IMAGE_PATH = "chat_images"
 
         private fun sha256(input: String): String {
             val digest = MessageDigest.getInstance("SHA-256")

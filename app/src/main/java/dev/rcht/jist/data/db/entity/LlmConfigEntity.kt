@@ -16,5 +16,8 @@ data class LlmConfigEntity(
     val maxTokens: Int = 512,
     val temperature: Float = 0.3f,
     // Extra HTTP headers sent with every LLM request. "Key: Value" per line.
-    val customHeaders: String = ""
+    val customHeaders: String = "",
+    // When enabled, chat images are sent to the model as vision content
+    // during summarization (requires a vision-capable model).
+    val imageAnalysis: Boolean = false
 )
