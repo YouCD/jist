@@ -61,16 +61,6 @@ fun insertSource(cr: android.content.ContentResolver, baseUri: Uri, pkg: String,
     return uri?.lastPathSegment?.toLongOrNull() ?: -1L
 }
 
-fun isChatWatched(cr: android.content.ContentResolver, baseUri: Uri, sourceId: Long, chatId: String): Boolean {
-    val uri = Uri.withAppendedPath(baseUri, "$WATCHED_CHAT_PATH/query_by_chat")
-        .buildUpon()
-        .appendQueryParameter("sourceId", sourceId.toString())
-        .appendQueryParameter("chatId", chatId)
-        .build()
-    val cursor = cr.query(uri, null, null, null, null)
-    return cursor?.use { it.moveToFirst() && it.getInt(it.getColumnIndexOrThrow("isEnabled")) == 1 } ?: false
-}
-
 fun ensureWatchedChat(cr: android.content.ContentResolver, baseUri: Uri, sourceId: Long, chatId: String, chatName: String): Long {
     val values = ContentValues().apply {
         put("sourceId", sourceId)

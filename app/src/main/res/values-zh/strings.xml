@@ -1,8 +1,6 @@
 <resources>
     <string name="app_name">Jist</string>
-    <string name="navigation_drawer_open">打开导航抽屉</string>
-    <string name="navigation_drawer_close">关闭导航抽屉</string>
-    <string name="nav_header_title">Jist</string>
+            <string name="nav_header_title">Jist</string>
     <string name="nav_header_subtitle">AI 通知摘要助手</string>
     <string name="nav_header_desc">导航头部</string>
     <string name="action_settings">设置</string>
@@ -22,24 +20,20 @@
     <!-- Common -->
     <string name="save">保存</string>
     <string name="delete">删除</string>
-    <string name="search">搜索</string>
-    <string name="done">完成</string>
+        <string name="done">完成</string>
     <string name="clear">清除</string>
     <string name="default_label">默认</string>
     <string name="active">已启用</string>
     <string name="disabled">已禁用</string>
     <string name="settings">设置</string>
-    <string name="coming_soon">即将推出</string>
-    <string name="settings_data_management">数据管理</string>
+        <string name="settings_data_management">数据管理</string>
 
     <!-- Dashboard -->
     <string name="dashboard_intercepted">已拦截</string>
     <string name="dashboard_summarized">已摘要</string>
     <string name="dashboard_notifications">条通知</string>
     <string name="dashboard_digests">篇摘要</string>
-    <string name="dashboard_time_saved">今日节省时间</string>
-    <string name="dashboard_minutes">约 %d 分钟</string>
-    <string name="dashboard_recent_activity">最近活动</string>
+            <string name="dashboard_recent_activity">最近活动</string>
     <string name="dashboard_view_all">查看全部 →</string>
     <string name="dashboard_no_summaries">暂无摘要</string>
     <string name="dashboard_tap_to_summarize">点击下方按钮开始摘要</string>
@@ -54,13 +48,7 @@
     <string name="dashboard_good_wee_hours">凌晨好</string>
     <string name="dashboard_good_forenoon">上午好</string>
     <string name="dashboard_good_noon">中午好</string>
-    <string name="jist_active">Jist 已启用</string>
-    <string name="jist_inactive">Jist 未启用</string>
-    <string name="dashboard_just_now">刚刚</string>
-    <string name="dashboard_min_ago">%d 分钟前</string>
-    <string name="dashboard_hour_ago">%d 小时前</string>
-    <string name="dashboard_day_ago">%d 天前</string>
-    <string name="dashboard_inactive">未启用</string>
+                            <string name="dashboard_inactive">未启用</string>
 
     <!-- LLM Config -->
     <string name="llm_title">LLM 配置</string>
@@ -95,8 +83,7 @@
     <string name="llm_config_saved">配置保存成功！</string>
     <string name="llm_show">显示</string>
     <string name="llm_hide">隐藏</string>
-    <string name="llm_paste">粘贴</string>
-    <string name="llm_select_model">选择模型</string>
+        <string name="llm_select_model">选择模型</string>
     <string name="llm_expand">展开</string>
     <string name="llm_collapse">收起</string>
     <string name="llm_connection_success">✓ 连接成功！\n\n响应：%s</string>
@@ -117,8 +104,7 @@
     <string name="settings_push_notifications">推送通知</string>
     <string name="settings_version">版本</string>
     <string name="settings_jist_2026">Jist 2026</string>
-    <string name="settings_configured">已配置</string>
-    <string name="settings_content_sources">内容来源</string>
+        <string name="settings_content_sources">内容来源</string>
     <string name="settings_apps_active">%d 个活跃</string>
 
     <!-- App Settings -->
@@ -142,9 +128,7 @@
     <string name="summaries_search">搜索摘要</string>
     <string name="summaries_empty">暂无摘要</string>
     <string name="summaries_empty_desc">通知即将被摘要</string>
-    <string name="summaries_msg_count">%d 条消息</string>
-    <string name="summaries_select">选择</string>
-    <string name="selection_count">已选择 %d 项</string>
+            <string name="selection_count">已选择 %d 项</string>
     <string name="summaries_delete_title">删除摘要</string>
     <string name="summaries_delete_message">确定要删除选中的 %d 条摘要吗？</string>
     <string name="summaries_delete_confirm">删除</string>
@@ -155,8 +139,7 @@
     <string name="summary_label">摘要</string>
     <string name="summary_original_notifications">原始通知（%d）</string>
     <string name="summary_original_messages">原始消息（%d）</string>
-    <string name="summary_resummarize">重新摘要</string>
-
+    
     <!-- Notification Log -->
     <string name="notification_log_title">通知日志</string>
     <string name="notification_log_load_more">加载更多（剩余 %d 条）</string>
@@ -214,8 +197,7 @@
     <string name="onboarding_manage_apps">管理应用</string>
     <string name="onboarding_preview">预览</string>
     <string name="onboarding_selected">已选择</string>
-    <string name="onboarding_save_config">保存配置</string>
-    <string name="onboarding_connection_success">✓ 连接成功！</string>
+        <string name="onboarding_connection_success">✓ 连接成功！</string>
     <string name="onboarding_100">100</string>
     <string name="onboarding_4000">4000</string>
 
@@ -232,37 +214,16 @@
     <string name="settings_config_imported">配置已导入</string>
     <string name="settings_config_import_failed">导入失败：%s</string>
     <string name="settings_config_export_failed">导出失败</string>
-    <string name="settings_config_import_confirm_title">导入配置</string>
-    <string name="settings_config_import_confirm_message">这将替换所有当前设置，是否继续？</string>
-    <string name="settings_confirm">确认</string>
-    <string name="onboarding_import_config_title">导入现有配置</string>
+                <string name="onboarding_import_config_title">导入现有配置</string>
     <string name="onboarding_import_config_desc">导入之前导出的配置文件，快速恢复所有设置、LLM 配置和已监控的应用。</string>
     <string name="onboarding_import_config_button">选择配置文件</string>
     <string name="onboarding_import_config_success">配置导入成功！</string>
     <string name="onboarding_import_config_skip">跳过</string>
 
     <!-- Profile -->
-    <string name="profile_local_user">本地用户</string>
-    <string name="profile_local_email">local@jist.app</string>
-    <string name="profile_loading">加载中…</string>
-    <string name="profile_concise">简洁</string>
-    <string name="profile_default_time">08:00</string>
-    <string name="profile_default_version">1.0.0</string>
-    <string name="profile_unknown">未知</string>
-
+                            
     <!-- Notification -->
-    <string name="notification_unknown_app">未知</string>
-    <string name="notification_default_app">通知</string>
-    <string name="notification_summary">摘要</string>
-    <string name="notification_summary_ready">摘要已就绪</string>
-    <string name="notification_from">来自 %s</string>
-    <string name="notification_new_messages">%s：%d 条新消息</string>
-    <string name="notification_summarize">摘要</string>
-    <string name="notification_chats_count">%s（%d 个会话）</string>
-    <string name="notification_conversations_summarized">已摘要 %d 个会话</string>
-    <string name="notification_summaries_ready">%d 篇摘要已就绪</string>
-    <string name="notification_ellipsis">…</string>
-
+                                            
     <!-- Smart Watch -->
     <string name="watch_active">活跃</string>
     <string name="watch_paused">暂停</string>
@@ -270,8 +231,7 @@
     <string name="watch_list_title">我的关注</string>
     <string name="watch_new">新建关注</string>
     <string name="watch_edit">编辑关注</string>
-    <string name="watch_back">返回</string>
-    <string name="watch_save">保存</string>
+        <string name="watch_save">保存</string>
     <string name="watch_delete">删除</string>
     <string name="watch_title_label">关注标题</string>
     <string name="watch_title_hint">例: 买冰箱</string>
@@ -287,29 +247,18 @@
     <string name="watch_match_keyword_desc">本地匹配，零延迟，不消耗 API 配额</string>
     <string name="watch_match_ai">AI 语义匹配（更精准）</string>
     <string name="watch_match_ai_desc">更精准，会消耗 API 调用配额</string>
-    <string name="watch_notify_mode_label">通知方式</string>
-    <string name="watch_notify_each">每次匹配时提醒</string>
-    <string name="watch_notify_important">有重要信息时提醒</string>
-    <string name="watch_notify_digest">每日摘要</string>
-    <string name="watch_empty_title">还没有任何关注</string>
+                    <string name="watch_empty_title">还没有任何关注</string>
     <string name="watch_empty_desc">设定关注主题，AI 会自动从你的通知中\n收集相关信息并整理提醒。</string>
     <string name="watch_empty_create">创建第一个关注</string>
     <string name="watch_not_found">关注不存在</string>
-    <string name="watch_detail_records">详细记录</string>
-    <string name="watch_match_display">匹配: %s</string>
-    <string name="watch_notify_display">通知: %s</string>
-    <string name="watch_status_active">● 活跃</string>
+        <string name="watch_match_display">匹配: %s</string>
+        <string name="watch_status_active">● 活跃</string>
     <string name="watch_status_paused">● 暂停</string>
     <string name="watch_collected_summary">已收集 %1$d 条信息，来自 %2$d 个应用</string>
     <string name="watch_item_stats">已收集 %1$d 条 · 最新: %2$s</string>
     <string name="watch_item_stats_none">已收集 %1$d 条 · 最新: 暂无</string>
     <string name="watch_item_match">命中: %s</string>
-    <string name="watch_mode_keyword">关键词</string>
-    <string name="watch_mode_ai">AI 语义</string>
-    <string name="watch_notify_always">每次</string>
-    <string name="watch_notify_important_label">重要时</string>
-    <string name="watch_notify_daily">每日</string>
-    <string name="watch_keywords_label_colon">关键词:</string>
+                        <string name="watch_keywords_label_colon">关键词:</string>
     <string name="watch_error_title_required">请输入关注标题</string>
     <string name="watch_error_keyword_required">请添加至少一个关键词</string>
     <string name="watch_error_save_failed">保存失败: %s</string>
@@ -329,8 +278,7 @@
     <string name="watch_widget_title">🔍 我的关注</string>
     <string name="watch_widget_create">＋ 创建关注</string>
     <string name="app_settings_prompt_saved">自定义提示词已保存</string>
-    <string name="app_settings_min_messages_saved">最小消息数已保存</string>
-    <string name="app_settings_save_failed">保存失败: %s</string>
+        <string name="app_settings_save_failed">保存失败: %s</string>
 
     <!-- Watch Engine Prompts -->
     <string name="watch_prompt_system">你是一个信息收集助手。用户正在关注以下主题：\n「%1$s」\n%2$s\n\n请判断以下通知是否与用户关注的主题相关。如果相关，提取关键信息并以 JSON 格式返回：\n{\"relevant\":true,\"keyInfo\":\"提取的关键信息\",\"importance\":1-5}\n如果不相关，返回：\n{\"relevant\":false}</string>
@@ -346,8 +294,7 @@
     <string name="watch_delete_message">确定要删除这个关注主题吗？此操作不可撤销。</string>
     <string name="watch_delete_confirm">删除</string>
     <string name="watch_delete_cancel">取消</string>
-    <string name="watch_item_count">条记录</string>
-
+    
     <!-- Silent Notification Channel -->
     <string name="silent_channel_name">已监控应用通知</string>
     <string name="silent_channel_description">来自已监控应用的静音通知</string>
@@ -355,7 +302,6 @@
     <!-- Xposed Chat Views -->
     <string name="xposed_chats_title">消息</string>
     <string name="xposed_chats_empty">还没有捕获到任何消息</string>
-    <string name="xposed_chats_no_messages">暂无消息</string>
-    <string name="nav_xposed_chats">消息</string>
+        <string name="nav_xposed_chats">消息</string>
 
 </resources>

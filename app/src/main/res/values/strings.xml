@@ -1,8 +1,6 @@
 <resources>
     <string name="app_name">Jist</string>
-    <string name="navigation_drawer_open">Open navigation drawer</string>
-    <string name="navigation_drawer_close">Close navigation drawer</string>
-    <string name="nav_header_title">Jist</string>
+            <string name="nav_header_title">Jist</string>
     <string name="nav_header_subtitle">AI Notification Summarizer</string>
     <string name="nav_header_desc">Navigation header</string>
     <string name="action_settings">Settings</string>
@@ -22,24 +20,20 @@
     <!-- Common -->
     <string name="save">Save</string>
     <string name="delete">Delete</string>
-    <string name="search">Search</string>
-    <string name="done">Done</string>
+        <string name="done">Done</string>
     <string name="clear">Clear</string>
     <string name="default_label">Default</string>
     <string name="active">Active</string>
     <string name="disabled">Disabled</string>
     <string name="settings">Settings</string>
-    <string name="coming_soon">Coming Soon</string>
-    <string name="settings_data_management">DATA MANAGEMENT</string>
+        <string name="settings_data_management">DATA MANAGEMENT</string>
 
     <!-- Dashboard -->
     <string name="dashboard_intercepted">Intercepted</string>
     <string name="dashboard_summarized">Summarized</string>
     <string name="dashboard_notifications">notifications</string>
     <string name="dashboard_digests">digests</string>
-    <string name="dashboard_time_saved">Time saved today</string>
-    <string name="dashboard_minutes">~%d minutes</string>
-    <string name="dashboard_recent_activity">Recent Activity</string>
+            <string name="dashboard_recent_activity">Recent Activity</string>
     <string name="dashboard_view_all">View All →</string>
     <string name="dashboard_no_summaries">No summaries yet</string>
     <string name="dashboard_tap_to_summarize">Tap the button below to summarize</string>
@@ -54,13 +48,7 @@
     <string name="dashboard_good_wee_hours">WEE HOURS</string>
     <string name="dashboard_good_forenoon">GOOD MORNING</string>
     <string name="dashboard_good_noon">GOOD NOON</string>
-    <string name="jist_active">Jist Active</string>
-    <string name="jist_inactive">Jist Inactive</string>
-    <string name="dashboard_just_now">Just now</string>
-    <string name="dashboard_min_ago">%dm ago</string>
-    <string name="dashboard_hour_ago">%dh ago</string>
-    <string name="dashboard_day_ago">%dd ago</string>
-    <string name="dashboard_inactive">Inactive</string>
+                            <string name="dashboard_inactive">Inactive</string>
 
     <!-- LLM Config -->
     <string name="llm_title">LLM Configuration</string>
@@ -96,8 +84,7 @@
     <string name="llm_config_saved">Configuration saved successfully!</string>
     <string name="llm_show">Show</string>
     <string name="llm_hide">Hide</string>
-    <string name="llm_paste">Paste</string>
-    <string name="llm_select_model">Select model</string>
+        <string name="llm_select_model">Select model</string>
     <string name="llm_expand">Expand</string>
     <string name="llm_collapse">Collapse</string>
     <string name="llm_connection_success">✓ Connection successful!\n\nResponse: %s</string>
@@ -118,8 +105,7 @@
     <string name="settings_push_notifications">Push Notifications</string>
     <string name="settings_version">Version</string>
     <string name="settings_jist_2026">Jist 2026</string>
-    <string name="settings_configured">Configured</string>
-    <string name="settings_content_sources">CONTENT SOURCES</string>
+        <string name="settings_content_sources">CONTENT SOURCES</string>
     <string name="settings_apps_active">%d Active</string>
 
     <!-- App Settings -->
@@ -143,9 +129,7 @@
     <string name="summaries_search">Search summaries</string>
     <string name="summaries_empty">No summaries yet</string>
     <string name="summaries_empty_desc">Notifications will be summarized soon</string>
-    <string name="summaries_msg_count">%d msg</string>
-    <string name="summaries_select">Select</string>
-    <string name="selection_count">%d selected</string>
+            <string name="selection_count">%d selected</string>
     <string name="summaries_delete_title">Delete summaries</string>
     <string name="summaries_delete_message">Are you sure you want to delete %d selected summaries?</string>
     <string name="summaries_delete_confirm">Delete</string>
@@ -156,8 +140,7 @@
     <string name="summary_label">Summary</string>
     <string name="summary_original_notifications">Original Notifications (%d)</string>
     <string name="summary_original_messages">Original Messages (%d)</string>
-    <string name="summary_resummarize">Re-summarize</string>
-
+    
     <!-- Notification Log -->
     <string name="notification_log_title">Notification Log</string>
     <string name="notification_log_load_more">Load more (%d remaining)</string>
@@ -215,8 +198,7 @@
     <string name="onboarding_manage_apps">Manage Apps</string>
     <string name="onboarding_preview">PREVIEW</string>
     <string name="onboarding_selected">Selected</string>
-    <string name="onboarding_save_config">Save Configuration</string>
-    <string name="onboarding_connection_success">✓ Connection successful!</string>
+        <string name="onboarding_connection_success">✓ Connection successful!</string>
     <string name="onboarding_100">100</string>
     <string name="onboarding_4000">4000</string>
 
@@ -233,37 +215,16 @@
     <string name="settings_config_imported">Config imported</string>
     <string name="settings_config_import_failed">Import failed: %s</string>
     <string name="settings_config_export_failed">Export failed</string>
-    <string name="settings_config_import_confirm_title">Import Config</string>
-    <string name="settings_config_import_confirm_message">This will replace all current settings. Continue?</string>
-    <string name="settings_confirm">Confirm</string>
-    <string name="onboarding_import_config_title">Import Existing Config</string>
+                <string name="onboarding_import_config_title">Import Existing Config</string>
     <string name="onboarding_import_config_desc">Import a previously exported config file to restore all your settings, LLM configuration, and monitored apps.</string>
     <string name="onboarding_import_config_button">Select Config File</string>
     <string name="onboarding_import_config_success">Config imported successfully!</string>
     <string name="onboarding_import_config_skip">Skip</string>
 
     <!-- Profile -->
-    <string name="profile_local_user">Local User</string>
-    <string name="profile_local_email">local@jist.app</string>
-    <string name="profile_loading">Loading…</string>
-    <string name="profile_concise">Concise</string>
-    <string name="profile_default_time">08:00 AM</string>
-    <string name="profile_default_version">1.0.0</string>
-    <string name="profile_unknown">Unknown</string>
-
+                            
     <!-- Notification -->
-    <string name="notification_unknown_app">Unknown</string>
-    <string name="notification_default_app">Notification</string>
-    <string name="notification_summary">Summary</string>
-    <string name="notification_summary_ready">Summary ready</string>
-    <string name="notification_from">from %s</string>
-    <string name="notification_new_messages">%s: %d new messages</string>
-    <string name="notification_summarize">Summarize</string>
-    <string name="notification_chats_count">%s (%d chats)</string>
-    <string name="notification_conversations_summarized">%d conversations summarized</string>
-    <string name="notification_summaries_ready">%d summaries ready</string>
-    <string name="notification_ellipsis">…</string>
-
+                                            
     <!-- Smart Watch -->
     <string name="watch_active">Active</string>
     <string name="watch_paused">Paused</string>
@@ -271,8 +232,7 @@
     <string name="watch_list_title">Watch</string>
     <string name="watch_new">New Watch</string>
     <string name="watch_edit">Edit Watch</string>
-    <string name="watch_back">Back</string>
-    <string name="watch_save">Save</string>
+        <string name="watch_save">Save</string>
     <string name="watch_delete">Delete</string>
     <string name="watch_title_label">Title</string>
     <string name="watch_title_hint">e.g. Buy a refrigerator</string>
@@ -288,29 +248,18 @@
     <string name="watch_match_keyword_desc">Local match, instant, no API cost</string>
     <string name="watch_match_ai">AI Semantic Match (more accurate)</string>
     <string name="watch_match_ai_desc">More accurate, consumes API quota</string>
-    <string name="watch_notify_mode_label">Notification Mode</string>
-    <string name="watch_notify_each">Notify on every match</string>
-    <string name="watch_notify_important">Notify when important</string>
-    <string name="watch_notify_digest">Daily digest</string>
-    <string name="watch_empty_title">No watches yet</string>
+                    <string name="watch_empty_title">No watches yet</string>
     <string name="watch_empty_desc">Set topics and AI will collect relevant info from your notifications.</string>
     <string name="watch_empty_create">Create your first watch</string>
     <string name="watch_not_found">Watch not found</string>
-    <string name="watch_detail_records">Detailed Records</string>
-    <string name="watch_match_display">Match: %s</string>
-    <string name="watch_notify_display">Notify: %s</string>
-    <string name="watch_status_active">● Active</string>
+        <string name="watch_match_display">Match: %s</string>
+        <string name="watch_status_active">● Active</string>
     <string name="watch_status_paused">● Paused</string>
     <string name="watch_collected_summary">%1$d items collected from %2$d apps</string>
     <string name="watch_item_stats">%1$d collected · Latest: %2$s</string>
     <string name="watch_item_stats_none">%1$d collected · Latest: None</string>
     <string name="watch_item_match">Match: %s</string>
-    <string name="watch_mode_keyword">Keyword(s)</string>
-    <string name="watch_mode_ai">AI Semantic</string>
-    <string name="watch_notify_always">Always</string>
-    <string name="watch_notify_important_label">Important</string>
-    <string name="watch_notify_daily">Daily</string>
-    <string name="watch_keywords_label_colon">Keywords:</string>
+                        <string name="watch_keywords_label_colon">Keywords:</string>
     <string name="watch_error_title_required">Please enter a title</string>
     <string name="watch_error_keyword_required">Please add at least one keyword</string>
     <string name="watch_error_save_failed">Save failed: %s</string>
@@ -330,8 +279,7 @@
     <string name="watch_widget_title">🔍 Watch</string>
     <string name="watch_widget_create">＋ Create Watch</string>
     <string name="app_settings_prompt_saved">Custom prompt saved</string>
-    <string name="app_settings_min_messages_saved">Minimum messages saved</string>
-    <string name="app_settings_save_failed">Save failed: %s</string>
+        <string name="app_settings_save_failed">Save failed: %s</string>
 
     <!-- Watch Engine Prompts -->
     <string name="watch_prompt_system">You are an information collection assistant. The user is watching the following topic:\n«%1$s»\n%2$s\n\nDetermine if the following notification is relevant to the topic the user is watching. If relevant, extract key information and return in JSON format:\n{\"relevant\":true,\"keyInfo\":\"extracted key information\",\"importance\":1-5}\nIf not relevant, return:\n{\"relevant\":false}</string>
@@ -347,8 +295,7 @@
     <string name="watch_delete_message">Are you sure you want to delete this watch topic? This action cannot be undone.</string>
     <string name="watch_delete_confirm">Delete</string>
     <string name="watch_delete_cancel">Cancel</string>
-    <string name="watch_item_count">records</string>
-
+    
     <!-- Silent Notification Channel -->
     <string name="silent_channel_name">Monitored app notifications</string>
     <string name="silent_channel_description">Silent notifications forwarded from monitored apps</string>
@@ -356,7 +303,6 @@
     <!-- Xposed Chat Views -->
     <string name="xposed_chats_title">消息</string>
     <string name="xposed_chats_empty">还没有捕获到任何消息</string>
-    <string name="xposed_chats_no_messages">暂无消息</string>
-    <string name="nav_xposed_chats">消息</string>
+        <string name="nav_xposed_chats">消息</string>
 
 </resources>
