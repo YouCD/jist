@@ -26,7 +26,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -57,11 +56,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
-import androidx.compose.ui.input.nestedscroll.NestedScrollSource
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
-import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -85,9 +80,13 @@ fun SummaryDetailScreen(
     }
 ) {
     val context = LocalContext.current
-    var targetIndex by remember { mutableIntStateOf(uiState.currentIndex) }
-    val currentLazyListState = remember { mutableStateOf<LazyListState?>(null) }
-    val currentSummaryScrollState = remember { mutableStateOf<androidx.compose.foundation.ScrollState?>(null) }
+    // Start unsynced (-1) while the VM is still loading: uiState.currentIndex is 0
+    // before loadAll() resolves the clicked summary's real position in the
+    // unread-first sorted list, so rendering page 0 would briefly show the first
+    // *unread* summary when a *read* one was opened.
+    var targetIndex by remember {
+        mutableIntStateOf(if (uiState.isLoading) -1 else uiState.currentIndex)
+    }
     val isChangingPage = remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
 
@@ -97,56 +96,13 @@ fun SummaryDetailScreen(
         }
     }
 
-    val overscrollConnection = remember {
-        object : NestedScrollConnection {
-            override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
-                if (available.y == 0f || isChangingPage.value || source != NestedScrollSource.UserInput)
-                    return Offset.Zero
-
-                val scrollingDown = available.y < 0f
-                val summaryState = currentSummaryScrollState.value
-                val listState = currentLazyListState.value
-
-                val canScroll = if (scrollingDown)
-                    (summaryState?.canScrollForward == true) || (listState?.canScrollForward == true)
-                else
-                    (summaryState?.canScrollBackward == true) || (listState?.canScrollBackward == true)
-
-                // If any child can still scroll → let it handle the gesture
-                if (canScroll) return Offset.Zero
-
-                // Both at boundary → trigger page switch
-                if (scrollingDown && targetIndex < uiState.summaries.size - 1) {
-                    isChangingPage.value = true
-                    coroutineScope.launch {
-                        val next = targetIndex + 1
-                        targetIndex = next
-                        delay(300)
-                        onPageChanged(next)
-                        isChangingPage.value = false
-                    }
-                } else if (!scrollingDown && targetIndex > 0) {
-                    isChangingPage.value = true
-                    coroutineScope.launch {
-                        val prev = targetIndex - 1
-                        targetIndex = prev
-                        delay(300)
-                        onPageChanged(prev)
-                        isChangingPage.value = false
-                    }
-                }
-                return Offset.Zero
-            }
-        }
-    }
-
     GlassScaffold(
         topBar = {
             CenterAlignedTopAppBar(
                 title = {
                     val remaining = uiState.summaries.size - targetIndex - 1
                     Text(
-                        if (uiState.summaries.isNotEmpty())
+                        if (targetIndex in uiState.summaries.indices)
                             "${stringResource(R.string.summary_detail_title)} (${targetIndex + 1}/${uiState.summaries.size})"
                         else
                             stringResource(R.string.summary_detail_title)
@@ -168,9 +124,10 @@ fun SummaryDetailScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .nestedScroll(overscrollConnection)
         ) {
-            if (uiState.isLoading) {
+            if (uiState.isLoading || targetIndex < 0) {
+                // targetIndex < 0: one-frame gap between load completion and the
+                // LaunchedEffect that syncs the pager to the clicked summary.
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     androidx.compose.material3.CircularProgressIndicator()
                 }
@@ -195,7 +152,6 @@ fun SummaryDetailScreen(
                     val innerLazyListState = rememberLazyListState()
 
                     LaunchedEffect(page) {
-                        currentLazyListState.value = innerLazyListState
                         innerLazyListState.scrollToItem(0)
                     }
 
@@ -331,10 +287,6 @@ fun SummaryDetailScreen(
                                     } else {
                                         val summaryScrollState = rememberScrollState()
                                         var isScrolling by remember { mutableStateOf(false) }
-
-                                        LaunchedEffect(page) {
-                                            currentSummaryScrollState.value = summaryScrollState
-                                        }
 
                                         LaunchedEffect(summaryScrollState.isScrollInProgress) {
                                             isScrolling = summaryScrollState.isScrollInProgress

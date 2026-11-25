@@ -117,7 +117,9 @@ fun NavGraphBuilder.dashboardRoute(
                     }
                 },
                 onSummaryClick = { summaryId ->
-                    navController.navigate("summary_detail/$summaryId")
+                    navController.navigate("summary_detail/$summaryId") {
+                        launchSingleTop = true
+                    }
                 },
                 onWatchTopicClick = { topicId ->
                     navController.navigate("watch_detail/$topicId")
@@ -164,7 +166,9 @@ fun NavGraphBuilder.summariesRoute(
             onSearchChange = { query -> viewModel.searchSummaries(query) },
             onAppFilterChange = { app -> viewModel.filterByApp(app) },
             onSummaryClick = { summaryId ->
-                navController.navigate("summary_detail/$summaryId")
+                navController.navigate("summary_detail/$summaryId") {
+                    launchSingleTop = true
+                }
             },
             onDeleteSummaries = { ids -> viewModel.deleteSummaries(ids) },
             onRefresh = { viewModel.refreshSummaries() },
